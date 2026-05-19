@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { listUnits, createUnit, updateUnit, deleteUnit } from './units.controller';
+import { authenticate } from '../../middleware/auth';
+const router = Router();
+router.use(authenticate);
+router.get('/',      listUnits);
+router.post('/',     createUnit);
+router.put('/:id',   updateUnit);
+router.delete('/:id', deleteUnit);
+export default router;

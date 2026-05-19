@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { salesReport, inventoryReport, staffReport, businessTypeReport, dashboardStats } from './reporting.controller';
+import { authenticate, requireShop } from '../../middleware/auth';
+const router = Router();
+router.use(authenticate, requireShop);
+router.get('/dashboard',      dashboardStats);
+router.get('/sales',          salesReport);
+router.get('/inventory',      inventoryReport);
+router.get('/staff',          staffReport);
+router.get('/business-type',  businessTypeReport);
+export default router;

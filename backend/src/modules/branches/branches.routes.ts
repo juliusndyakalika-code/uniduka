@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { listBranches, createBranch, updateBranchMode, transferStock } from './branches.controller';
+import { authenticate, authorize } from '../../middleware/auth';
+const router = Router();
+router.use(authenticate);
+router.get('/',                                 listBranches);
+router.post('/',                                authorize('ACCOUNT_OWNER'), createBranch);
+router.put('/:id/mode',                         authorize('ACCOUNT_OWNER'), updateBranchMode);
+router.post('/transfer',                        authorize('ACCOUNT_OWNER', 'INVENTORY_STAFF'), transferStock);
+export default router;

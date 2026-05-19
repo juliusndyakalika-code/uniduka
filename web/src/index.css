@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Splash animation (from DiliKitaa) ─────────────────────────────────────── */
+@keyframes logo-in {
+  0%   { opacity: 0; transform: scale(0.8); }
+  40%  { opacity: 1; transform: scale(1); }
+  70%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+@keyframes tagline-in {
+  0%   { opacity: 0; transform: translateY(8px); }
+  35%  { opacity: 0; transform: translateY(8px); }
+  60%  { opacity: 1; transform: translateY(0); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+.animate-logo    { animation: logo-in    2.4s ease forwards; }
+.animate-tagline { animation: tagline-in 2.4s ease forwards; }
+
+@layer base {
+  body {
+    @apply bg-[#F8F5F0] text-stone-900 antialiased;
+  }
+  h1, h2, h3 {
+    @apply tracking-tight;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm bg-stone-900 px-6 py-2.5 text-xs font-semibold tracking-widest text-white uppercase shadow-none hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm border border-stone-300 bg-white px-6 py-2.5 text-xs font-semibold tracking-widest text-stone-700 uppercase shadow-none hover:border-stone-900 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2 disabled:opacity-40 transition-colors;
+  }
+  .btn-duka {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm bg-duka-600 px-6 py-2.5 text-xs font-semibold tracking-widest text-white uppercase hover:bg-duka-700 focus:outline-none focus:ring-2 focus:ring-duka-600 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm bg-red-600 px-6 py-2.5 text-xs font-semibold tracking-widest text-white uppercase hover:bg-red-700 disabled:opacity-40 transition-colors;
+  }
+
+  /* Form elements */
+  .input {
+    @apply block w-full border-0 border-b border-stone-300 bg-transparent px-0 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-stone-900 focus:outline-none focus:ring-0 disabled:text-stone-400 transition-colors;
+  }
+  .input-box {
+    @apply block w-full rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 disabled:bg-stone-50 transition-colors;
+  }
+  .select {
+    @apply block w-full rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900;
+  }
+  .label {
+    @apply block text-xs font-semibold tracking-widest text-stone-500 mb-2 uppercase;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white border border-stone-200 shadow-none;
+  }
+  .card-hover {
+    @apply bg-white border border-stone-200 shadow-none hover:border-stone-400 hover:shadow-sm transition-all cursor-pointer;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center rounded-sm px-2.5 py-0.5 text-xs font-medium tracking-wide;
+  }
+  .badge-green  { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .badge-amber  { @apply badge bg-amber-50 text-amber-700 border border-amber-200; }
+  .badge-red    { @apply badge bg-red-50 text-red-700 border border-red-200; }
+  .badge-blue   { @apply badge bg-blue-50 text-blue-700 border border-blue-200; }
+  .badge-stone  { @apply badge bg-stone-100 text-stone-600 border border-stone-200; }
+  .badge-duka   { @apply badge bg-duka-50 text-duka-700 border border-duka-200; }
+
+  /* Sidebar nav */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900 rounded-sm transition-colors cursor-pointer;
+  }
+  .nav-item-active {
+    @apply flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-stone-900 bg-primary-100 border-r-2 border-primary-600 rounded-sm;
+  }
+
+  /* Page header */
+  .page-header {
+    @apply flex items-center justify-between mb-6;
+  }
+  .page-title {
+    @apply text-lg font-bold text-stone-900 tracking-tight;
+  }
+  .page-subtitle {
+    @apply text-xs text-stone-400 uppercase tracking-widest mt-0.5;
+  }
+
+  /* Table */
+  .table-wrapper {
+    @apply overflow-x-auto rounded-sm border border-stone-200;
+  }
+  .table {
+    @apply w-full text-sm text-left;
+  }
+  .table th {
+    @apply px-4 py-3 text-xs font-semibold uppercase tracking-widest text-stone-500 bg-stone-50 border-b border-stone-200;
+  }
+  .table td {
+    @apply px-4 py-3 border-b border-stone-100 text-stone-700;
+  }
+  .table tr:last-child td {
+    @apply border-b-0;
+  }
+  .table tr:hover td {
+    @apply bg-stone-50;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply card p-5;
+  }
+  .stat-value {
+    @apply text-2xl font-bold text-stone-900 tracking-tight;
+  }
+  .stat-label {
+    @apply text-xs uppercase tracking-widest text-stone-400 mt-1;
+  }
+}

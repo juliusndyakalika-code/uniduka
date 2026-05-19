@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { getProgram, upsertProgram, awardPoints, redeemPoints, getLoyaltyStats } from './loyalty.controller';
+import { authenticate } from '../../middleware/auth';
+const router = Router();
+router.use(authenticate);
+router.get('/',          getProgram);
+router.put('/',          upsertProgram);
+router.post('/award',    awardPoints);
+router.post('/redeem',   redeemPoints);
+router.get('/stats',     getLoyaltyStats);
+export default router;

@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { listAppointments, getAppointment, createAppointment, updateAppointment, cancelAppointment, getCalendar } from './appointments.controller';
+import { authenticate } from '../../middleware/auth';
+const router = Router();
+router.use(authenticate);
+router.get('/',          listAppointments);
+router.post('/',         createAppointment);
+router.get('/calendar',  getCalendar);
+router.get('/:id',       getAppointment);
+router.put('/:id',       updateAppointment);
+router.post('/:id/cancel', cancelAppointment);
+export default router;

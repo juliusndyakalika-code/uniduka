@@ -1,0 +1,977 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────────────────────
+
+enum SubscriptionPlan {
+  STARTER    // 1 shop, 1 branch, 3 staff, 1 register/branch
+  GROWTH     // 3 shops, 3 branches each, 15 staff, 3 registers/branch
+  BUSINESS   // 10 shops, unlimited branches, 100 staff, unlimited registers
+  ENTERPRISE // Unlimited everything + custom hardware + 24/7 SLA
+}
+
+enum BusinessType {
+  RETAIL_STORE
+  WHOLESALE_B2B
+  GROCERY_SUPERMARKET
+  PHARMACY_CHEMIST
+  RESTAURANT
+  CAFE_QSR
+  BAR_NIGHTCLUB
+  SALON_SPA
+  CLINIC_MEDICAL
+  REPAIR_WORKSHOP
+  HOTEL_GUESTHOUSE
+}
+
+enum UserRole {
+  PLATFORM_ADMIN   // UniDuka platform ops — manages all tenants
+  ACCOUNT_OWNER    // Business owner — full access, billing, shop setup, reports
+  CASHIER          // POS and sales only
+  INVENTORY_STAFF  // Stock, purchase orders, stocktake only
+}
+
+enum BranchMode {
+  INDEPENDENT       // Own stock, staff, pricing, registers
+  SHARED_CATALOGUE  // Shared master catalogue; separate inventory
+  SHARED_INVENTORY  // Shared inventory pool; inter-branch transfers
+}
+
+enum InventoryModel {
+  SKU_VARIANT       // Retail, Wholesale, Grocery packaged
+  RECIPE_INGREDIENT // Restaurant, Cafe, Bar
+  BATCH_LOT         // Pharmacy, Food manufacturing
+  CONSUMABLE        // Salon, Spa, Clinic
+  ASSET_SERIAL      // Repair Workshop
+  AMENITY           // Hotel
+}
+
+enum PricingMode {
+  FIXED
+  WEIGHT_BASED
+  VOLUME_BASED
+  MENU_BASED
+  TIME_BASED
+  TIERED_BULK
+  CONTRACT
+  PACKAGE_BUNDLE
+  BED_AND_BOARD
+}
+
+enum UnitDimension {
+  WEIGHT
+  VOLUME
+  LENGTH
+  AREA
+  COUNT
+  TIME
+}
+
+enum ProductType {
+  PRODUCT
+  SERVICE
+  INGREDIENT
+  COMPOSITE
+  MENU_ITEM
+}
+
+enum TxStatus {
+  PENDING
+  ON_HOLD
+  COMPLETED
+  VOIDED
+  REFUNDED
+}
+
+enum TxType {
+  SALE
+  RETURN
+  EXCHANGE
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  MOBILE_MONEY
+  VOUCHER
+  STORE_CREDIT
+  BANK_TRANSFER
+  INSURANCE
+  ACCOUNT_CREDIT
+}
+
+enum MovementType {
+  SALE
+  PURCHASE
+  TRANSFER_IN
+  TRANSFER_OUT
+  ADJUSTMENT
+  RETURN
+  WASTE
+  RECIPE_DEDUCTION
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+enum ModuleKey {
+  POS
+  INVENTORY
+  CRM
+  SCHEDULING
+  REPORTING
+  KITCHEN_DISPLAY
+  LOYALTY
+  ONLINE_BOOKING
+  BARCODE
+  SCALES_INTEGRATION
+  EXPIRY_TRACKING
+  BATCH_TRACKING
+  RX_MANAGEMENT
+  TABLE_MANAGEMENT
+  TAB_MANAGEMENT
+  WORK_ORDERS
+  FOLIO_BILLING
+  B2B_ORDERS
+  CREDIT_ACCOUNTS
+  TIPPING
+  AGE_VERIFICATION
+  HAPPY_HOUR
+  RESERVATIONS
+  PATIENT_RECORDS
+  INSURANCE_CLAIMS
+  TECHNICIAN_DISPATCH
+  HOUSEKEEPING
+  WEBHOOKS
+  TWO_FA
+  AUDIT_LOG
+}
+
+enum TaxMode {
+  STANDARD_VAT
+  GST
+  B2B_ZERO_RATED
+  MIXED_FOOD_NON
+  EXEMPT_REDUCED
+  FAB_SERVICE_RATE
+  FAB_STANDARD
+  ALCOHOL_RATE
+  SERVICE_RATE
+  EXEMPT_HEALTH
+  HOSPITALITY_RATE
+}
+
+enum JobStatus {
+  OPEN
+  IN_PROGRESS
+  AWAITING_PARTS
+  COMPLETED
+  INVOICED
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  CHECKOUT
+  MAINTENANCE
+}
+
+// ─── OWNER ACCOUNT (TIER 2 TENANT) ──────────────────────────────────────────
+
+model OwnerAccount {
+  id               String           @id @default(cuid())
+  legalName        String
+  email            String           @unique
+  phone            String?
+  profilePhoto     String?
+  subscriptionPlan SubscriptionPlan @default(STARTER)
+  billingEmail     String?
+  billingCycle     String?          @default("monthly")
+  stripeCustomerId String?
+  isActive              Boolean          @default(true)
+  subscriptionActive    Boolean          @default(false)
+  subscriptionExpiresAt DateTime?        // null = never expires (paid/enterprise); set for trial & renewals
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  users   User[]
+  shops   Shop[]
+  tickets SupportTicket[]
+
+  @@map("owner_accounts")
+}
+
+// ─── SHOP / BRANCH (TIER 3) ──────────────────────────────────────────────────
+
+model Shop {
+  id              String       @id @default(cuid())
+  ownerAccountId  String
+  ownerAccount    OwnerAccount @relation(fields: [ownerAccountId], references: [id], onDelete: Cascade)
+
+  tradingName     String
+  legalName       String?
+  logoUrl         String?
+  contactEmail    String?
+  phone           String?
+
+  // Tanzania Revenue Authority compliance
+  tin             String?   // Taxpayer Identification Number
+  vrn             String?   // VAT Registration Number (VAT-registered shops only)
+
+  // Location
+  addressLine1    String?
+  addressLine2    String?
+  city            String?
+  region          String?
+  country         String       @default("TZ")
+  timezone        String       @default("Africa/Dar_es_Salaam")
+  currency        String       @default("TZS")
+
+  // Business type drives configuration profile
+  businessType    BusinessType
+  inventoryModel  InventoryModel
+  pricingMode     PricingMode
+  taxMode         TaxMode
+
+  // Branch relationship
+  branchMode      BranchMode   @default(INDEPENDENT)
+  parentShopId    String?
+  parentShop      Shop?        @relation("BranchChildren", fields: [parentShopId], references: [id])
+  childShops      Shop[]       @relation("BranchChildren")
+
+  // Config Health Score 0-100
+  configScore     Int          @default(0)
+  isActive        Boolean      @default(true)
+  wizardCompleted Boolean      @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  shopModules     ShopModule[]
+  unitProfiles    UnitProfile[]
+  users           UserShopAccess[]
+  products        Product[]
+  inventory       InventoryItem[]
+  transactions    Transaction[]
+  customers       Customer[]
+  appointments    Appointment[]
+  purchaseOrders  PurchaseOrder[]
+  stockMovements  StockMovement[]
+  registers       Register[]
+  taxRules        TaxRule[]
+  discountRules   DiscountRule[]
+  loyaltyProgram  LoyaltyProgram?
+  kdsOrders       KdsOrder[]
+  workOrders      WorkOrder[]
+  rooms           Room[]
+  suppliers       Supplier[]
+  auditLogs       AuditLog[]
+  webhooks        Webhook[]
+  recipes         Recipe[]
+
+  @@map("shops")
+}
+
+// ─── SHOP MODULES ─────────────────────────────────────────────────────────────
+
+model ShopModule {
+  id        String    @id @default(cuid())
+  shopId    String
+  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  moduleKey ModuleKey
+  enabled   Boolean   @default(true)
+  required  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@unique([shopId, moduleKey])
+  @@map("shop_modules")
+}
+
+// ─── MEASUREMENT UNIT PROFILES ────────────────────────────────────────────────
+
+model UnitProfile {
+  id           String        @id @default(cuid())
+  shopId       String
+  shop         Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name         String        // e.g. "Kilogram", "Bottle", "Service"
+  abbreviation String        // e.g. "kg", "btl", "svc"
+  dimension    UnitDimension
+  conversionFactor Float     @default(1.0) // relative to base unit of dimension
+  baseUnit     String?       // e.g. "kg" is base; "g" has factor 0.001
+  isDefault    Boolean       @default(false)
+  showInPos    Boolean       @default(true)
+  showOnPO     Boolean       @default(true)
+  isCustom     Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+
+  @@unique([shopId, abbreviation])
+  @@map("unit_profiles")
+}
+
+// ─── USERS & ACCESS ──────────────────────────────────────────────────────────
+
+model User {
+  id             String       @id @default(cuid())
+  ownerAccountId String
+  ownerAccount   OwnerAccount @relation(fields: [ownerAccountId], references: [id], onDelete: Cascade)
+
+  email          String       @unique
+  passwordHash   String
+  fullName       String
+  phone          String?
+  avatarUrl      String?
+  role           UserRole     @default(CASHIER)
+  twoFaSecret    String?
+  twoFaEnabled   Boolean      @default(false)
+  isActive       Boolean      @default(true)
+  lastLoginAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shopAccess     UserShopAccess[]
+  transactions   Transaction[]
+  auditLogs      AuditLog[]
+  appointments   Appointment[]   @relation("StaffAppointments")
+
+  @@map("users")
+}
+
+model UserShopAccess {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopId String
+  shop   Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  role   UserRole
+
+  @@unique([userId, shopId])
+  @@map("user_shop_access")
+}
+
+// ─── PRODUCTS / SERVICES / INGREDIENTS ──────────────────────────────────────
+
+model Product {
+  id          String      @id @default(cuid())
+  shopId      String
+  shop        Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  sku         String?
+  barcode     String?
+  name        String
+  description String?
+  imageUrl    String?
+  type        ProductType @default(PRODUCT)
+  category    String?
+  brand       String?
+
+  unit           String?  // display unit label (ea, kg, L, session…)
+
+  // Unit configuration
+  purchaseUnitId String?
+  storageUnitId  String?
+  sellUnitId     String?
+
+  // Pricing
+  costPrice      Float   @default(0)
+  sellPrice      Float   @default(0)
+  taxRuleId      String?
+  taxRule        TaxRule? @relation(fields: [taxRuleId], references: [id])
+  taxInclusive   Boolean @default(false)
+
+  // Inventory control
+  trackStock     Boolean @default(true)
+  minStockLevel  Float   @default(0)
+  reorderPoint   Float   @default(0)
+  reorderQty     Float   @default(0)
+  supplierId     String?
+  supplier       Supplier? @relation(fields: [supplierId], references: [id])
+
+  // Service/appointment fields
+  durationMinutes Int?
+  requiresStaff   Boolean @default(false)
+
+  // Pharmacy specific
+  requiresRx      Boolean @default(false)
+  isControlled    Boolean @default(false)
+  genericName     String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventory       InventoryItem[]
+  txItems         TransactionItem[]
+  recipeLines     RecipeLine[]      @relation("RecipeIngredient")
+  recipeProducts  RecipeLine[]      @relation("RecipeProduct")
+  stockMovements  StockMovement[]
+  appointmentServices AppointmentService[]
+
+  @@unique([shopId, sku])
+  @@map("products")
+}
+
+// ─── INVENTORY ────────────────────────────────────────────────────────────────
+
+model InventoryItem {
+  id         String   @id @default(cuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Batch / lot tracking
+  batchNo    String?
+  lotNo      String?
+  expiryDate DateTime?
+
+  // Serial (asset) tracking
+  serialNo   String?
+
+  quantity   Float    @default(0)
+  costPrice  Float    @default(0)
+
+  receivedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("inventory_items")
+}
+
+model StockMovement {
+  id          String       @id @default(cuid())
+  shopId      String
+  shop        Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product      @relation(fields: [productId], references: [id])
+  type        MovementType
+  quantity    Float
+  unitCost    Float        @default(0)
+  reference   String?      // tx id, po id, etc.
+  note        String?
+  batchNo     String?
+  createdAt   DateTime     @default(now())
+
+  @@map("stock_movements")
+}
+
+// ─── RECIPES (Bill of Materials) ─────────────────────────────────────────────
+
+model Recipe {
+  id          String       @id @default(cuid())
+  shopId      String
+  shop        Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name        String
+  yieldQty    Float        @default(1)
+  yieldUnitId String?
+  wasteFactor Float        @default(0) // percentage 0-100
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  lines RecipeLine[]
+
+  @@map("recipes")
+}
+
+model RecipeLine {
+  id          String  @id @default(cuid())
+  recipeId    String
+  recipe      Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  productId   String  // ingredient
+  product     Product @relation("RecipeIngredient", fields: [productId], references: [id])
+  outputProductId String? // final menu item
+  outputProduct Product? @relation("RecipeProduct", fields: [outputProductId], references: [id])
+  quantity    Float
+  unitId      String?
+  isSubRecipe Boolean @default(false)
+
+  @@map("recipe_lines")
+}
+
+// ─── SUPPLIERS ────────────────────────────────────────────────────────────────
+
+model Supplier {
+  id        String    @id @default(cuid())
+  shopId    String
+  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  taxNo     String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+// ─── PURCHASE ORDERS ─────────────────────────────────────────────────────────
+
+model PurchaseOrder {
+  id          String              @id @default(cuid())
+  shopId      String
+  shop        Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  supplierId  String?
+  supplier    Supplier?           @relation(fields: [supplierId], references: [id])
+  poNumber    String
+  status      PurchaseOrderStatus @default(DRAFT)
+  totalAmount Float               @default(0)
+  notes       String?
+  orderedAt   DateTime?
+  expectedAt  DateTime?
+  receivedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  lines PurchaseOrderLine[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id               String        @id @default(cuid())
+  purchaseOrderId  String
+  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId        String
+  orderedQty       Float
+  receivedQty      Float         @default(0)
+  unitCost         Float
+  batchNo          String?
+  lotNo            String?
+  expiryDate       DateTime?
+
+  @@map("purchase_order_lines")
+}
+
+// ─── TAX & DISCOUNTS ──────────────────────────────────────────────────────────
+
+model TaxRule {
+  id         String   @id @default(cuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name       String   // "Standard VAT", "Zero-rated food", "Alcohol excise"
+  rate       Float    // percentage e.g. 16.0
+  isDefault  Boolean  @default(false)
+  isExempt   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  products Product[]
+
+  @@map("tax_rules")
+}
+
+model DiscountRule {
+  id              String   @id @default(cuid())
+  shopId          String
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name            String
+  type            String   // "percentage" | "fixed" | "bogo" | "multi-buy"
+  value           Float
+  minQty          Float?
+  maxQty          Float?
+  minAmount       Float?
+  requiresApproval Boolean @default(false)
+  approvalRole    UserRole @default(ACCOUNT_OWNER)
+  validFrom       DateTime?
+  validTo         DateTime?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@map("discount_rules")
+}
+
+// ─── POS REGISTERS ────────────────────────────────────────────────────────────
+
+model Register {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name      String
+  isActive  Boolean  @default(true)
+  openedAt  DateTime?
+  closedAt  DateTime?
+  openingFloat Float @default(0)
+  closingFloat Float @default(0)
+  createdAt DateTime @default(now())
+
+  transactions Transaction[]
+
+  @@map("registers")
+}
+
+// ─── TRANSACTIONS (POS) ──────────────────────────────────────────────────────
+
+model Transaction {
+  id           String        @id @default(cuid())
+  shopId       String
+  shop         Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  registerId   String?
+  register     Register?     @relation(fields: [registerId], references: [id])
+  cashierId    String
+  cashier      User          @relation(fields: [cashierId], references: [id])
+  customerId   String?
+  customer     Customer?     @relation(fields: [customerId], references: [id])
+
+  type         TxType        @default(SALE)
+  status       TxStatus      @default(COMPLETED)
+
+  subtotal     Float
+  discountAmount Float       @default(0)
+  taxAmount    Float         @default(0)
+  total        Float
+  roundingAdj  Float         @default(0)
+
+  // Business-type specific
+  tableNo      String?       // Restaurant
+  coverCount   Int?          // Restaurant
+  rxRef        String?       // Pharmacy
+  jobRef       String?       // Repair
+  roomFolioId  String?       // Hotel
+  tabId        String?       // Bar
+
+  note         String?
+  customerTin  String?       // Buyer TIN for B2B / TRA tax invoice
+  receiptNo    String        @unique
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  items    TransactionItem[]
+  payments TransactionPayment[]
+
+  @@map("transactions")
+}
+
+model TransactionItem {
+  id            String      @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id])
+
+  name          String      // snapshot
+  quantity      Float
+  unitLabel     String      // e.g. "kg", "ml", "ea"
+  unitPrice     Float
+  discountPct   Float       @default(0)
+  taxAmount     Float       @default(0)
+  lineTotal     Float
+
+  // Modifiers (restaurant/cafe)
+  modifiers     Json?       // [{name, value, price}]
+  notes         String?
+
+  @@map("transaction_items")
+}
+
+model TransactionPayment {
+  id            String        @id @default(cuid())
+  transactionId String
+  transaction   Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  method        PaymentMethod
+  amount        Float
+  reference     String?       // card auth code, M-Pesa ref, etc.
+  createdAt     DateTime      @default(now())
+
+  @@map("transaction_payments")
+}
+
+// ─── CRM / CUSTOMERS ─────────────────────────────────────────────────────────
+
+model Customer {
+  id             String   @id @default(cuid())
+  shopId         String
+  shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  fullName       String
+  email          String?
+  phone          String?
+  dateOfBirth    DateTime?
+  gender         String?
+  address        String?
+  tags           String[]
+  notes          String?
+
+  loyaltyPoints  Float    @default(0)
+  totalSpend     Float    @default(0)
+  visitCount     Int      @default(0)
+  lastVisitAt    DateTime?
+
+  isActive       Boolean  @default(true)
+  consentMarketing Boolean @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  transactions   Transaction[]
+  appointments   Appointment[]
+
+  @@map("customers")
+}
+
+// ─── LOYALTY PROGRAM ─────────────────────────────────────────────────────────
+
+model LoyaltyProgram {
+  id              String   @id @default(cuid())
+  shopId          String   @unique
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name            String   @default("Loyalty Program")
+  pointsPerUnit   Float    @default(1)  // points per currency unit spent
+  redeemRate      Float    @default(100) // points needed to redeem 1 currency unit
+  sharedAcrossBranches Boolean @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  tiers LoyaltyTier[]
+
+  @@map("loyalty_programs")
+}
+
+model LoyaltyTier {
+  id             String         @id @default(cuid())
+  programId      String
+  program        LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  name           String         // "Bronze", "Silver", "Gold"
+  minPoints      Float
+  discountPct    Float          @default(0)
+  bonusMultiplier Float         @default(1.0)
+  perks          String[]
+  createdAt      DateTime       @default(now())
+
+  @@map("loyalty_tiers")
+}
+
+// ─── APPOINTMENTS ────────────────────────────────────────────────────────────
+
+model Appointment {
+  id          String            @id @default(cuid())
+  shopId      String
+  shop        Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer?         @relation(fields: [customerId], references: [id])
+  staffId     String?
+  staff       User?             @relation("StaffAppointments", fields: [staffId], references: [id])
+
+  startTime   DateTime
+  endTime     DateTime
+  status      AppointmentStatus @default(SCHEDULED)
+  deposit     Float             @default(0)
+  totalAmount Float             @default(0)
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  services AppointmentService[]
+
+  @@map("appointments")
+}
+
+model AppointmentService {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  productId     String      // service product
+  product       Product     @relation(fields: [productId], references: [id])
+  price         Float
+  durationMin   Int
+
+  @@map("appointment_services")
+}
+
+// ─── KITCHEN DISPLAY SYSTEM ──────────────────────────────────────────────────
+
+model KdsOrder {
+  id            String   @id @default(cuid())
+  shopId        String
+  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  transactionId String?
+  station       String   @default("kitchen")
+  tableNo       String?
+  orderNo       String
+  status        String   @default("PENDING") // PENDING|PREPARING|READY|SERVED
+  items         Json
+  priority      Int      @default(0)
+  sentAt        DateTime @default(now())
+  readyAt       DateTime?
+  servedAt      DateTime?
+
+  @@map("kds_orders")
+}
+
+// ─── BAR TABS ────────────────────────────────────────────────────────────────
+
+model BarTab {
+  id         String   @id @default(cuid())
+  shopId     String
+  name       String   // customer name or table
+  isOpen     Boolean  @default(true)
+  totalAmount Float   @default(0)
+  openedAt   DateTime @default(now())
+  closedAt   DateTime?
+
+  @@map("bar_tabs")
+}
+
+// ─── WORK ORDERS (Repair Workshop) ───────────────────────────────────────────
+
+model WorkOrder {
+  id           String    @id @default(cuid())
+  shopId       String
+  shop         Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  jobNo        String    @unique
+  customerId   String?
+  deviceDesc   String?
+  fault        String?
+  diagnosis    String?
+  status       JobStatus @default(OPEN)
+  technicianId String?
+  labourHours  Float     @default(0)
+  labourRate   Float     @default(0)
+  partsTotal   Float     @default(0)
+  totalAmount  Float     @default(0)
+  serialNo     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  parts WorkOrderPart[]
+
+  @@map("work_orders")
+}
+
+model WorkOrderPart {
+  id          String    @id @default(cuid())
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  productId   String
+  quantity    Float
+  unitCost    Float
+  markup      Float     @default(0)
+
+  @@map("work_order_parts")
+}
+
+// ─── HOTEL ROOMS & FOLIOS ────────────────────────────────────────────────────
+
+model Room {
+  id        String     @id @default(cuid())
+  shopId    String
+  shop      Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  roomNo    String
+  roomType  String
+  floor     Int?
+  status    RoomStatus @default(AVAILABLE)
+  ratePerNight Float
+  createdAt DateTime   @default(now())
+
+  folios RoomFolio[]
+
+  @@unique([shopId, roomNo])
+  @@map("rooms")
+}
+
+model RoomFolio {
+  id          String   @id @default(cuid())
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id])
+  guestName   String
+  guestEmail  String?
+  checkIn     DateTime
+  checkOut    DateTime?
+  nights      Int      @default(1)
+  roomTotal   Float    @default(0)
+  fbTotal     Float    @default(0)
+  grandTotal  Float    @default(0)
+  isPaid      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  charges RoomCharge[]
+
+  @@map("room_folios")
+}
+
+model RoomCharge {
+  id         String    @id @default(cuid())
+  folioId    String
+  folio      RoomFolio @relation(fields: [folioId], references: [id], onDelete: Cascade)
+  description String
+  amount     Float
+  chargeType String    // "room_rate" | "minibar" | "restaurant" | "service"
+  chargedAt  DateTime  @default(now())
+
+  @@map("room_charges")
+}
+
+// ─── WEBHOOKS ────────────────────────────────────────────────────────────────
+
+model Webhook {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  url       String
+  events    String[]
+  secret    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("webhooks")
+}
+
+// ─── AUDIT LOG ────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  shopId     String?
+  shop       Shop?    @relation(fields: [shopId], references: [id])
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entity     String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// ─── SUPPORT TICKETS ─────────────────────────────────────────────────────────
+
+model SupportTicket {
+  id             String       @id @default(cuid())
+  ownerAccountId String
+  ownerAccount   OwnerAccount @relation(fields: [ownerAccountId], references: [id])
+  subject        String
+  message        String
+  status         String       @default("OPEN")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("support_tickets")
+}
