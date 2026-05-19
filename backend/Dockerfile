@@ -30,8 +30,9 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 COPY prisma ./prisma
+COPY seed-prod.js ./
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 4000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/app.js"]
+CMD ["sh", "-c", "echo 'Starting node...' && node dist/app.js && echo 'Node exited 0' || echo 'Node exited non-zero'"]
