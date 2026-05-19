@@ -92,6 +92,15 @@ io.on('connection', (socket) => {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason);
+  process.exit(1);
+});
+
 (async () => {
   await connectDB();
   await connectRedis().catch(() => logger.warn('Redis unavailable — continuing without cache'));
