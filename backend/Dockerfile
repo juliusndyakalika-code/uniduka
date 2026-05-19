@@ -1,6 +1,5 @@
 FROM node:20-slim AS builder
 
-# Prisma needs OpenSSL at generate time
 RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -26,12 +25,13 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-COPY prisma ./prisma
-RUN npx prisma generate
+# Copy the generated Prisma client from builder (avoids npx version mismatch)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
+COPY prisma ./prisma
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 4000
 
-# Run migrations then start the server
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/app.js"]

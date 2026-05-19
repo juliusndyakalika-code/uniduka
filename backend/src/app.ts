@@ -69,6 +69,7 @@ app.use(`${v1}/webhooks`,   webhookRoutes);
 app.use(`${v1}/platform`,   platformRoutes);
 
 // ── Health ────────────────────────────────────────────────────────────────────
+app.get('/', (_, res) => res.json({ status: 'ok', service: 'UniDuka API', version: '4.0.0' }));
 app.get('/health', (_, res) => res.json({ status: 'ok', service: 'UniDuka API', version: '4.0.0' }));
 
 // ── Global error handler ──────────────────────────────────────────────────────
