@@ -1,18 +1,37 @@
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
+
+# Prisma needs OpenSSL at generate time
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
+
 COPY package*.json ./
 RUN npm ci
-COPY . .
+
+COPY prisma ./prisma
 RUN npx prisma generate
+
+COPY tsconfig.json ./
+COPY src ./src
 RUN npm run build
 
-FROM node:20-alpine
+# ── Runtime image ────────────────────────────────────────────────────────────
+FROM node:20-slim
+
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 ENV NODE_ENV=production
+
 COPY package*.json ./
 RUN npm ci --omit=dev
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
 COPY prisma ./prisma
+RUN npx prisma generate
+
+COPY --from=builder /app/dist ./dist
+
 EXPOSE 4000
-CMD ["node", "dist/app.js"]
+
+# Run migrations then start the server
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/app.js"]
