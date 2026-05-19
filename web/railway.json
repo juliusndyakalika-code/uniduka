@@ -5,7 +5,7 @@
     "buildCommand": "npm ci && npm run build"
   },
   "deploy": {
-    "startCommand": "npx serve -s dist -l $PORT",
+    "startCommand": "node -e \"const {execSync}=require('child_process');execSync('npx serve -s dist -l '+process.env.PORT,{stdio:'inherit',shell:true})\"",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
