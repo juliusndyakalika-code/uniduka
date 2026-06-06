@@ -38,4 +38,4 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 4000
 
-CMD ["node", "dist/app.js"]
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy 2>&1 && echo '[MIGRATE OK]' && node dist/app.js 2>&1; echo \"[EXIT $?]\""]
