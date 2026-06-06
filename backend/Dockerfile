@@ -33,11 +33,10 @@ COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
 COPY prisma ./prisma
 COPY seed-prod.js ./
-COPY start.js ./
 COPY run.sh ./
 COPY public ./public
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 4000
 
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy 2>&1 && echo '[MIGRATE OK]' && node dist/app.js 2>&1; echo \"[EXIT $?]\""]
+CMD ["sh", "run.sh"]

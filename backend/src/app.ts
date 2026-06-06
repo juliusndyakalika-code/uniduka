@@ -106,13 +106,9 @@ process.on('unhandledRejection', (reason) => {
 });
 
 (async () => {
-  console.log('[BOOT] node started, PORT=' + PORT + ' NODE_ENV=' + process.env.NODE_ENV);
-  console.log('[BOOT] connecting to DB...');
   await connectDB();
-  console.log('[BOOT] DB connected, connecting to Redis...');
   await connectRedis().catch(() => logger.warn('Redis unavailable — continuing without cache'));
-  console.log('[BOOT] starting HTTP listener...');
-  http.listen(PORT, () => console.log('[BOOT] listening on :' + PORT));
+  http.listen(PORT, () => logger.info(`UniDuka API listening on :${PORT}`));
 })();
 
 export default app;
