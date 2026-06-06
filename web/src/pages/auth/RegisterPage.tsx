@@ -51,12 +51,12 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
               <label className="label">Your Full Name</label>
-              <input {...register('fullName', { required: true })} className="input" placeholder="Jane Wanjiku" />
+              <input {...register('fullName', { required: true })} className="input" placeholder="Amina Hassan" />
               {errors.fullName && <p className="mt-1 text-xs text-red-600">Required</p>}
             </div>
             <div>
               <label className="label">Business / Company Name</label>
-              <input {...register('legalName', { required: true })} className="input" placeholder="Wanjiku Enterprises Ltd" />
+              <input {...register('legalName', { required: true })} className="input" placeholder="Mwangaza Enterprises Ltd" />
               {errors.legalName && <p className="mt-1 text-xs text-red-600">Required</p>}
             </div>
             <div>
@@ -66,7 +66,7 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className="label">Phone (optional)</label>
-              <input {...register('phone')} type="tel" className="input" placeholder="+254 7XX XXX XXX" />
+              <input {...register('phone')} type="tel" className="input" placeholder="+255 7XX XXX XXX" />
             </div>
             <div>
               <label className="label">Password</label>

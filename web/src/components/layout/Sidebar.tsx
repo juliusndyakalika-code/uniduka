@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Calendar,
-  BarChart2, Settings, LogOut, Store, ChevronDown, Plus,
+  BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
-  Hotel, ShoppingBag, Building2, X, Check, Loader2,
+  Hotel, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
@@ -32,6 +32,29 @@ function NavItem({ to, icon, label, end }: NavItemProps) {
       {icon}
       <span>{label}</span>
     </NavLink>
+  );
+}
+
+function NavGroup({ icon, label, prefix, children }: {
+  icon: React.ReactNode; label: string; prefix: string; children: React.ReactNode;
+}) {
+  const isGroupActive = window.location.pathname.startsWith(prefix);
+  const [open, setOpen] = useState(isGroupActive);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className={`nav-item w-full justify-between ${isGroupActive ? 'text-stone-900 font-semibold' : ''}`}
+      >
+        <span className="flex items-center gap-2">{icon}<span>{label}</span></span>
+        <ChevronDown size={13} className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="ml-4 mt-0.5 border-l border-stone-200 pl-2 space-y-0.5">
+          {children}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -201,11 +224,17 @@ export default function Sidebar({ open, onClose }: Props) {
           {isOwner && (
             <>
               <NavItem to="/pos"                icon={<ShoppingCart size={16} />} label="Point of Sale" />
+              <NavItem to="/pos/debts"         icon={<Clock size={16} />}        label="Debts" />
+              <NavItem to="/pos/voids"         icon={<Trash2 size={16} />}       label="Voided Sales" />
               <NavItem to="/inventory"          icon={<BarChart2 size={16} />}     label="Stock Overview" end />
               <NavItem to="/inventory/products" icon={<Package size={16} />}      label="Products" />
               <NavItem to="/customers"          icon={<Users size={16} />}        label="Customers" />
               <NavItem to="/appointments"       icon={<Calendar size={16} />}     label="Appointments" />
-              <NavItem to="/reports/sales"      icon={<BarChart2 size={16} />}    label="Reports" />
+              <NavGroup icon={<TrendingUp size={16} />} label="Reports" prefix="/reports">
+                <NavItem to="/reports/sales"     icon={<TrendingUp size={14} />} label="Sales" />
+                <NavItem to="/reports/staff"     icon={<Users size={14} />}      label="By Seller" />
+                <NavItem to="/reports/inventory" icon={<Package size={14} />}    label="Stock" />
+              </NavGroup>
 
               <div className="pt-3 pb-1">
                 <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400">Management</p>

@@ -10,7 +10,7 @@ interface Customer {
   totalSpend: number; visitCount: number; loyaltyPoints: number;
   createdAt: string;
 }
-interface Form { name: string; phone?: string; email?: string; notes?: string; }
+interface Form { fullName: string; phone?: string; email?: string; notes?: string; }
 
 function fmt(n: number) {
   return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
@@ -25,26 +25,26 @@ export default function CustomersPage() {
 
   const { register, handleSubmit, reset } = useForm<Form>();
 
-  const { data, isLoading } = useQuery<{ items: Customer[]; total: number }>({
+  const { data: customers = [], isLoading } = useQuery<Customer[]>({
     queryKey: ['customers', shopId, search],
-    queryFn: () => api.get('/crm/customers', { params: { search } }).then(r => r.data.data),
+    queryFn: () =>
+      api.get('/crm', { params: { search } })
+         .then(r => (Array.isArray(r.data.data) ? r.data.data : []) as Customer[]),
     enabled: !!shopId,
   });
 
   const { mutate: save, isPending } = useMutation({
-    mutationFn: (d: Form) => api.post('/crm/customers', d),
+    mutationFn: (d: Form) => api.post('/crm', d),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['customers'] }); setShowForm(false); reset(); },
     onError: (e: unknown) => setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
-
-  const customers = data?.items ?? [];
 
   return (
     <div className="space-y-4">
       <div className="page-header">
         <div>
           <h1 className="page-title">Customers</h1>
-          <p className="page-subtitle">{data?.total ?? 0} customers</p>
+          <p className="page-subtitle">{customers.length} customers</p>
         </div>
         <button className="btn-primary" onClick={() => { setError(''); setShowForm(true); }}>
           <Plus size={14} className="mr-1.5" /> Add Customer
@@ -120,15 +120,15 @@ export default function CustomersPage() {
             <form onSubmit={handleSubmit(d => save(d))} className="space-y-4">
               <div>
                 <label className="label">Full Name</label>
-                <input {...register('name', { required: true })} className="input" placeholder="Jane Wanjiku" />
+                <input {...register('fullName', { required: true })} className="input" placeholder="Amina Hassan" />
               </div>
               <div>
                 <label className="label">Phone</label>
-                <input {...register('phone')} type="tel" className="input" placeholder="+254 7XX XXX XXX" />
+                <input {...register('phone')} type="tel" className="input" placeholder="+255 7XX XXX XXX" />
               </div>
               <div>
                 <label className="label">Email</label>
-                <input {...register('email')} type="email" className="input" placeholder="jane@email.com" />
+                <input {...register('email')} type="email" className="input" placeholder="amina@email.com" />
               </div>
               <div>
                 <label className="label">Notes</label>

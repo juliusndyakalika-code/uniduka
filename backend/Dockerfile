@@ -31,6 +31,7 @@ COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/clie
 
 COPY prisma ./prisma
 COPY seed-prod.js ./
+COPY public ./public
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 4000

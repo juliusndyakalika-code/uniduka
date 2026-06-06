@@ -34,6 +34,8 @@ import AppointmentsPage from './pages/appointments/AppointmentsPage';
 import SalesReportPage from './pages/reports/SalesReportPage';
 import InventoryReportPage from './pages/reports/InventoryReportPage';
 import StaffReportPage from './pages/reports/StaffReportPage';
+import DebtsPage from './pages/pos/DebtsPage';
+import VoidsPage from './pages/pos/VoidsPage';
 
 import KdsPage from './pages/kds/KdsPage';
 
@@ -92,6 +94,8 @@ export default function App() {
             <Route path="/reports/sales" element={<SalesReportPage />} />
             <Route path="/reports/inventory" element={<InventoryReportPage />} />
             <Route path="/reports/staff" element={<StaffReportPage />} />
+            <Route path="/pos/debts" element={<DebtsPage />} />
+            <Route path="/pos/voids" element={<VoidsPage />} />
 
             <Route path="/kds" element={<KdsPage />} />
 

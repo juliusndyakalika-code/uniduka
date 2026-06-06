@@ -79,12 +79,13 @@ export async function createShop(req: AuthRequest, res: Response) {
 }
 
 export async function updateShop(req: AuthRequest, res: Response) {
-  const { tradingName, legalName, phone, contactEmail, logoUrl, addressLine1, city, region, currency, timezone, isActive, tin, vrn } = req.body;
+  const { tradingName, legalName, phone, contactEmail, logoUrl, addressLine1, city, region, currency, timezone, isActive, tin, vrn, mobileMoneyProviders } = req.body;
   const shop = await prisma.shop.updateMany({
     where: { id: req.params.id, ownerAccountId: req.user!.accountId },
     data: {
       tradingName, legalName, phone, contactEmail, logoUrl, addressLine1, city, region, currency, timezone, tin, vrn,
       ...(isActive !== undefined && { isActive }),
+      ...(mobileMoneyProviders !== undefined && { mobileMoneyProviders }),
     },
   });
   if (!shop.count) return R.notFound(res, 'Shop not found');

@@ -37,6 +37,7 @@ export default function UsersPage() {
   const [inviteError, setInviteError]       = useState('');
   const [editError, setEditError]           = useState('');
   const [deleteError, setDeleteError]       = useState('');
+  const [deleteNotice, setDeleteNotice]     = useState('');
   const [reassignError, setReassignError]   = useState('');
 
   const inviteForm = useForm<InviteForm>({
@@ -81,9 +82,11 @@ export default function UsersPage() {
 
   const { mutate: destroy, isPending: deleting } = useMutation({
     mutationFn: (id: string) => api.delete(`/users/${id}`),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['users'] });
       setDeleteUser(null); setConfirmName(''); setDeleteError('');
+      const msg = (res as { data?: { data?: { message?: string } } })?.data?.data?.message;
+      if (msg) setDeleteNotice(msg);
     },
     onError: (e: unknown) => setDeleteError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
@@ -137,6 +140,14 @@ export default function UsersPage() {
           </button>
         )}
       </div>
+
+      {deleteNotice && (
+        <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+          <AlertTriangle size={15} className="text-amber-500 mt-0.5 shrink-0" />
+          <span className="flex-1">{deleteNotice}</span>
+          <button onClick={() => setDeleteNotice('')} className="text-amber-400 hover:text-amber-700"><X size={14} /></button>
+        </div>
+      )}
 
       <div className="card">
         {isLoading ? (

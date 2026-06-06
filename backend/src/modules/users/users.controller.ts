@@ -71,7 +71,17 @@ export async function deleteUser(req: AuthRequest, res: Response) {
   });
   if (!target) return R.notFound(res, 'User not found');
   if (target.role === 'ACCOUNT_OWNER') return R.forbidden(res, 'Cannot delete an account owner');
-  await prisma.user.delete({ where: { id: req.params.id } });
+  try {
+    await prisma.user.delete({ where: { id: req.params.id } });
+  } catch (e: unknown) {
+    const code = (e as { code?: string })?.code;
+    if (code === 'P2003') {
+      // User has transactions — deactivate instead of deleting
+      await prisma.user.update({ where: { id: req.params.id }, data: { isActive: false } });
+      return R.ok(res, { message: 'User deactivated (has transaction history — cannot be fully deleted)' });
+    }
+    throw e;
+  }
   return R.noContent(res);
 }
 

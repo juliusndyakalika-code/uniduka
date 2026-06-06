@@ -104,7 +104,7 @@ export default function BranchesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">City</label>
-                  <input {...register('city')} className="input" placeholder="Nairobi" />
+                  <input {...register('city')} className="input" placeholder="Dar es Salaam" />
                 </div>
                 <div>
                   <label className="label">Country</label>

@@ -36,7 +36,7 @@ const FEATURES = [
   {
     icon: ShoppingCart,
     title: 'Point of Sale',
-    desc: 'Fast, intuitive POS built for every business type. Accept cash, M-Pesa, or card. Print TRA-compliant receipts instantly.',
+    desc: 'Fast, intuitive POS built for every business type. Accept cash, M-Pesa, or card. Print receipts instantly.',
     color: 'bg-primary-50 text-primary-700',
   },
   {
@@ -59,8 +59,8 @@ const FEATURES = [
   },
   {
     icon: Receipt,
-    title: 'TRA Compliance',
-    desc: 'Every receipt includes your TIN, VRN, tax category codes, fraud hotline, and date/time in TRA-mandated format.',
+    title: 'Auto Receipts',
+    desc: 'Every sale auto-generates a receipt with your shop name, TIN, VRN, itemised totals, and payment details. No extra setup.',
     color: 'bg-blue-50 text-blue-700',
   },
   {
@@ -90,7 +90,7 @@ const PLANS = [
     period: '30-day trial',
     description: 'Perfect for new businesses getting started.',
     highlight: false,
-    features: ['1 shop', '1 user', 'POS & inventory', 'TRA receipts', 'Basic reports', 'Email support'],
+    features: ['1 shop', '1 user', 'POS & inventory', 'Auto receipts', 'Basic reports', 'Email support'],
   },
   {
     name: 'Growth',
@@ -120,7 +120,7 @@ const PLANS = [
 
 const STATS = [
   { value: '11', label: 'Business types supported' },
-  { value: '100%', label: 'TRA compliant receipts' },
+  { value: '100%', label: 'Auto-generated receipts' },
   { value: '30s', label: 'Average checkout time' },
   { value: '24/7', label: 'Uptime monitoring' },
 ];
@@ -139,7 +139,7 @@ const HOW_IT_WORKS = [
   {
     step: '03',
     title: 'Start selling',
-    desc: 'Open the POS and begin. Every sale updates stock in real time, feeds into your reports, and prints a TRA-compliant receipt automatically.',
+    desc: 'Open the POS and begin. Every sale updates stock in real time, feeds into your reports, and prints a receipt automatically.',
   },
 ];
 
@@ -262,7 +262,7 @@ export default function LandingPage() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-8">
-            {['Features', 'Who It\'s For', 'Pricing'].map(item => (
+            {['Features', 'Who It\'s For', 'Pricing', 'Android App'].map(item => (
               <a key={item} href={`#${item.toLowerCase().replace(/[^a-z]/g, '-')}`}
                 className="text-sm text-stone-600 hover:text-stone-900 transition-colors">
                 {item}
@@ -290,7 +290,7 @@ export default function LandingPage() {
         {/* Mobile menu */}
         {mobileOpen && (
           <div className="md:hidden bg-white border-t border-stone-200 px-4 py-5 space-y-4">
-            {['Features', 'Who It\'s For', 'Pricing'].map(item => (
+            {['Features', 'Who It\'s For', 'Pricing', 'Android App'].map(item => (
               <a key={item} href={`#${item.toLowerCase().replace(/[^a-z]/g, '-')}`}
                 onClick={() => setMobileOpen(false)}
                 className="block text-sm font-medium text-stone-700 py-1">
@@ -467,27 +467,26 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── TRA Compliance highlight ────────────────────────────────────── */}
+      {/* ── Receipt highlight ────────────────────────────────────────── */}
       <section className="py-20 bg-gradient-to-r from-primary-600 to-primary-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-semibold mb-6 border border-white/20">
-                <Shield size={12} /> Tanzania Revenue Authority
+                <Printer size={12} /> Automatic Receipts
               </div>
-              <h2 className="text-3xl font-bold mb-4">100% TRA compliant receipts, automatically.</h2>
+              <h2 className="text-3xl font-bold mb-4">Receipts generated automatically on every sale.</h2>
               <p className="text-white/80 leading-relaxed mb-6">
-                Every receipt printed through UniDuka includes your TIN, VRN (if VAT registered),
-                tax category codes (A/C/E), date and time in TRA format, and the official fraud hotline.
-                No extra setup. No compliance risk.
+                Every sale through UniDuka auto-generates a receipt with your shop details, TIN, VRN,
+                itemised products, tax breakdown, and payment summary. Print or share instantly — no extra setup.
               </p>
               <ul className="space-y-3">
                 {[
-                  'TIN & VRN printed on every receipt',
+                  'Shop name, address & phone on every receipt',
+                  'TIN & VRN printed when configured',
                   'Tax codes: A (18% VAT) · C (Zero-rated) · E (Exempt)',
-                  'Customer TIN field for B2B tax invoices',
-                  'TRA fraud hotline: 0800 780 078 on every receipt',
-                  'Date/time in DD/MM/YYYY HH:MM:SS format',
+                  'Customer TIN field for B2B invoices',
+                  'Date, time & unique receipt number on every sale',
                 ].map(item => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-white/90">
                     <Check size={15} className="text-emerald-300 mt-0.5 flex-shrink-0" />
@@ -528,9 +527,8 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="p-3 bg-stone-50 border-t border-stone-200 text-center text-[8px] text-stone-500 space-y-0.5">
-                  <p className="font-bold text-stone-700">THIS IS A VALID TAX RECEIPT</p>
-                  <p>DEMAND RECEIPT FOR EVERY PURCHASE</p>
-                  <p className="font-bold">Fraud Hotline: 0800 780 078</p>
+                  <p className="font-bold text-stone-700">ASANTE KWA KUNUNUA!</p>
+                  <p>Powered by UniDuka</p>
                 </div>
               </div>
             </div>
@@ -546,7 +544,7 @@ export default function LandingPage() {
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">Plans for every stage of growth</h2>
             <p className="text-stone-500 max-w-lg mx-auto">
               Start free. Upgrade as you grow. No setup fees, no hidden charges.
-              All plans include TRA-compliant receipts.
+              All plans include automatic receipts.
             </p>
           </div>
 
@@ -599,6 +597,94 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Android App ────────────────────────────────────────────────── */}
+      <section id="android-app" className="py-24 bg-stone-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-semibold mb-6 border border-white/20">
+                <Smartphone size={12} /> Android App
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+                Take UniDuka with you.<br />Native Android app.
+              </h2>
+              <p className="text-white/70 leading-relaxed mb-8">
+                Full-featured POS, inventory management, and sales dashboard in your pocket.
+                Works on any Android phone or tablet — no Play Store required.
+              </p>
+              <ul className="space-y-3 mb-10">
+                {[
+                  'Full POS — scan, sell, print receipts',
+                  'Real-time stock & inventory updates',
+                  'Sales dashboard & reports',
+                  'Works on Android 7.0 and above',
+                  'No Play Store — direct APK install',
+                ].map(item => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-white/80">
+                    <Check size={15} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex flex-wrap gap-4 items-center">
+                <a
+                  href="https://api-production-00d0.up.railway.app/uniduka.apk"
+                  download="UniDuka.apk"
+                  className="inline-flex items-center gap-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold px-8 py-4 rounded-lg transition-colors shadow-lg text-base"
+                >
+                  <Smartphone size={20} />
+                  Download APK
+                </a>
+                <p className="text-white/40 text-xs">v1.0 · ~18 MB · Android 7.0+</p>
+              </div>
+              <p className="mt-4 text-xs text-white/40">
+                Enable "Install from unknown sources" in Android settings to install.
+              </p>
+            </div>
+
+            {/* Phone mockup */}
+            <div className="mt-12 lg:mt-0 flex justify-center">
+              <div className="relative">
+                <div className="w-52 h-96 bg-stone-800 rounded-3xl border-2 border-stone-700 shadow-2xl flex flex-col overflow-hidden">
+                  <div className="bg-stone-700 h-6 flex items-center justify-center">
+                    <div className="w-16 h-1.5 bg-stone-600 rounded-full" />
+                  </div>
+                  <div className="flex-1 bg-stone-900 p-3 space-y-2">
+                    <div className="bg-stone-800 rounded-lg p-3">
+                      <p className="text-white/40 text-[9px] uppercase tracking-widest">Today's Sales</p>
+                      <p className="text-white font-bold text-xl mt-0.5">TZS 247,500</p>
+                      <p className="text-emerald-400 text-[10px] mt-0.5">↑ 12% from yesterday</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-stone-800 rounded-lg p-2.5">
+                        <p className="text-white/40 text-[8px]">Transactions</p>
+                        <p className="text-white font-bold text-sm">34</p>
+                      </div>
+                      <div className="bg-stone-800 rounded-lg p-2.5">
+                        <p className="text-white/40 text-[8px]">Items Sold</p>
+                        <p className="text-white font-bold text-sm">128</p>
+                      </div>
+                    </div>
+                    <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-lg p-2.5 text-center">
+                      <p className="text-emerald-400 font-bold text-xs">New Sale</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      {['Amoxicillin 500mg', 'Paracetamol 1g', 'ORS Sachets'].map(p => (
+                        <div key={p} className="bg-stone-800 rounded p-2 flex justify-between items-center">
+                          <p className="text-white/70 text-[9px]">{p}</p>
+                          <p className="text-white text-[9px] font-bold">× 1</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-20 h-1.5 bg-stone-700 rounded-full" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Final CTA ──────────────────────────────────────────────────── */}
       <section className="py-24 bg-stone-50 border-t border-stone-200">
         <div className="max-w-3xl mx-auto px-4 text-center">
@@ -624,7 +710,7 @@ export default function LandingPage() {
             </Link>
           </div>
           <div className="flex flex-wrap justify-center gap-6 mt-8 text-xs text-stone-400">
-            {['30-day free trial', 'No credit card', 'Cancel anytime', 'TRA compliant'].map(t => (
+            {['30-day free trial', 'No credit card', 'Cancel anytime', 'Auto receipts'].map(t => (
               <span key={t} className="flex items-center gap-1.5">
                 <Check size={11} className="text-emerald-500" /> {t}
               </span>
@@ -658,8 +744,12 @@ export default function LandingPage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-stone-300 mb-4">Product</p>
               <ul className="space-y-2.5">
-                {['Features', 'Pricing', 'Android App', 'TRA Compliance'].map(l => (
-                  <li key={l}><a href="#" className="text-sm hover:text-white transition-colors">{l}</a></li>
+                {[
+                  { label: 'Features', href: '#features' },
+                  { label: 'Pricing', href: '#pricing' },
+                  { label: 'Android App', href: '#android-app' },
+                ].map(({ label, href }) => (
+                  <li key={label}><a href={href} className="text-sm hover:text-white transition-colors">{label}</a></li>
                 ))}
               </ul>
             </div>
@@ -690,7 +780,7 @@ export default function LandingPage() {
           <div className="border-t border-stone-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-stone-600">© 2026 UniDuka. All rights reserved.</p>
             <p className="text-xs text-stone-600 flex items-center gap-1.5">
-              <Printer size={11} /> TRA Compliant &middot; Built in Tanzania
+              <Printer size={11} /> Made in Tanzania
             </p>
           </div>
         </div>

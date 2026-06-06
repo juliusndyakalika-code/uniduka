@@ -105,6 +105,7 @@ enum PaymentMethod {
   BANK_TRANSFER
   INSURANCE
   ACCOUNT_CREDIT
+  DEBIT
 }
 
 enum MovementType {
@@ -247,6 +248,7 @@ model Shop {
   country         String       @default("TZ")
   timezone        String       @default("Africa/Dar_es_Salaam")
   currency        String       @default("TZS")
+  mobileMoneyProviders Json    @default("[\"M-Pesa\",\"Airtel Money\",\"Tigo Pesa\",\"Halopesa\"]")
 
   // Business type drives configuration profile
   businessType    BusinessType
@@ -655,6 +657,7 @@ model Transaction {
   tabId        String?       // Bar
 
   note         String?
+  customerName String?       // Free-text name when no customerId (typed at POS)
   customerTin  String?       // Buyer TIN for B2B / TRA tax invoice
   receiptNo    String        @unique
   createdAt    DateTime      @default(now())
@@ -692,9 +695,10 @@ model TransactionPayment {
   id            String        @id @default(cuid())
   transactionId String
   transaction   Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  method        PaymentMethod
-  amount        Float
-  reference     String?       // card auth code, M-Pesa ref, etc.
+  method           PaymentMethod
+  amount           Float
+  reference        String?       // card auth code, M-Pesa ref, transaction ID
+  providerName     String?       // e.g. "M-Pesa", "Airtel Money", "Tigo Pesa"
   createdAt     DateTime      @default(now())
 
   @@map("transaction_payments")

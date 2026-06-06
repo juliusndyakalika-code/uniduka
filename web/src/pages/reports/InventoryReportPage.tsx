@@ -1,7 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Package, TrendingDown } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { AlertTriangle, Package, TrendingDown, TrendingUp, Users, Download } from 'lucide-react';
+import { downloadCsv } from '../../utils/exportCsv';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+
+const REPORT_TABS = [
+  { to: '/reports/sales',     label: 'Sales',     icon: TrendingUp },
+  { to: '/reports/staff',     label: 'By Seller',  icon: Users },
+  { to: '/reports/inventory', label: 'Stock',      icon: Package },
+];
 
 interface InventoryReport {
   summary: { totalProducts: number; totalValue: number; lowStockCount: number; outOfStockCount: number };
@@ -16,8 +24,9 @@ function fmt(n: number) {
 
 export default function InventoryReportPage() {
   const { shopId } = useAuthStore();
+  const location = useLocation();
 
-  const { data, isLoading } = useQuery<InventoryReport>({
+  const { data, isLoading, isError } = useQuery<InventoryReport>({
     queryKey: ['inventory-report', shopId],
     queryFn: () => api.get('/reporting/inventory').then(r => r.data.data),
     enabled: !!shopId,
@@ -26,11 +35,57 @@ export default function InventoryReportPage() {
   return (
     <div className="space-y-6">
       <div className="page-header">
-        <h1 className="page-title">Inventory Report</h1>
+        <h1 className="page-title">Reports</h1>
+        <div className="flex gap-2">
+          <button
+            className="btn-secondary text-xs"
+            disabled={!data}
+            onClick={() => {
+              if (!data) return;
+              const today = new Date().toISOString().split('T')[0];
+              downloadCsv(
+                `stock-valuation-${today}.csv`,
+                (data.valuation ?? []).map(p => [p.name, p.stock, p.costPrice, p.value]),
+                ['Product', 'Stock Qty', 'Cost Price (TZS)', 'Stock Value (TZS)']
+              );
+            }}
+          >
+            <Download size={13} className="mr-1" /> Valuation CSV
+          </button>
+          <button
+            className="btn-secondary text-xs"
+            disabled={!data || !(data.lowStock?.length)}
+            onClick={() => {
+              if (!data) return;
+              const today = new Date().toISOString().split('T')[0];
+              downloadCsv(
+                `low-stock-${today}.csv`,
+                (data.lowStock ?? []).map(p => [p.name, p.sku, p.stock, p.reorderPoint, p.unit]),
+                ['Product', 'SKU', 'Current Stock', 'Reorder Point', 'Unit']
+              );
+            }}
+          >
+            <Download size={13} className="mr-1" /> Low Stock CSV
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1 w-fit">
+        {REPORT_TABS.map(({ to, label, icon: Icon }) => (
+          <Link key={to} to={to}
+            className={`flex items-center gap-1.5 px-4 py-1.5 text-xs rounded-md transition-colors font-medium ${
+              location.pathname === to ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            <Icon size={13} />{label}
+          </Link>
+        ))}
       </div>
 
       {isLoading ? (
         <div className="card p-8 text-center text-stone-400">Loading…</div>
+      ) : isError ? (
+        <div className="card p-8 text-center text-red-500 text-sm">Failed to load inventory report</div>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

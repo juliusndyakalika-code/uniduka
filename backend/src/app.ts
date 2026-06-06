@@ -36,6 +36,10 @@ export const io = new SocketServer(http, {
   cors: { origin: process.env.CORS_ORIGIN || '*' },
 });
 
+// ── Static files & APK download ──────────────────────────────────────────────
+app.use(express.static('public'));
+app.get('/uniduka.apk', (_req, res) => res.redirect('https://web-production-a0a00.up.railway.app/uniduka.apk'));
+
 // ── Security ──────────────────────────────────────────────────────────────────
 app.set('trust proxy', 1);
 app.use(helmet());

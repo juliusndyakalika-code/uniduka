@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { Store, MapPin, Layers, Receipt, Package, Check, Plus, Trash2, ShieldCheck } from 'lucide-react';
+import { Store, MapPin, Layers, Receipt, Package, Check, Plus, Trash2, ShieldCheck, Smartphone, X } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -10,6 +10,7 @@ interface ShopConfig {
   addressLine1?: string; city?: string; country?: string; currency: string; timezone: string;
   businessType: string; inventoryModel: string; pricingMode: string; taxMode: string;
   tin?: string; vrn?: string;
+  mobileMoneyProviders?: string[];
   wizardCompleted: boolean; configScore?: number;
   shopModules: { moduleKey: string; enabled: boolean; required: boolean }[];
   unitProfiles: { id: string; name: string; abbreviation: string; dimension: string }[];
@@ -31,9 +32,12 @@ const TIMEZONES  = [
 export default function ShopSettingsPage() {
   const { shopId } = useAuthStore();
   const qc = useQueryClient();
-  const [saved, setSaved]   = useState(false);
-  const [error, setError]   = useState('');
-  const [taxForm, setTaxForm] = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const [error, setError]       = useState('');
+  const [taxForm, setTaxForm]   = useState(false);
+  const [mmProviders, setMmProviders] = useState<string[]>([]);
+  const [mmNew, setMmNew]       = useState('');
+  const [mmSaving, setMmSaving] = useState(false);
 
   const { register: reg, handleSubmit, reset } = useForm<ShopForm>();
   const { register: regTax, handleSubmit: handleTax, reset: resetTax } = useForm<TaxForm>({
@@ -56,6 +60,7 @@ export default function ShopSettingsPage() {
         country: config.country ?? 'TZ', currency: config.currency, timezone: config.timezone,
       });
       resetTra({ tin: config.tin ?? '', vrn: config.vrn ?? '' });
+      setMmProviders(config.mobileMoneyProviders ?? ['M-Pesa', 'Airtel Money', 'Tigo Pesa', 'Halopesa']);
     }
   }, [config, reset, resetTra]);
 
@@ -137,7 +142,7 @@ export default function ShopSettingsPage() {
             </div>
             <div className="col-span-2">
               <label className="label">Address</label>
-              <input {...reg('addressLine1')} className="input" placeholder="Street address" />
+              <input {...reg('addressLine1')} className="input" placeholder="e.g. Samora Avenue, Kariakoo" />
             </div>
           </div>
           <button type="submit" disabled={isPending} className="btn-primary">
@@ -150,7 +155,7 @@ export default function ShopSettingsPage() {
       <div className="card p-6">
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck size={16} className="text-primary-600" />
-          <h3 className="text-sm font-bold text-stone-900">TRA Compliance</h3>
+          <h3 className="text-sm font-bold text-stone-900">Tax Compliance</h3>
         </div>
         <p className="text-xs text-stone-400 mb-5">
           Your TIN is printed on every receipt. VRN is required only for VAT-registered businesses.
@@ -159,7 +164,7 @@ export default function ShopSettingsPage() {
         {!config.tin && (
           <div className="mb-4 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-start gap-2">
             <span className="font-bold mt-0.5">⚠</span>
-            <span>TIN is missing — receipts will show a warning. Enter your TIN from TRA to comply.</span>
+            <span>TIN is missing — enter your TIN to include it on receipts.</span>
           </div>
         )}
 
@@ -190,11 +195,75 @@ export default function ShopSettingsPage() {
           </div>
           <div className="flex items-center gap-3">
             <button type="submit" disabled={savingTra} className="btn-primary">
-              {savingTra ? 'Saving…' : 'Save TRA Details'}
+              {savingTra ? 'Saving…' : 'Save Tax Details'}
             </button>
             {saved && <span className="text-xs text-emerald-600 font-medium">Saved ✓</span>}
           </div>
         </form>
+      </div>
+
+      {/* Mobile Money Providers */}
+      <div className="card p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Smartphone size={16} className="text-primary-600" />
+          <h3 className="text-sm font-bold text-stone-900">Mobile Money Providers</h3>
+        </div>
+        <p className="text-xs text-stone-400 mb-5">
+          These appear as payment options at the POS. Add the providers your shop accepts.
+        </p>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {mmProviders.map(p => (
+            <div key={p} className="flex items-center gap-1.5 bg-stone-100 border border-stone-200 rounded-full px-3 py-1.5">
+              <span className="text-xs font-medium text-stone-700">{p}</span>
+              <button onClick={() => setMmProviders(prev => prev.filter(x => x !== p))}
+                className="text-stone-400 hover:text-red-500 transition-colors">
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+          {mmProviders.length === 0 && (
+            <p className="text-xs text-stone-400">No providers added yet</p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <input
+            className="input flex-1 text-xs"
+            placeholder="e.g. M-Pesa, Airtel Money, Tigo Pesa…"
+            value={mmNew}
+            onChange={e => setMmNew(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && mmNew.trim()) {
+                e.preventDefault();
+                if (!mmProviders.includes(mmNew.trim())) setMmProviders(prev => [...prev, mmNew.trim()]);
+                setMmNew('');
+              }
+            }}
+          />
+          <button
+            className="btn-secondary text-xs px-3"
+            onClick={() => {
+              if (mmNew.trim() && !mmProviders.includes(mmNew.trim())) {
+                setMmProviders(prev => [...prev, mmNew.trim()]);
+              }
+              setMmNew('');
+            }}
+          >
+            <Plus size={13} className="mr-1" /> Add
+          </button>
+          <button
+            className="btn-primary text-xs px-3"
+            disabled={mmSaving}
+            onClick={async () => {
+              setMmSaving(true);
+              await api.put(`/shops/${shopId}`, { mobileMoneyProviders: mmProviders });
+              qc.invalidateQueries({ queryKey: ['shop-config', shopId] });
+              qc.invalidateQueries({ queryKey: ['shop-detail'] });
+              setMmSaving(false);
+            }}
+          >
+            {mmSaving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </div>
 
       {/* Location */}

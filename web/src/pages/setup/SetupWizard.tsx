@@ -189,7 +189,7 @@ export default function SetupWizard() {
                 </div>
                 <div>
                   <label className="label">Physical Address</label>
-                  <input {...register('address')} className="input" placeholder="Kimathi Street, Nairobi CBD" />
+                  <input {...register('address')} className="input" placeholder="Samora Avenue, Dar es Salaam" />
                 </div>
               </div>
             </div>
