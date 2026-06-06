@@ -33,6 +33,8 @@ COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
 COPY prisma ./prisma
 COPY seed-prod.js ./
+COPY start.js ./
+COPY run.sh ./
 COPY public ./public
 COPY --from=builder /app/dist ./dist
 
