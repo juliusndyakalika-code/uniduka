@@ -29,6 +29,7 @@ import usersRoutes      from './modules/users/users.routes';
 import kdsRoutes        from './modules/kds/kds.routes';
 import webhookRoutes    from './modules/webhooks/webhooks.routes';
 import platformRoutes   from './modules/platform/platform.routes';
+import consignmentRoutes from './modules/consignment/consignment.routes';
 
 const app  = express();
 const http = createServer(app);
@@ -69,8 +70,9 @@ app.use(`${v1}/appointments`,  subscriptionGate, apptRoutes);
 app.use(`${v1}/reporting`,    subscriptionGate, reportingRoutes);
 app.use(`${v1}/users`,        subscriptionGate, usersRoutes);
 app.use(`${v1}/kds`,          subscriptionGate, kdsRoutes);
-app.use(`${v1}/webhooks`,   webhookRoutes);
-app.use(`${v1}/platform`,   platformRoutes);
+app.use(`${v1}/webhooks`,     webhookRoutes);
+app.use(`${v1}/platform`,     platformRoutes);
+app.use(`${v1}/consignment`,  subscriptionGate, consignmentRoutes);
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/', (_, res) => res.json({ status: 'ok', service: 'UniDuka API', version: '4.0.0' }));

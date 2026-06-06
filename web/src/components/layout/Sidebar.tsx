@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, Users, Calendar,
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
-  Hotel, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2,
+  Hotel, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
@@ -229,6 +229,7 @@ export default function Sidebar({ open, onClose }: Props) {
               <NavItem to="/inventory"          icon={<BarChart2 size={16} />}     label="Stock Overview" end />
               <NavItem to="/inventory/products" icon={<Package size={16} />}      label="Products" />
               <NavItem to="/customers"          icon={<Users size={16} />}        label="Customers" />
+              <NavItem to="/consignment"        icon={<Handshake size={16} />}    label="Consignment" />
               <NavItem to="/appointments"       icon={<Calendar size={16} />}     label="Appointments" />
               <NavGroup icon={<TrendingUp size={16} />} label="Reports" prefix="/reports">
                 <NavItem to="/reports/sales"     icon={<TrendingUp size={14} />} label="Sales" />

@@ -39,6 +39,7 @@ import VoidsPage from './pages/pos/VoidsPage';
 
 import KdsPage from './pages/kds/KdsPage';
 
+import ConsignmentPage from './pages/consignment/ConsignmentPage';
 import ShopsPage from './pages/admin/ShopsPage';
 import UsersPage from './pages/admin/UsersPage';
 import BusinessSettingsPage from './pages/admin/BusinessSettingsPage';
@@ -87,6 +88,7 @@ export default function App() {
             <Route path="/inventory/recipes" element={<RecipesPage />} />
             <Route path="/inventory/purchase-orders" element={<PurchaseOrdersPage />} />
 
+            <Route path="/consignment" element={<ConsignmentPage />} />
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/loyalty" element={<LoyaltyPage />} />
             <Route path="/appointments" element={<AppointmentsPage />} />
