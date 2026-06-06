@@ -36,4 +36,4 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 4000
 
-CMD ["sh", "-c", "echo 'Starting node...' && node dist/app.js && echo 'Node exited 0' || echo 'Node exited non-zero'"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/app.js"]
