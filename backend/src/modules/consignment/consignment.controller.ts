@@ -39,174 +39,89 @@ export async function deletePartner(req: AuthRequest, res: Response) {
   return R.noContent(res);
 }
 
-// ── Batches ───────────────────────────────────────────────────────────────────
+// ── Sales ─────────────────────────────────────────────────────────────────────
 
-export async function listBatches(req: AuthRequest, res: Response) {
-  const { partnerId, status } = req.query as Record<string, string>;
-  const batches = await prisma.consignmentBatch.findMany({
+export async function listSales(req: AuthRequest, res: Response) {
+  const { partnerId } = req.query as Record<string, string>;
+  const sales = await prisma.consignmentSale.findMany({
     where: {
       shopId: shop(req),
       ...(partnerId && { partnerId }),
-      ...(status && { status: status as 'ACTIVE' | 'PARTIAL' | 'SETTLED' }),
     },
     include: {
       partner: { select: { id: true, name: true } },
-      settlements: { select: { qtySold: true, amountPaid: true } },
+      soldBy: { select: { id: true, fullName: true } },
     },
-    orderBy: { receivedAt: 'desc' },
+    orderBy: { soldAt: 'desc' },
   });
-
-  const enriched = batches.map(b => {
-    const settledQty = b.settlements.reduce((s, x) => s + x.qtySold, 0);
-    const settledAmount = b.settlements.reduce((s, x) => s + x.amountPaid, 0);
-    const qtyRemaining = b.qtyReceived - b.qtySold;
-    const totalOwed = b.qtySold * b.costPrice;
-    const outstanding = totalOwed - settledAmount;
-    return { ...b, settledQty, settledAmount, qtyRemaining, totalOwed, outstanding };
-  });
-
-  return R.ok(res, enriched);
+  return R.ok(res, sales);
 }
 
-export async function createBatch(req: AuthRequest, res: Response) {
-  const { partnerId, productName, costPrice, sellingPrice, qtyReceived, notes, receivedAt } = req.body;
+export async function createSale(req: AuthRequest, res: Response) {
+  const { partnerId, productName, costPrice, sellingPrice, qty, notes, soldAt } = req.body;
+
   const partner = await prisma.consignmentPartner.findFirst({
     where: { id: partnerId, shopId: shop(req), isActive: true },
   });
   if (!partner) return R.notFound(res, 'Partner not found');
 
-  const batch = await prisma.consignmentBatch.create({
+  const cost = Number(costPrice);
+  const sell = Number(sellingPrice);
+  const quantity = Number(qty);
+  const profit = (sell - cost) * quantity;
+
+  const sale = await prisma.consignmentSale.create({
     data: {
       shopId: shop(req),
       partnerId,
       productName,
-      costPrice: Number(costPrice),
-      sellingPrice: Number(sellingPrice),
-      qtyReceived: Number(qtyReceived),
+      costPrice: cost,
+      sellingPrice: sell,
+      qty: quantity,
+      profit,
       notes,
-      ...(receivedAt && { receivedAt: new Date(receivedAt) }),
+      soldById: req.user!.sub,
+      ...(soldAt && { soldAt: new Date(soldAt) }),
     },
-    include: { partner: { select: { id: true, name: true } } },
+    include: {
+      partner: { select: { id: true, name: true } },
+      soldBy: { select: { id: true, fullName: true } },
+    },
   });
-  return R.created(res, batch);
+  return R.created(res, sale);
 }
 
-export async function updateBatchSold(req: AuthRequest, res: Response) {
-  const { qtySold } = req.body;
-  const batch = await prisma.consignmentBatch.findFirst({
+export async function deleteSale(req: AuthRequest, res: Response) {
+  const r = await prisma.consignmentSale.deleteMany({
     where: { id: req.params.id, shopId: shop(req) },
   });
-  if (!batch) return R.notFound(res);
-
-  const newQtySold = Number(qtySold);
-  if (newQtySold < 0 || newQtySold > batch.qtyReceived) {
-    return R.badRequest(res, `qtySold must be between 0 and ${batch.qtyReceived}`);
-  }
-
-  const totalSettled = (await prisma.consignmentSettlement.aggregate({
-    where: { batchId: batch.id },
-    _sum: { qtySold: true },
-  }))._sum.qtySold ?? 0;
-
-  let status: 'ACTIVE' | 'PARTIAL' | 'SETTLED' = 'ACTIVE';
-  if (newQtySold > 0 && newQtySold > totalSettled) status = 'PARTIAL';
-  if (totalSettled >= newQtySold && newQtySold > 0) status = 'SETTLED';
-
-  const updated = await prisma.consignmentBatch.update({
-    where: { id: batch.id },
-    data: { qtySold: newQtySold, status },
-    include: { partner: { select: { id: true, name: true } } },
-  });
-  return R.ok(res, updated);
+  if (!r.count) return R.notFound(res);
+  return R.noContent(res);
 }
 
-// ── Liability ─────────────────────────────────────────────────────────────────
+// ── Profit report (by seller) ───────────────────────────────────────────────
 
-export async function getLiability(req: AuthRequest, res: Response) {
-  const batches = await prisma.consignmentBatch.findMany({
-    where: { shopId: shop(req), status: { in: ['ACTIVE', 'PARTIAL'] } },
-    include: {
-      partner: { select: { id: true, name: true, phone: true } },
-      settlements: { select: { qtySold: true, amountPaid: true } },
-    },
+export async function getProfitReport(req: AuthRequest, res: Response) {
+  const sales = await prisma.consignmentSale.findMany({
+    where: { shopId: shop(req) },
+    include: { soldBy: { select: { id: true, fullName: true } } },
   });
 
-  // Group by partner
-  const byPartner: Record<string, {
-    partnerId: string; partnerName: string; phone?: string | null;
-    totalOwed: number; totalPaid: number; outstanding: number; batches: number;
+  const bySeller: Record<string, {
+    sellerId: string; sellerName: string;
+    salesCount: number; totalQty: number; totalRevenue: number; totalProfit: number;
   }> = {};
 
-  for (const b of batches) {
-    const settled = b.settlements.reduce((s, x) => s + x.amountPaid, 0);
-    const owed = b.qtySold * b.costPrice;
-    const outstanding = owed - settled;
-    const pid = b.partner.id;
-    if (!byPartner[pid]) {
-      byPartner[pid] = { partnerId: pid, partnerName: b.partner.name, phone: b.partner.phone, totalOwed: 0, totalPaid: 0, outstanding: 0, batches: 0 };
+  for (const s of sales) {
+    const id = s.soldBy.id;
+    if (!bySeller[id]) {
+      bySeller[id] = { sellerId: id, sellerName: s.soldBy.fullName, salesCount: 0, totalQty: 0, totalRevenue: 0, totalProfit: 0 };
     }
-    byPartner[pid].totalOwed += owed;
-    byPartner[pid].totalPaid += settled;
-    byPartner[pid].outstanding += outstanding;
-    byPartner[pid].batches += 1;
+    bySeller[id].salesCount += 1;
+    bySeller[id].totalQty += s.qty;
+    bySeller[id].totalRevenue += s.sellingPrice * s.qty;
+    bySeller[id].totalProfit += s.profit;
   }
 
-  return R.ok(res, Object.values(byPartner).sort((a, b) => b.outstanding - a.outstanding));
-}
-
-// ── Settlements ───────────────────────────────────────────────────────────────
-
-export async function listSettlements(req: AuthRequest, res: Response) {
-  const { batchId } = req.query as Record<string, string>;
-  const settlements = await prisma.consignmentSettlement.findMany({
-    where: {
-      shopId: shop(req),
-      ...(batchId && { batchId }),
-    },
-    include: {
-      batch: { select: { id: true, productName: true, partner: { select: { name: true } } } },
-    },
-    orderBy: { paidAt: 'desc' },
-  });
-  return R.ok(res, settlements);
-}
-
-export async function createSettlement(req: AuthRequest, res: Response) {
-  const { batchId, qtySold, amountPaid, notes, paidAt } = req.body;
-
-  const batch = await prisma.consignmentBatch.findFirst({
-    where: { id: batchId, shopId: shop(req) },
-    include: { settlements: { select: { qtySold: true, amountPaid: true } } },
-  });
-  if (!batch) return R.notFound(res, 'Batch not found');
-
-  const qty = Number(qtySold);
-  const paid = Number(amountPaid);
-  const amountOwed = qty * batch.costPrice;
-
-  const settlement = await prisma.consignmentSettlement.create({
-    data: {
-      shopId: shop(req),
-      batchId,
-      qtySold: qty,
-      amountOwed,
-      amountPaid: paid,
-      notes,
-      ...(paidAt && { paidAt: new Date(paidAt) }),
-    },
-    include: {
-      batch: { select: { productName: true, partner: { select: { name: true } } } },
-    },
-  });
-
-  // Recalculate batch status
-  const allSettled = [...batch.settlements, { qtySold: qty, amountPaid: paid }];
-  const totalSettledQty = allSettled.reduce((s, x) => s + x.qtySold, 0);
-  const newStatus = totalSettledQty >= batch.qtySold ? 'SETTLED' : 'PARTIAL';
-  await prisma.consignmentBatch.update({
-    where: { id: batchId },
-    data: { qtySold: Math.max(batch.qtySold, totalSettledQty), status: newStatus },
-  });
-
-  return R.created(res, settlement);
+  return R.ok(res, Object.values(bySeller).sort((a, b) => b.totalProfit - a.totalProfit));
 }

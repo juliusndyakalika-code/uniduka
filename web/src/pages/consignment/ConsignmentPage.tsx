@@ -1,39 +1,28 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, Users, Package, AlertCircle, CheckCircle, Clock, TrendingDown } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { Plus, X, Users, Package, AlertCircle, Trash2, Trophy } from 'lucide-react';
+import { useForm, useWatch } from 'react-hook-form';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Partner { id: string; name: string; phone?: string; email?: string; notes?: string; }
-interface Batch {
+interface Sale {
   id: string; productName: string; costPrice: number; sellingPrice: number;
-  qtyReceived: number; qtySold: number; qtyRemaining: number;
-  totalOwed: number; settledAmount: number; settledQty: number; outstanding: number;
-  status: 'ACTIVE' | 'PARTIAL' | 'SETTLED'; receivedAt: string; notes?: string;
+  qty: number; profit: number; notes?: string; soldAt: string;
   partner: { id: string; name: string };
-  settlements: { qtySold: number; amountPaid: number }[];
+  soldBy: { id: string; fullName: string };
 }
-interface Liability {
-  partnerId: string; partnerName: string; phone?: string;
-  totalOwed: number; totalPaid: number; outstanding: number; batches: number;
-}
-interface Settlement {
-  id: string; qtySold: number; amountOwed: number; amountPaid: number;
-  paidAt: string; notes?: string;
-  batch: { productName: string; partner: { name: string } };
+interface SellerStat {
+  sellerId: string; sellerName: string;
+  salesCount: number; totalQty: number; totalRevenue: number; totalProfit: number;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const TABS = ['Batches', 'Partners', 'Liability', 'Settlements'] as const;
+const TABS = ['Sales', 'Partners', 'Profit Report'] as const;
 type Tab = typeof TABS[number];
-
-const STATUS_BADGE: Record<string, string> = {
-  ACTIVE: 'badge-blue', PARTIAL: 'badge-amber', SETTLED: 'badge-green',
-};
 
 function fmt(n: number) {
   return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
@@ -43,23 +32,19 @@ function date(s: string) { return new Date(s).toLocaleDateString('en-TZ', { day:
 // ── Forms ─────────────────────────────────────────────────────────────────────
 
 type PartnerForm = { name: string; phone?: string; email?: string; notes?: string; };
-type BatchForm = { partnerId: string; productName: string; costPrice: number; sellingPrice: number; qtyReceived: number; notes?: string; receivedAt?: string; };
-type SettleForm = { qtySold: number; amountPaid: number; notes?: string; paidAt?: string; };
-type SoldForm = { qtySold: number; };
+type SaleForm = { partnerId: string; productName: string; costPrice: number; sellingPrice: number; qty: number; notes?: string; soldAt?: string; };
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ConsignmentPage() {
   const { shopId } = useAuthStore();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<Tab>('Batches');
+  const [tab, setTab] = useState<Tab>('Sales');
   const [error, setError] = useState('');
 
   // modal state
   const [showPartnerForm, setShowPartnerForm] = useState(false);
-  const [showBatchForm, setShowBatchForm] = useState(false);
-  const [settlingBatch, setSettlingBatch] = useState<Batch | null>(null);
-  const [markingSoldBatch, setMarkingSoldBatch] = useState<Batch | null>(null);
+  const [showSaleForm, setShowSaleForm] = useState(false);
 
   function err(e: unknown) {
     return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Something went wrong';
@@ -73,22 +58,16 @@ export default function ConsignmentPage() {
     enabled: !!shopId,
   });
 
-  const { data: batches = [], isLoading: batchLoading } = useQuery<Batch[]>({
-    queryKey: ['consignment-batches', shopId],
-    queryFn: () => api.get('/consignment/batches').then(r => r.data.data),
+  const { data: sales = [], isLoading: salesLoading } = useQuery<Sale[]>({
+    queryKey: ['consignment-sales', shopId],
+    queryFn: () => api.get('/consignment/sales').then(r => r.data.data),
     enabled: !!shopId,
   });
 
-  const { data: liability = [] } = useQuery<Liability[]>({
-    queryKey: ['consignment-liability', shopId],
-    queryFn: () => api.get('/consignment/liability').then(r => r.data.data),
-    enabled: !!shopId && tab === 'Liability',
-  });
-
-  const { data: settlements = [], isLoading: settleLoading } = useQuery<Settlement[]>({
-    queryKey: ['consignment-settlements', shopId],
-    queryFn: () => api.get('/consignment/settlements').then(r => r.data.data),
-    enabled: !!shopId && tab === 'Settlements',
+  const { data: report = [], isLoading: reportLoading } = useQuery<SellerStat[]>({
+    queryKey: ['consignment-profit-report', shopId],
+    queryFn: () => api.get('/consignment/profit-report').then(r => r.data.data),
+    enabled: !!shopId && tab === 'Profit Report',
   });
 
   // ── Mutations ─────────────────────────────────────────────────────────────────
@@ -100,37 +79,37 @@ export default function ConsignmentPage() {
     onError: (e) => setError(err(e)),
   });
 
-  const batchForm = useForm<BatchForm>();
-  const { mutate: saveBatch, isPending: savingBatch } = useMutation({
-    mutationFn: (d: BatchForm) => api.post('/consignment/batches', d),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['consignment-batches'] }); setShowBatchForm(false); batchForm.reset(); setError(''); },
-    onError: (e) => setError(err(e)),
-  });
-
-  const settleForm = useForm<SettleForm>();
-  const { mutate: settle, isPending: settling } = useMutation({
-    mutationFn: (d: SettleForm & { batchId: string }) => api.post('/consignment/settlements', d),
+  const saleForm = useForm<SaleForm>();
+  const { mutate: saveSale, isPending: savingSale } = useMutation({
+    mutationFn: (d: SaleForm) => api.post('/consignment/sales', d),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['consignment-batches'] });
-      qc.invalidateQueries({ queryKey: ['consignment-settlements'] });
-      qc.invalidateQueries({ queryKey: ['consignment-liability'] });
-      setSettlingBatch(null); settleForm.reset(); setError('');
+      qc.invalidateQueries({ queryKey: ['consignment-sales'] });
+      qc.invalidateQueries({ queryKey: ['consignment-profit-report'] });
+      setShowSaleForm(false); saleForm.reset(); setError('');
     },
     onError: (e) => setError(err(e)),
   });
 
-  const soldForm = useForm<SoldForm>();
-  const { mutate: markSold, isPending: markingSold } = useMutation({
-    mutationFn: (d: SoldForm & { batchId: string }) => api.patch(`/consignment/batches/${d.batchId}/sold`, { qtySold: d.qtySold }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['consignment-batches'] }); setMarkingSoldBatch(null); soldForm.reset(); setError(''); },
+  const { mutate: removeSale } = useMutation({
+    mutationFn: (id: string) => api.delete(`/consignment/sales/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['consignment-sales'] });
+      qc.invalidateQueries({ queryKey: ['consignment-profit-report'] });
+    },
     onError: (e) => setError(err(e)),
   });
 
+  // ── Live profit preview in the sale form ────────────────────────────────────
+
+  const watchCost = useWatch({ control: saleForm.control, name: 'costPrice' });
+  const watchSell = useWatch({ control: saleForm.control, name: 'sellingPrice' });
+  const watchQty = useWatch({ control: saleForm.control, name: 'qty' });
+  const previewProfit = (Number(watchSell) - Number(watchCost) || 0) * (Number(watchQty) || 0);
+
   // ── Summary stats ─────────────────────────────────────────────────────────────
 
-  const totalOutstanding = batches.reduce((s, b) => s + b.outstanding, 0);
-  const activeBatches = batches.filter(b => b.status !== 'SETTLED').length;
-  const totalProfit = batches.reduce((s, b) => s + (b.qtySold * (b.sellingPrice - b.costPrice)), 0);
+  const totalProfit = sales.reduce((s, x) => s + x.profit, 0);
+  const totalRevenue = sales.reduce((s, x) => s + x.sellingPrice * x.qty, 0);
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -140,7 +119,7 @@ export default function ConsignmentPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Consignment</h1>
-          <p className="page-subtitle">Goods taken on behalf — track, sell, settle</p>
+          <p className="page-subtitle">Goods sold on behalf — record the profit when sold</p>
         </div>
         <div className="flex gap-2">
           {tab === 'Partners' && (
@@ -148,9 +127,9 @@ export default function ConsignmentPage() {
               <Plus size={14} className="mr-1.5" /> Add Partner
             </button>
           )}
-          {tab === 'Batches' && (
-            <button className="btn-primary" onClick={() => { setError(''); setShowBatchForm(true); }}>
-              <Plus size={14} className="mr-1.5" /> Receive Batch
+          {tab === 'Sales' && (
+            <button className="btn-primary" onClick={() => { setError(''); saleForm.reset(); setShowSaleForm(true); }}>
+              <Plus size={14} className="mr-1.5" /> Record Sale
             </button>
           )}
         </div>
@@ -159,16 +138,16 @@ export default function ConsignmentPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
         <div className="card p-4">
-          <p className="text-xs text-stone-500 mb-1">Outstanding Liability</p>
-          <p className="text-xl font-bold text-red-600">{fmt(totalOutstanding)}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-stone-500 mb-1">Active Batches</p>
-          <p className="text-xl font-bold text-stone-800">{activeBatches}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-stone-500 mb-1">Markup Earned</p>
+          <p className="text-xs text-stone-500 mb-1">Total Profit</p>
           <p className="text-xl font-bold text-green-600">{fmt(totalProfit)}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-stone-500 mb-1">Sales Recorded</p>
+          <p className="text-xl font-bold text-stone-800">{sales.length}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-stone-500 mb-1">Total Revenue</p>
+          <p className="text-xl font-bold text-stone-800">{fmt(totalRevenue)}</p>
         </div>
       </div>
 
@@ -199,15 +178,15 @@ export default function ConsignmentPage() {
         </div>
       )}
 
-      {/* ── Batches Tab ───────────────────────────────────────────────────────── */}
-      {tab === 'Batches' && (
+      {/* ── Sales Tab ─────────────────────────────────────────────────────────── */}
+      {tab === 'Sales' && (
         <div className="card">
-          {batchLoading ? (
+          {salesLoading ? (
             <div className="p-8 text-center text-stone-400">Loading…</div>
-          ) : batches.length === 0 ? (
+          ) : sales.length === 0 ? (
             <div className="p-10 text-center text-stone-400">
               <Package size={32} className="mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No batches yet — receive your first consignment batch</p>
+              <p className="text-sm">No consignment sales recorded yet</p>
             </div>
           ) : (
             <div className="table-wrapper">
@@ -216,53 +195,32 @@ export default function ConsignmentPage() {
                   <tr>
                     <th>Product</th>
                     <th>Partner</th>
-                    <th>Received</th>
                     <th>Cost / Sell</th>
-                    <th>Qty In / Sold / Left</th>
-                    <th>Outstanding</th>
-                    <th>Status</th>
+                    <th>Qty</th>
+                    <th>Profit</th>
+                    <th>Sold By</th>
+                    <th>Date</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {batches.map(b => (
-                    <tr key={b.id}>
-                      <td className="font-medium">{b.productName}</td>
-                      <td className="text-stone-500">{b.partner.name}</td>
-                      <td className="text-stone-400">{date(b.receivedAt)}</td>
+                  {sales.map(s => (
+                    <tr key={s.id}>
+                      <td className="font-medium">{s.productName}</td>
+                      <td className="text-stone-500">{s.partner.name}</td>
                       <td>
-                        <span className="text-xs text-stone-500">{fmt(b.costPrice)}</span>
+                        <span className="text-xs text-stone-500">{fmt(s.costPrice)}</span>
                         <span className="mx-1 text-stone-300">/</span>
-                        <span className="text-xs font-medium">{fmt(b.sellingPrice)}</span>
+                        <span className="text-xs font-medium">{fmt(s.sellingPrice)}</span>
                       </td>
+                      <td className="text-xs">{s.qty}</td>
+                      <td className="font-semibold text-green-600">{fmt(s.profit)}</td>
+                      <td className="text-stone-500">{s.soldBy.fullName}</td>
+                      <td className="text-stone-400">{date(s.soldAt)}</td>
                       <td>
-                        <span className="text-xs">{b.qtyReceived} / </span>
-                        <span className="text-xs font-semibold text-amber-600">{b.qtySold}</span>
-                        <span className="text-xs"> / {b.qtyRemaining}</span>
-                      </td>
-                      <td className={b.outstanding > 0 ? 'font-semibold text-red-600' : 'text-stone-400'}>
-                        {fmt(b.outstanding)}
-                      </td>
-                      <td>
-                        <span className={`badge ${STATUS_BADGE[b.status]}`}>{b.status}</span>
-                      </td>
-                      <td>
-                        <div className="flex gap-1">
-                          <button
-                            className="btn-sm btn-ghost"
-                            onClick={() => { soldForm.setValue('qtySold', b.qtySold); setMarkingSoldBatch(b); setError(''); }}
-                          >
-                            Mark Sold
-                          </button>
-                          {b.status !== 'SETTLED' && (
-                            <button
-                              className="btn-sm btn-primary"
-                              onClick={() => { settleForm.reset(); setSettlingBatch(b); setError(''); }}
-                            >
-                              Settle
-                            </button>
-                          )}
-                        </div>
+                        <button className="btn-sm btn-ghost text-red-500" onClick={() => removeSale(s.id)} title="Delete">
+                          <Trash2 size={14} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -302,60 +260,30 @@ export default function ConsignmentPage() {
         </div>
       )}
 
-      {/* ── Liability Tab ─────────────────────────────────────────────────────── */}
-      {tab === 'Liability' && (
-        <div className="space-y-3">
-          {liability.length === 0 ? (
-            <div className="card p-10 text-center text-stone-400">
-              <CheckCircle size={32} className="mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No outstanding liability</p>
-            </div>
-          ) : (
-            liability.map(l => (
-              <div key={l.partnerId} className="card p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-stone-900">{l.partnerName}</p>
-                    {l.phone && <p className="text-xs text-stone-400">{l.phone}</p>}
-                    <p className="text-xs text-stone-400 mt-0.5">{l.batches} active batch{l.batches !== 1 ? 'es' : ''}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-stone-400">Outstanding</p>
-                    <p className="text-lg font-bold text-red-600">{fmt(l.outstanding)}</p>
-                    <p className="text-[10px] text-stone-400">Owed {fmt(l.totalOwed)} · Paid {fmt(l.totalPaid)}</p>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* ── Settlements Tab ───────────────────────────────────────────────────── */}
-      {tab === 'Settlements' && (
+      {/* ── Profit Report Tab ────────────────────────────────────────────────── */}
+      {tab === 'Profit Report' && (
         <div className="card">
-          {settleLoading ? (
+          {reportLoading ? (
             <div className="p-8 text-center text-stone-400">Loading…</div>
-          ) : settlements.length === 0 ? (
+          ) : report.length === 0 ? (
             <div className="p-10 text-center text-stone-400">
-              <Clock size={32} className="mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No settlements recorded yet</p>
+              <Trophy size={32} className="mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No consignment profits recorded yet</p>
             </div>
           ) : (
             <div className="table-wrapper">
               <table className="table">
                 <thead>
-                  <tr><th>Partner</th><th>Product</th><th>Qty Settled</th><th>Owed</th><th>Paid</th><th>Date</th></tr>
+                  <tr><th>Seller</th><th>Sales</th><th>Qty Sold</th><th>Revenue</th><th>Profit</th></tr>
                 </thead>
                 <tbody>
-                  {settlements.map(s => (
-                    <tr key={s.id}>
-                      <td className="font-medium">{s.batch.partner.name}</td>
-                      <td className="text-stone-600">{s.batch.productName}</td>
-                      <td>{s.qtySold}</td>
-                      <td>{fmt(s.amountOwed)}</td>
-                      <td className="font-medium">{fmt(s.amountPaid)}</td>
-                      <td className="text-stone-400">{date(s.paidAt)}</td>
+                  {report.map(r => (
+                    <tr key={r.sellerId}>
+                      <td className="font-medium">{r.sellerName}</td>
+                      <td className="text-xs">{r.salesCount}</td>
+                      <td className="text-xs">{r.totalQty}</td>
+                      <td className="text-stone-500">{fmt(r.totalRevenue)}</td>
+                      <td className="font-semibold text-green-600">{fmt(r.totalProfit)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -403,163 +331,60 @@ export default function ConsignmentPage() {
         </div>
       )}
 
-      {/* ── Modal: Receive Batch ─────────────────────────────────────────────── */}
-      {showBatchForm && (
+      {/* ── Modal: Record Sale ───────────────────────────────────────────────── */}
+      {showSaleForm && (
         <div className="modal-backdrop">
           <div className="modal">
             <div className="modal-header">
-              <h2 className="modal-title">Receive Consignment Batch</h2>
-              <button onClick={() => { setShowBatchForm(false); setError(''); }} className="modal-close"><X size={16} /></button>
+              <h2 className="modal-title">Record Consignment Sale</h2>
+              <button onClick={() => { setShowSaleForm(false); setError(''); }} className="modal-close"><X size={16} /></button>
             </div>
-            <form onSubmit={batchForm.handleSubmit(d => saveBatch(d))} className="space-y-3 p-4">
+            <form onSubmit={saleForm.handleSubmit(d => saveSale(d))} className="space-y-3 p-4">
               <div>
                 <label className="label">Partner *</label>
-                <select className="input" {...batchForm.register('partnerId', { required: true })}>
+                <select className="input" {...saleForm.register('partnerId', { required: true })}>
                   <option value="">Select partner…</option>
                   {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="label">Product / Item Name *</label>
-                <input className="input" {...batchForm.register('productName', { required: true })} placeholder="e.g. Samsung A05 (128GB)" />
+                <input className="input" {...saleForm.register('productName', { required: true })} placeholder="e.g. Samsung A05 (128GB)" />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="label">Cost Price *</label>
-                  <input className="input" type="number" min="0" step="any" {...batchForm.register('costPrice', { required: true, min: 0 })} placeholder="0" />
-                  <p className="text-[10px] text-stone-400 mt-0.5">What you owe per unit</p>
+                  <input className="input" type="number" min="0" step="any" {...saleForm.register('costPrice', { required: true, min: 0 })} placeholder="0" />
+                  <p className="text-[10px] text-stone-400 mt-0.5">Owed to partner / unit</p>
                 </div>
                 <div>
                   <label className="label">Selling Price *</label>
-                  <input className="input" type="number" min="0" step="any" {...batchForm.register('sellingPrice', { required: true, min: 0 })} placeholder="0" />
-                  <p className="text-[10px] text-stone-400 mt-0.5">Your price to customer</p>
+                  <input className="input" type="number" min="0" step="any" {...saleForm.register('sellingPrice', { required: true, min: 0 })} placeholder="0" />
+                  <p className="text-[10px] text-stone-400 mt-0.5">Sold to customer for</p>
                 </div>
                 <div>
-                  <label className="label">Qty Received *</label>
-                  <input className="input" type="number" min="1" step="any" {...batchForm.register('qtyReceived', { required: true, min: 1 })} placeholder="0" />
+                  <label className="label">Qty *</label>
+                  <input className="input" type="number" min="1" step="any" {...saleForm.register('qty', { required: true, min: 1 })} placeholder="0" />
                 </div>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-center justify-between">
+                <span className="text-xs text-green-700">Profit</span>
+                <span className="text-sm font-bold text-green-700">{fmt(previewProfit)}</span>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="label">Date Received</label>
-                  <input className="input" type="date" {...batchForm.register('receivedAt')} />
+                  <label className="label">Date Sold</label>
+                  <input className="input" type="date" {...saleForm.register('soldAt')} />
                 </div>
                 <div>
                   <label className="label">Notes</label>
-                  <input className="input" {...batchForm.register('notes')} placeholder="Optional" />
+                  <input className="input" {...saleForm.register('notes')} placeholder="Optional" />
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-1">
-                <button type="button" className="btn-ghost" onClick={() => { setShowBatchForm(false); setError(''); }}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={savingBatch}>
-                  {savingBatch ? 'Saving…' : 'Record Batch'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal: Mark Sold ─────────────────────────────────────────────────── */}
-      {markingSoldBatch && (
-        <div className="modal-backdrop">
-          <div className="modal max-w-sm">
-            <div className="modal-header">
-              <h2 className="modal-title">Update Quantity Sold</h2>
-              <button onClick={() => { setMarkingSoldBatch(null); setError(''); }} className="modal-close"><X size={16} /></button>
-            </div>
-            <form onSubmit={soldForm.handleSubmit(d => markSold({ ...d, batchId: markingSoldBatch.id }))} className="space-y-3 p-4">
-              <p className="text-xs text-stone-500">
-                Batch: <span className="font-medium text-stone-800">{markingSoldBatch.productName}</span>
-                {' '}· Received: {markingSoldBatch.qtyReceived}
-              </p>
-              <div>
-                <label className="label">Total Qty Sold So Far *</label>
-                <input
-                  className="input"
-                  type="number"
-                  min="0"
-                  max={markingSoldBatch.qtyReceived}
-                  step="any"
-                  {...soldForm.register('qtySold', { required: true, min: 0, max: markingSoldBatch.qtyReceived })}
-                />
-                <p className="text-[10px] text-stone-400 mt-0.5">
-                  Enter the running total sold from this batch (not just new sales)
-                </p>
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <button type="button" className="btn-ghost" onClick={() => { setMarkingSoldBatch(null); setError(''); }}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={markingSold}>
-                  {markingSold ? 'Saving…' : 'Update'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal: Settle ────────────────────────────────────────────────────── */}
-      {settlingBatch && (
-        <div className="modal-backdrop">
-          <div className="modal max-w-sm">
-            <div className="modal-header">
-              <h2 className="modal-title">Record Settlement</h2>
-              <button onClick={() => { setSettlingBatch(null); setError(''); }} className="modal-close"><X size={16} /></button>
-            </div>
-            <form onSubmit={settleForm.handleSubmit(d => settle({ ...d, batchId: settlingBatch.id }))} className="space-y-3 p-4">
-              <div className="bg-stone-50 rounded-lg p-3 text-xs space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-stone-500">Product</span>
-                  <span className="font-medium">{settlingBatch.productName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-stone-500">Partner</span>
-                  <span>{settlingBatch.partner.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-stone-500">Qty Sold</span>
-                  <span>{settlingBatch.qtySold}</span>
-                </div>
-                <div className="flex justify-between font-semibold text-red-600">
-                  <span>Outstanding</span>
-                  <span>{fmt(settlingBatch.outstanding)}</span>
-                </div>
-              </div>
-              <div>
-                <label className="label">Qty Being Settled *</label>
-                <input
-                  className="input"
-                  type="number"
-                  min="1"
-                  step="any"
-                  defaultValue={settlingBatch.qtySold - (settlingBatch.settledQty ?? 0)}
-                  {...settleForm.register('qtySold', { required: true, min: 1 })}
-                />
-              </div>
-              <div>
-                <label className="label">Amount Paid (TZS) *</label>
-                <input
-                  className="input"
-                  type="number"
-                  min="0"
-                  step="any"
-                  {...settleForm.register('amountPaid', { required: true, min: 0 })}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">Date Paid</label>
-                  <input className="input" type="date" {...settleForm.register('paidAt')} />
-                </div>
-                <div>
-                  <label className="label">Notes</label>
-                  <input className="input" {...settleForm.register('notes')} placeholder="Optional" />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <button type="button" className="btn-ghost" onClick={() => { setSettlingBatch(null); setError(''); }}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={settling}>
-                  {settling ? 'Recording…' : 'Record Payment'}
+                <button type="button" className="btn-ghost" onClick={() => { setShowSaleForm(false); setError(''); }}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={savingSale}>
+                  {savingSale ? 'Saving…' : 'Record Sale'}
                 </button>
               </div>
             </form>

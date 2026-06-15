@@ -191,12 +191,6 @@ enum JobStatus {
   INVOICED
 }
 
-enum ConsignmentBatchStatus {
-  ACTIVE    // items in stock, not yet settled
-  PARTIAL   // partially settled
-  SETTLED   // fully paid to partner
-}
-
 enum RoomStatus {
   AVAILABLE
   OCCUPIED
@@ -299,7 +293,7 @@ model Shop {
   webhooks        Webhook[]
   recipes               Recipe[]
   consignmentPartners   ConsignmentPartner[]
-  consignmentBatches    ConsignmentBatch[]
+  consignmentSales      ConsignmentSale[]
 
   @@map("shops")
 }
@@ -365,6 +359,7 @@ model User {
   transactions   Transaction[]
   auditLogs      AuditLog[]
   appointments   Appointment[]   @relation("StaffAppointments")
+  consignmentSales ConsignmentSale[]
 
   @@map("users")
 }
@@ -986,49 +981,32 @@ model ConsignmentPartner {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  batches ConsignmentBatch[]
+  sales ConsignmentSale[]
 
   @@map("consignment_partners")
 }
 
-model ConsignmentBatch {
-  id          String                 @id @default(cuid())
-  shopId      String
-  shop        Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  partnerId   String
-  partner     ConsignmentPartner     @relation(fields: [partnerId], references: [id])
+model ConsignmentSale {
+  id        String             @id @default(cuid())
+  shopId    String
+  shop      Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  partnerId String
+  partner   ConsignmentPartner @relation(fields: [partnerId], references: [id])
 
   productName  String
-  costPrice    Float                 // owed to partner per unit sold
-  sellingPrice Float                 // your price (costPrice + markup)
-  qtyReceived  Float
-  qtySold      Float                 @default(0) // updated manually when settling
+  costPrice    Float   // owed to partner per unit
+  sellingPrice Float   // sold to customer for
+  qty          Float
+  profit       Float   // (sellingPrice - costPrice) * qty
   notes        String?
-  status       ConsignmentBatchStatus @default(ACTIVE)
 
-  receivedAt DateTime @default(now())
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  soldById String
+  soldBy   User   @relation(fields: [soldById], references: [id])
 
-  settlements ConsignmentSettlement[]
+  soldAt    DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  @@map("consignment_batches")
-}
-
-model ConsignmentSettlement {
-  id        String           @id @default(cuid())
-  shopId    String
-  batchId   String
-  batch     ConsignmentBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-
-  qtySold    Float   // qty being settled in this payment
-  amountOwed Float   // costPrice × qtySold
-  amountPaid Float   // actual cash handed to partner
-  notes      String?
-  paidAt     DateTime @default(now())
-  createdAt  DateTime @default(now())
-
-  @@map("consignment_settlements")
+  @@map("consignment_sales")
 }
 
 // ─── SUPPORT TICKETS ─────────────────────────────────────────────────────────
