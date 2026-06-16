@@ -86,7 +86,7 @@
 
   /* Page header */
   .page-header {
-    @apply flex items-center justify-between mb-6;
+    @apply flex flex-wrap items-center justify-between gap-3 mb-6;
   }
   .page-title {
     @apply text-lg font-bold text-stone-900 tracking-tight;

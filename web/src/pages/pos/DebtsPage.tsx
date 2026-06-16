@@ -48,11 +48,11 @@ function DebtRow({ debt, onSettle }: { debt: Debt; onSettle: (d: Debt) => void }
             </div>
           </div>
         </td>
-        <td className="text-xs text-stone-400 whitespace-nowrap">
+        <td className="hidden sm:table-cell text-xs text-stone-400 whitespace-nowrap">
           {new Date(debt.createdAt).toLocaleString('en-TZ', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}
         </td>
-        <td className="font-medium">{fmt(debt.total)}</td>
-        <td className="text-emerald-600">{debt.paidAmount > 0 ? fmt(debt.paidAmount) : '—'}</td>
+        <td className="hidden sm:table-cell font-medium">{fmt(debt.total)}</td>
+        <td className="hidden sm:table-cell text-emerald-600">{debt.paidAmount > 0 ? fmt(debt.paidAmount) : '—'}</td>
         <td>
           {debt.isSettled
             ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
@@ -172,7 +172,7 @@ export default function DebtsPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="card p-5">
           <p className="stat-value text-red-600">{fmt(totalOutstanding)}</p>
           <p className="stat-label">Total outstanding</p>
@@ -227,9 +227,9 @@ export default function DebtsPage() {
                 <tr>
                   <th>Receipt</th>
                   <th>Customer</th>
-                  <th>Date</th>
-                  <th>Sale Total</th>
-                  <th>Paid</th>
+                  <th className="hidden sm:table-cell">Date</th>
+                  <th className="hidden sm:table-cell">Sale Total</th>
+                  <th className="hidden sm:table-cell">Paid</th>
                   <th>Outstanding</th>
                   <th>Action</th>
                 </tr>
@@ -242,9 +242,9 @@ export default function DebtsPage() {
               {displayed.length > 1 && (
                 <tfoot>
                   <tr className="border-t-2 border-stone-200 bg-stone-50">
-                    <td colSpan={3} className="font-semibold text-stone-700 py-2 px-3">Total</td>
-                    <td className="font-bold">{fmt(displayed.reduce((s, d) => s + d.total, 0))}</td>
-                    <td className="font-bold text-emerald-600">{fmt(displayed.reduce((s, d) => s + d.paidAmount, 0))}</td>
+                    <td colSpan={2} className="font-semibold text-stone-700 py-2 px-3">Total</td>
+                    <td className="hidden sm:table-cell font-bold">{fmt(displayed.reduce((s, d) => s + d.total, 0))}</td>
+                    <td className="hidden sm:table-cell font-bold text-emerald-600">{fmt(displayed.reduce((s, d) => s + d.paidAmount, 0))}</td>
                     <td className="font-bold text-red-600">{fmt(displayed.reduce((s, d) => s + d.outstanding, 0))}</td>
                     <td></td>
                   </tr>

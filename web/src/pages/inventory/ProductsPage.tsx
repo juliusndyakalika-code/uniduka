@@ -530,9 +530,9 @@ export default function ProductsPage() {
               <thead>
                 <tr>
                   <Th col="name">Product</Th>
-                  <Th col="sku">SKU</Th>
+                  <th className="hidden sm:table-cell"><button onClick={() => toggleSort('sku')} className="flex items-center gap-0 hover:text-stone-900">SKU<SortIcon col="sku" /></button></th>
                   <Th col="sellingPrice">Price</Th>
-                  <Th col="costPrice">Cost</Th>
+                  <th className="hidden sm:table-cell"><button onClick={() => toggleSort('costPrice')} className="flex items-center gap-0 hover:text-stone-900">Cost<SortIcon col="costPrice" /></button></th>
                   <Th col="stock">Stock</Th>
                   <th>Status</th>
                   <th></th>
@@ -550,9 +550,9 @@ export default function ProductsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="font-mono text-xs">{p.sku}</td>
+                    <td className="hidden sm:table-cell font-mono text-xs">{p.sku}</td>
                     <td className="font-medium">{fmt(p.sellingPrice)}</td>
-                    <td className="text-stone-400">{p.costPrice ? fmt(p.costPrice) : '—'}</td>
+                    <td className="hidden sm:table-cell text-stone-400">{p.costPrice ? fmt(p.costPrice) : '—'}</td>
                     <td>
                       <div className="flex items-center gap-1.5">
                         {p.stock <= p.reorderPoint && p.stock > 0 && <AlertTriangle size={12} className="text-amber-500" />}

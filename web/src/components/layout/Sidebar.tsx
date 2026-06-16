@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Calendar,
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
@@ -62,7 +62,11 @@ interface Props { open: boolean; onClose: () => void; }
 export default function Sidebar({ open, onClose }: Props) {
   const { user, account, shopId, shops, logout, setShopId } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [shopPickerOpen, setShopPickerOpen] = useState(false);
+
+  // Close sidebar on mobile whenever the route changes
+  useEffect(() => { onClose(); }, [location.pathname]);
   const [switching, setSwitching] = useState(false);
 
   const role = user?.role ?? '';

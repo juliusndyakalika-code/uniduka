@@ -65,11 +65,11 @@ export default function CustomersPage() {
               <thead>
                 <tr>
                   <th>Customer</th>
-                  <th>Contact</th>
+                  <th className="hidden sm:table-cell">Contact</th>
                   <th>Total Spend</th>
-                  <th>Visits</th>
-                  <th>Points</th>
-                  <th>Since</th>
+                  <th className="hidden sm:table-cell">Visits</th>
+                  <th className="hidden sm:table-cell">Points</th>
+                  <th className="hidden sm:table-cell">Since</th>
                 </tr>
               </thead>
               <tbody>
@@ -83,7 +83,7 @@ export default function CustomersPage() {
                         <span className="font-medium text-stone-900">{c.name}</span>
                       </div>
                     </td>
-                    <td>
+                    <td className="hidden sm:table-cell">
                       <div className="space-y-0.5">
                         {c.phone && <div className="flex items-center gap-1 text-xs text-stone-500"><Phone size={10} />{c.phone}</div>}
                         {c.email && <div className="flex items-center gap-1 text-xs text-stone-500"><Mail size={10} />{c.email}</div>}
@@ -91,13 +91,13 @@ export default function CustomersPage() {
                       </div>
                     </td>
                     <td className="font-medium">{fmt(c.totalSpend)}</td>
-                    <td>{c.visitCount}</td>
-                    <td>
+                    <td className="hidden sm:table-cell">{c.visitCount}</td>
+                    <td className="hidden sm:table-cell">
                       {c.loyaltyPoints > 0 ? (
                         <span className="badge badge-duka">{c.loyaltyPoints} pts</span>
                       ) : <span className="text-stone-300">—</span>}
                     </td>
-                    <td className="text-stone-400 text-xs">{new Date(c.createdAt).toLocaleDateString('sw-TZ')}</td>
+                    <td className="hidden sm:table-cell text-stone-400 text-xs">{new Date(c.createdAt).toLocaleDateString('sw-TZ')}</td>
                   </tr>
                 ))}
                 {customers.length === 0 && (

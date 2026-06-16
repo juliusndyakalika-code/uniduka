@@ -136,7 +136,7 @@ export default function ConsignmentPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="card p-4">
           <p className="text-xs text-stone-500 mb-1">Total Profit</p>
           <p className="text-xl font-bold text-green-600">{fmt(totalProfit)}</p>
@@ -351,7 +351,7 @@ export default function ConsignmentPage() {
                 <label className="label">Product / Item Name *</label>
                 <input className="input" {...saleForm.register('productName', { required: true })} placeholder="e.g. Samsung A05 (128GB)" />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="label">Cost Price *</label>
                   <input className="input" type="number" min="0" step="any" {...saleForm.register('costPrice', { required: true, min: 0 })} placeholder="0" />

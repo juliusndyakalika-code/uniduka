@@ -183,10 +183,10 @@ export default function Dashboard() {
             <thead>
               <tr>
                 <th>Receipt</th>
-                <th>Customer / Cashier</th>
+                <th className="hidden sm:table-cell">Customer / Cashier</th>
                 <th>Amount</th>
-                <th>Payment</th>
-                <th>Date & Time</th>
+                <th className="hidden sm:table-cell">Payment</th>
+                <th className="hidden sm:table-cell">Date & Time</th>
                 <th>Print</th>
               </tr>
             </thead>
@@ -197,10 +197,10 @@ export default function Dashboard() {
                     {tx.receiptNo}
                     {tx.status === 'VOIDED' && <span className="ml-1.5 text-[10px] bg-red-100 text-red-600 rounded px-1 py-0.5 font-semibold">VOID</span>}
                   </td>
-                  <td className="text-xs text-stone-500">{tx.cashierName ?? '—'}</td>
+                  <td className="hidden sm:table-cell text-xs text-stone-500">{tx.cashierName ?? '—'}</td>
                   <td className="font-medium">{fmt(tx.total)}</td>
-                  <td><span className="badge badge-stone">{tx.paymentMethod?.replace('_', ' ')}</span></td>
-                  <td className="text-stone-400 text-xs whitespace-nowrap">
+                  <td className="hidden sm:table-cell"><span className="badge badge-stone">{tx.paymentMethod?.replace('_', ' ')}</span></td>
+                  <td className="hidden sm:table-cell text-stone-400 text-xs whitespace-nowrap">
                     {new Date(tx.createdAt).toLocaleString('en-TZ', {
                       day: '2-digit', month: 'short', year: 'numeric',
                       hour: '2-digit', minute: '2-digit',
