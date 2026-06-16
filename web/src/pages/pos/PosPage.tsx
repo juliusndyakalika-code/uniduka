@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone,
   Printer, X, Tag, User, UserPlus, DollarSign, RotateCcw, ChevronDown,
-  AlertTriangle, Check, Clock,
+  AlertTriangle, Check, Clock, ShoppingCart, Package,
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -87,6 +87,9 @@ export default function PosPage() {
   const [currency, setCurrency]         = useState<'TZS' | 'USD'>('TZS');
   const [exchangeRate, setExchangeRate] = useState(USD_RATE_DEFAULT);
   const [showRateEdit, setShowRateEdit] = useState(false);
+
+  // Mobile layout
+  const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
 
   // Return/void modal
   const [showReturn, setShowReturn]     = useState(false);
@@ -350,10 +353,37 @@ export default function PosPage() {
     (paymentMethod !== 'CASH'  || (!!cashReceived && Number(cashReceived) >= total));
 
   return (
-    <div className="flex h-full gap-4 overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
+
+      {/* ── Mobile tab switcher ──────────────────────────────────────────── */}
+      <div className="md:hidden flex rounded-xl overflow-hidden border border-stone-200 mb-3 shrink-0">
+        <button
+          onClick={() => setMobileView('products')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold transition-colors ${
+            mobileView === 'products' ? 'bg-primary-600 text-white' : 'bg-white text-stone-500'
+          }`}
+        >
+          <Package size={15} /> Products
+        </button>
+        <button
+          onClick={() => setMobileView('cart')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold transition-colors ${
+            mobileView === 'cart' ? 'bg-primary-600 text-white' : 'bg-white text-stone-500'
+          }`}
+        >
+          <ShoppingCart size={15} />
+          Cart{cart.length > 0 ? ` (${cart.length})` : ''}
+          {cart.length > 0 && mobileView === 'products' && (
+            <span className="ml-1 text-xs font-bold text-emerald-400">{fmt(total)}</span>
+          )}
+        </button>
+      </div>
+
+      {/* ── Main panels ──────────────────────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden md:gap-4">
 
       {/* ── Product grid ─────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className={`flex flex-col min-w-0 overflow-hidden ${mobileView === 'products' ? 'flex-1' : 'hidden md:flex md:flex-1'}`}>
 
         {/* Toolbar */}
         <div className="mb-3 flex items-center gap-2">
@@ -449,7 +479,7 @@ export default function PosPage() {
       </div>
 
       {/* ── Cart + payment ───────────────────────────────────────────────── */}
-      <div className="w-72 xl:w-80 flex flex-col shrink-0 overflow-hidden">
+      <div className={`flex flex-col overflow-hidden md:w-72 xl:w-80 md:shrink-0 ${mobileView === 'cart' ? 'flex-1' : 'hidden md:flex'}`}>
         <div className="card flex flex-col flex-1 overflow-hidden">
 
           {/* Cart header */}
@@ -703,6 +733,8 @@ export default function PosPage() {
           </div>
         </div>
       </div>
+
+      </div>{/* end main panels */}
 
       {/* ── Receipt modal ────────────────────────────────────────────────── */}
       {receipt && (
