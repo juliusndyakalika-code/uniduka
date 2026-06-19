@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef, ReactNode } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Menu, Bell, X, Package, Clock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -24,40 +23,36 @@ function saveReadIds(ids: Set<string>) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
 }
 
-const SEVERITY = {
+const SEVERITY: Record<string, { bar: string; icon: string; hover: string }> = {
   critical: { bar: 'bg-red-500',   icon: 'text-red-500',   hover: 'hover:bg-red-50'   },
   warning:  { bar: 'bg-amber-400', icon: 'text-amber-500', hover: 'hover:bg-amber-50' },
   info:     { bar: 'bg-blue-400',  icon: 'text-blue-500',  hover: 'hover:bg-blue-50'  },
-};
-
-const TYPE_ICON: Record<string, ReactNode> = {
-  LOW_STOCK: <Package size={14} />,
-  DEBT:      <Clock   size={14} />,
 };
 
 interface Props { onMenuClick: () => void; }
 
 export default function Topbar({ onMenuClick }: Props) {
   const { shopId } = useAuthStore();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(getReadIds);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const { data: notifications = [] } = useQuery<Notification[]>({
+  const { data } = useQuery<Notification[]>({
     queryKey: ['notifications', shopId],
     queryFn: () => api.get('/tenant/notifications').then(r => r.data.data),
     enabled: !!shopId,
     refetchInterval: 60_000,
   });
 
+  const notifications: Notification[] = Array.isArray(data) ? data : [];
   const unreadCount = notifications.filter(n => !readIds.has(n.id)).length;
 
   useEffect(() => {
+    if (!open) return;
     function handler(e: MouseEvent) {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
     }
-    if (open) document.addEventListener('mousedown', handler);
+    document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
@@ -72,7 +67,13 @@ export default function Topbar({ onMenuClick }: Props) {
     setReadIds(ids);
     saveReadIds(ids);
     setOpen(false);
-    navigate(n.href);
+    window.location.href = n.href;
+  }
+
+  function typeIcon(type: string) {
+    if (type === 'LOW_STOCK') return <Package size={14} />;
+    if (type === 'DEBT') return <Clock size={14} />;
+    return null;
   }
 
   return (
@@ -100,7 +101,6 @@ export default function Topbar({ onMenuClick }: Props) {
 
         {open && (
           <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-stone-200 rounded-xl shadow-xl z-50 overflow-hidden">
-            {/* Panel header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-semibold text-stone-900">Notifications</p>
@@ -122,7 +122,6 @@ export default function Topbar({ onMenuClick }: Props) {
               </div>
             </div>
 
-            {/* Notification list */}
             <div className="max-h-80 overflow-y-auto divide-y divide-stone-100">
               {notifications.length === 0 ? (
                 <div className="px-4 py-10 text-center">
@@ -131,7 +130,7 @@ export default function Topbar({ onMenuClick }: Props) {
                 </div>
               ) : (
                 notifications.map(n => {
-                  const s = SEVERITY[n.severity];
+                  const s = SEVERITY[n.severity] ?? SEVERITY.info;
                   const isUnread = !readIds.has(n.id);
                   return (
                     <button
@@ -139,13 +138,13 @@ export default function Topbar({ onMenuClick }: Props) {
                       onClick={() => handleNotifClick(n)}
                       className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors ${s.hover} ${isUnread ? 'bg-stone-50' : 'bg-white'}`}
                     >
-                      <div className={`mt-0.5 shrink-0 ${s.icon}`}>{TYPE_ICON[n.type]}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm text-stone-900 truncate ${isUnread ? 'font-semibold' : 'font-medium'}`}>
+                      <span className={`mt-0.5 shrink-0 ${s.icon}`}>{typeIcon(n.type)}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className={`block text-sm text-stone-900 truncate ${isUnread ? 'font-semibold' : 'font-medium'}`}>
                           {n.title}
-                        </p>
-                        <p className="text-xs text-stone-500 mt-0.5">{n.body}</p>
-                      </div>
+                        </span>
+                        <span className="block text-xs text-stone-500 mt-0.5">{n.body}</span>
+                      </span>
                       <span className={`w-2 h-2 rounded-full mt-2 shrink-0 ${isUnread ? s.bar : 'bg-transparent'}`} />
                     </button>
                   );
@@ -153,7 +152,6 @@ export default function Topbar({ onMenuClick }: Props) {
               )}
             </div>
 
-            {/* Footer */}
             {notifications.length > 0 && (
               <div className="border-t border-stone-100 px-4 py-2 text-center">
                 <p className="text-[11px] text-stone-400">
