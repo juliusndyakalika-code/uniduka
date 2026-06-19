@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, ReactNode } from 'react';
 import { Menu, Bell, X, Package, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -30,7 +30,7 @@ const SEVERITY = {
   info:     { bar: 'bg-blue-400',  icon: 'text-blue-500',  hover: 'hover:bg-blue-50'  },
 };
 
-const TYPE_ICON: Record<string, React.ReactNode> = {
+const TYPE_ICON: Record<string, ReactNode> = {
   LOW_STOCK: <Package size={14} />,
   DEBT:      <Clock   size={14} />,
 };
