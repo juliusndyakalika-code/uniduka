@@ -129,7 +129,7 @@ const HOW_IT_WORKS = [
   {
     step: '01',
     title: 'Register your business',
-    desc: 'Sign up in minutes. Select your business type and UniDuka automatically configures the right modules, tax settings, and inventory model for you.',
+    desc: 'Sign up in minutes. Select your business type and MauzoSmart automatically configures the right modules, tax settings, and inventory model for you.',
   },
   {
     step: '02',
@@ -330,7 +330,7 @@ export default function LandingPage() {
               </h1>
 
               <p className="text-lg text-stone-500 leading-relaxed mb-8 max-w-lg">
-                UniDuka is the all-in-one business management platform for retail, restaurants, pharmacies, salons, and more —
+                MauzoSmart is the all-in-one business management platform for retail, restaurants, pharmacies, salons, and more —
                 with built-in TRA compliance, real-time inventory, and Android POS.
               </p>
 
@@ -415,7 +415,7 @@ export default function LandingPage() {
             <p className="text-xs font-semibold tracking-widest text-primary-600 uppercase mb-3">Business Types</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">Built for your industry</h2>
             <p className="text-stone-500 max-w-xl mx-auto">
-              Select your business type during registration and UniDuka auto-configures
+              Select your business type during registration and MauzoSmart auto-configures
               modules, tax modes, units, and workflows — no manual setup needed.
             </p>
           </div>
@@ -477,7 +477,7 @@ export default function LandingPage() {
               </div>
               <h2 className="text-3xl font-bold mb-4">Receipts generated automatically on every sale.</h2>
               <p className="text-white/80 leading-relaxed mb-6">
-                Every sale through UniDuka auto-generates a receipt with your shop details, TIN, VRN,
+                Every sale through MauzoSmart auto-generates a receipt with your shop details, TIN, VRN,
                 itemised products, tax breakdown, and payment summary. Print or share instantly — no extra setup.
               </p>
               <ul className="space-y-3">
@@ -528,7 +528,7 @@ export default function LandingPage() {
                 </div>
                 <div className="p-3 bg-stone-50 border-t border-stone-200 text-center text-[8px] text-stone-500 space-y-0.5">
                   <p className="font-bold text-stone-700">ASANTE KWA KUNUNUA!</p>
-                  <p>Powered by UniDuka</p>
+                  <p>Powered by MauzoSmart</p>
                 </div>
               </div>
             </div>
@@ -606,7 +606,7 @@ export default function LandingPage() {
                 <Smartphone size={12} /> Android App
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                Take UniDuka with you.<br />Native Android app.
+                Take MauzoSmart with you.<br />Native Android app.
               </h2>
               <p className="text-white/70 leading-relaxed mb-8">
                 Full-featured POS, inventory management, and sales dashboard in your pocket.
@@ -629,7 +629,7 @@ export default function LandingPage() {
               <div className="flex flex-wrap gap-4 items-center">
                 <a
                   href="https://api-production-00d0.up.railway.app/uniduka.apk"
-                  download="UniDuka.apk"
+                  download="MauzoSmart.apk"
                   className="inline-flex items-center gap-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold px-8 py-4 rounded-lg transition-colors shadow-lg text-base"
                 >
                   <Smartphone size={20} />
@@ -772,13 +772,13 @@ export default function LandingPage() {
               </ul>
               <div className="mt-5">
                 <p className="text-xs text-stone-500 mb-1">Reach us</p>
-                <p className="text-sm text-stone-300">info@uniduka.co.tz</p>
+                <p className="text-sm text-stone-300">info@mauzosmart.co.tz</p>
               </div>
             </div>
           </div>
 
           <div className="border-t border-stone-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-stone-600">© 2026 UniDuka. All rights reserved.</p>
+            <p className="text-xs text-stone-600">© 2026 MauzoSmart. All rights reserved.</p>
             <p className="text-xs text-stone-600 flex items-center gap-1.5">
               <Printer size={11} /> Made in Tanzania
             </p>

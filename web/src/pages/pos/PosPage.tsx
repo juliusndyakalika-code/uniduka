@@ -273,7 +273,7 @@ export default function PosPage() {
     }),
     onSuccess: (res) => {
       const tx = res.data.data;
-      const shopName = shopDetail?.tradingName ?? shops.find(s => s.id === shopId)?.tradingName ?? 'UniDuka';
+      const shopName = shopDetail?.tradingName ?? shops.find(s => s.id === shopId)?.tradingName ?? 'MauzoSmart';
       const cartSnapshot = cart.map(i => ({
         name:       i.product.name,
         qty:        i.qty,

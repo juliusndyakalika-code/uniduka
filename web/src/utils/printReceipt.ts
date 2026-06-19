@@ -161,7 +161,7 @@ ${r.customerName || r.customerTin ? '<hr class="sep"/>' : ''}
 ${r.paymentMethod === 'DEBIT' ? '<p class="debit-warn">*** PAYMENT PENDING ***</p><hr class="sep"/>' : ''}
 <p class="footer-msg">ASANTE KWA KUNUNUA!</p>
 <hr class="sep"/>
-<p class="footer">Powered by UniDuka</p>
+<p class="footer">Powered by MauzoSmart</p>
 <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
 </body></html>`);
   w.document.close();

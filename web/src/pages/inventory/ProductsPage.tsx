@@ -814,7 +814,7 @@ export default function ProductsPage() {
                 Allowed product types for this shop: <span className="font-medium text-stone-700">{(ALLOWED_TYPES[businessType] ?? ['PRODUCT']).join(', ')}</span>
               </p>
               <button
-                onClick={() => downloadCsv(generateCsv(businessType), `uniduka-template-${businessType.toLowerCase()}.csv`)}
+                onClick={() => downloadCsv(generateCsv(businessType), `mauzosmart-template-${businessType.toLowerCase()}.csv`)}
                 className="flex items-center gap-1.5 text-xs text-primary-600 hover:text-primary-800 font-medium"
               >
                 <Download size={13} /> Download template for {businessType.replace(/_/g, ' ')}

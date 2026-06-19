@@ -411,7 +411,7 @@ ${s.remaining > 0 ? `<tr><td>Still Outstanding</td><td class="r bold" style="col
 <hr class="sep2"/>
 <p class="footer-msg">${s.remaining <= 0 ? 'FULLY SETTLED ✓' : 'PARTIAL PAYMENT'}</p>
 <hr class="sep"/>
-<p class="footer">Powered by UniDuka</p>
+<p class="footer">Powered by MauzoSmart</p>
 <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
 </body></html>`);
                   w.document.close();

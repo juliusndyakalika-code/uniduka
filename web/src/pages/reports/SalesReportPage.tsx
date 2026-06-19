@@ -117,7 +117,7 @@ function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
           discountPct: i.discountPct, lineTotal: i.lineTotal, unit: i.unitLabel,
         })),
         shop: {
-          tradingName:  shop?.tradingName ?? 'UniDuka',
+          tradingName:  shop?.tradingName ?? 'MauzoSmart',
           addressLine1: shop?.addressLine1, city: shop?.city, phone: shop?.phone,
           tin: shop?.tin, vrn: shop?.vrn, taxMode: shop?.taxMode,
         },

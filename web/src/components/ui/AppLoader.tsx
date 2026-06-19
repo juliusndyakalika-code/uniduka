@@ -11,7 +11,7 @@ export default function AppLoader({ onDone }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#1C1A18]">
       <div className="animate-logo flex flex-col items-center gap-5">
-        {/* UniDuka mark — shop-pin */}
+        {/* MauzoSmart mark — shop-pin */}
         <svg width="56" height="64" viewBox="0 0 56 64" fill="none" aria-hidden="true">
           <rect x="4" y="4" width="48" height="40" rx="6" fill="#a66624"/>
           <rect x="4" y="4" width="48" height="40" rx="6" fill="url(#shop-grad)"/>
@@ -29,12 +29,12 @@ export default function AppLoader({ onDone }: Props) {
         </svg>
         <div className="text-center">
           <p className="text-white text-2xl font-bold tracking-tight">
-            Uni<span className="font-light text-primary-400">Duka</span>
+            Mauzo<span className="font-light text-primary-400">Smart</span>
           </p>
         </div>
       </div>
       <p className="animate-tagline absolute bottom-20 text-white/50 text-xs tracking-widest uppercase">
-        Multi-Business Platform
+        Smart Sales Platform
       </p>
     </div>
   );
