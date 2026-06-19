@@ -47,6 +47,63 @@ export async function upgradeSubscription(req: AuthRequest, res: Response) {
   return R.ok(res, { plan: account.subscriptionPlan });
 }
 
+export async function getNotifications(req: AuthRequest, res: Response) {
+  const shopId = req.user!.shopId;
+  if (!shopId) return R.ok(res, { data: [] });
+
+  const [products, debts] = await Promise.all([
+    prisma.product.findMany({
+      where: { shopId, isActive: true },
+      select: { id: true, name: true, reorderPoint: true, inventory: { select: { quantity: true } } },
+    }),
+    prisma.transaction.findMany({
+      where: { shopId, status: 'COMPLETED', payments: { some: { method: 'DEBIT' } } },
+      include: { payments: { select: { method: true, amount: true } } },
+    }),
+  ]);
+
+  const notifications: { id: string; type: string; title: string; body: string; href: string; severity: string }[] = [];
+
+  const lowStockItems = products
+    .map(p => ({ ...p, qty: p.inventory.reduce((s, i) => s + i.quantity, 0) }))
+    .filter(p => p.qty <= p.reorderPoint)
+    .sort((a, b) => a.qty - b.qty)
+    .slice(0, 5);
+
+  for (const p of lowStockItems) {
+    notifications.push({
+      id: `low-stock-${p.id}`,
+      type: 'LOW_STOCK',
+      title: p.name,
+      body: p.qty === 0 ? 'Out of stock' : `${p.qty} unit${p.qty === 1 ? '' : 's'} left`,
+      href: '/inventory/products',
+      severity: p.qty === 0 ? 'critical' : 'warning',
+    });
+  }
+
+  const unpaidDebts = debts.filter(tx => {
+    const paid = tx.payments.filter(p => p.method !== 'DEBIT').reduce((s, p) => s + p.amount, 0);
+    return tx.total - paid > 0;
+  });
+
+  if (unpaidDebts.length > 0) {
+    const totalOwed = unpaidDebts.reduce((s, tx) => {
+      const paid = tx.payments.filter(p => p.method !== 'DEBIT').reduce((a, p) => a + p.amount, 0);
+      return s + (tx.total - paid);
+    }, 0);
+    notifications.push({
+      id: `debts-${unpaidDebts.length}`,
+      type: 'DEBT',
+      title: `${unpaidDebts.length} unpaid debt${unpaidDebts.length === 1 ? '' : 's'}`,
+      body: `TZS ${Math.round(totalOwed).toLocaleString()} outstanding`,
+      href: '/pos/debts',
+      severity: 'info',
+    });
+  }
+
+  return R.ok(res, { data: notifications });
+}
+
 export async function getDashboard(req: AuthRequest, res: Response) {
   const shopId = req.user!.shopId;
   if (!shopId) return R.ok(res, { revenue: { today: 0, week: 0, month: 0 }, transactions: { today: 0, week: 0 }, customers: { total: 0, new: 0 }, lowStock: 0, topProducts: [], recentTransactions: [], salesChart: [] });
