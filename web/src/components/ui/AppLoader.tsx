@@ -12,18 +12,16 @@ export default function AppLoader({ onDone }: Props) {
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#1C1A18]">
       <div className="animate-logo flex flex-col items-center gap-5">
         {/* MauzoSmart mark — shop-pin */}
-        <svg width="56" height="64" viewBox="0 0 56 64" fill="none" aria-hidden="true">
-          <rect x="4" y="4" width="48" height="40" rx="6" fill="#a66624"/>
-          <rect x="4" y="4" width="48" height="40" rx="6" fill="url(#shop-grad)"/>
-          <path d="M20 44 L28 60 L36 44" fill="#a66624"/>
-          <rect x="14" y="16" width="8" height="14" rx="2" fill="white" opacity="0.9"/>
-          <rect x="24" y="16" width="8" height="14" rx="2" fill="white" opacity="0.9"/>
-          <rect x="34" y="16" width="8" height="14" rx="2" fill="white" opacity="0.9"/>
-          <rect x="14" y="34" width="28" height="3" rx="1.5" fill="white" opacity="0.5"/>
+        <svg width="64" height="64" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <rect width="40" height="40" rx="10" fill="url(#ms-splash-grad)"/>
+          <rect x="6" y="27" width="7" height="9" rx="1.5" fill="white" opacity="0.6"/>
+          <rect x="16.5" y="21" width="7" height="15" rx="1.5" fill="white" opacity="0.8"/>
+          <rect x="27" y="14" width="7" height="22" rx="1.5" fill="white"/>
+          <path d="M30.5 11 L30.5 6 M27.5 8.5 L30.5 5.5 L33.5 8.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           <defs>
-            <linearGradient id="shop-grad" x1="4" y1="4" x2="52" y2="44" gradientUnits="userSpaceOnUse">
+            <linearGradient id="ms-splash-grad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
               <stop stopColor="#c47d32"/>
-              <stop offset="1" stopColor="#88501c"/>
+              <stop offset="1" stopColor="#7a3e10"/>
             </linearGradient>
           </defs>
         </svg>

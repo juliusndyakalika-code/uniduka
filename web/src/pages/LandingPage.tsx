@@ -148,15 +148,15 @@ const HOW_IT_WORKS = [
 function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <svg width="28" height="32" viewBox="0 0 56 64" fill="none" aria-hidden="true">
-        <rect x="4" y="4" width="48" height="40" rx="6" fill="#a66624"/>
-        <rect x="14" y="16" width="8" height="14" rx="2" fill="white" opacity="0.9"/>
-        <rect x="24" y="16" width="8" height="14" rx="2" fill="white" opacity="0.9"/>
-        <rect x="34" y="16" width="8" height="14" rx="2" fill="white" opacity="0.9"/>
-        <path d="M20 44 L28 58 L36 44" fill="#a66624"/>
+      <svg width="28" height="28" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <rect width="40" height="40" rx="9" fill="#a66624"/>
+        <rect x="6" y="27" width="7" height="9" rx="1.5" fill="white" opacity="0.6"/>
+        <rect x="16.5" y="21" width="7" height="15" rx="1.5" fill="white" opacity="0.8"/>
+        <rect x="27" y="14" width="7" height="22" rx="1.5" fill="white"/>
+        <path d="M30.5 11 L30.5 6 M27.5 8.5 L30.5 5.5 L33.5 8.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
       <span className="text-lg font-bold tracking-tight text-stone-900">
-        Uni<span className="font-light text-primary-600">Duka</span>
+        Mauzo<span className="font-light text-primary-600">Smart</span>
       </span>
     </div>
   );
@@ -725,15 +725,15 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
             <div className="sm:col-span-2 lg:col-span-1">
               <div className="flex items-center gap-2.5 mb-4">
-                <svg width="24" height="28" viewBox="0 0 56 64" fill="none">
-                  <rect x="4" y="4" width="48" height="40" rx="6" fill="#a66624"/>
-                  <rect x="14" y="16" width="8" height="14" rx="2" fill="white" opacity="0.9"/>
-                  <rect x="24" y="16" width="8" height="14" rx="2" fill="white" opacity="0.9"/>
-                  <rect x="34" y="16" width="8" height="14" rx="2" fill="white" opacity="0.9"/>
-                  <path d="M20 44 L28 58 L36 44" fill="#a66624"/>
+                <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
+                  <rect width="40" height="40" rx="9" fill="#a66624"/>
+                  <rect x="6" y="27" width="7" height="9" rx="1.5" fill="white" opacity="0.6"/>
+                  <rect x="16.5" y="21" width="7" height="15" rx="1.5" fill="white" opacity="0.8"/>
+                  <rect x="27" y="14" width="7" height="22" rx="1.5" fill="white"/>
+                  <path d="M30.5 11 L30.5 6 M27.5 8.5 L30.5 5.5 L33.5 8.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
                 <span className="text-white font-bold tracking-tight">
-                  Uni<span className="font-light text-primary-500">Duka</span>
+                  Mauzo<span className="font-light text-primary-500">Smart</span>
                 </span>
               </div>
               <p className="text-sm leading-relaxed text-stone-500">
