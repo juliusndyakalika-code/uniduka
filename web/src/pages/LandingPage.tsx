@@ -71,8 +71,8 @@ const FEATURES = [
   },
   {
     icon: Smartphone,
-    title: 'Android App',
-    desc: 'Full-featured native Android app for POS, inventory, and dashboard. Works on any Android device or tablet.',
+    title: 'Install on Android',
+    desc: 'Install MauzoSmart directly from Chrome — no Play Store needed. Works like a native app with full POS, inventory, and dashboard.',
     color: 'bg-rose-50 text-rose-700',
   },
   {
@@ -262,7 +262,7 @@ export default function LandingPage() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-8">
-            {['Features', 'Who It\'s For', 'Pricing', 'Android App'].map(item => (
+            {['Features', 'Who It\'s For', 'Pricing', 'Install App'].map(item => (
               <a key={item} href={`#${item.toLowerCase().replace(/[^a-z]/g, '-')}`}
                 className="text-sm text-stone-600 hover:text-stone-900 transition-colors">
                 {item}
@@ -290,7 +290,7 @@ export default function LandingPage() {
         {/* Mobile menu */}
         {mobileOpen && (
           <div className="md:hidden bg-white border-t border-stone-200 px-4 py-5 space-y-4">
-            {['Features', 'Who It\'s For', 'Pricing', 'Android App'].map(item => (
+            {['Features', 'Who It\'s For', 'Pricing', 'Install App'].map(item => (
               <a key={item} href={`#${item.toLowerCase().replace(/[^a-z]/g, '-')}`}
                 onClick={() => setMobileOpen(false)}
                 className="block text-sm font-medium text-stone-700 py-1">
@@ -597,28 +597,29 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Android App ────────────────────────────────────────────────── */}
+      {/* ── Install on Android ─────────────────────────────────────────── */}
       <section id="android-app" className="py-24 bg-stone-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-semibold mb-6 border border-white/20">
-                <Smartphone size={12} /> Android App
+                <Smartphone size={12} /> Install on Android
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                Take MauzoSmart with you.<br />Native Android app.
+                Take MauzoSmart with you.<br />Install it like an app.
               </h2>
               <p className="text-white/70 leading-relaxed mb-8">
-                Full-featured POS, inventory management, and sales dashboard in your pocket.
-                Works on any Android phone or tablet — no Play Store required.
+                No Play Store, no APK downloads. Open MauzoSmart in Chrome, tap
+                <strong className="text-white"> "Add to Home Screen"</strong>, and it installs instantly —
+                full-screen, fast, and always up to date.
               </p>
               <ul className="space-y-3 mb-10">
                 {[
-                  'Full POS — scan, sell, print receipts',
+                  'Full POS — sell, collect payment, print receipts',
                   'Real-time stock & inventory updates',
-                  'Sales dashboard & reports',
-                  'Works on Android 7.0 and above',
-                  'No Play Store — direct APK install',
+                  'Sales dashboard, reports, and consignment',
+                  'Works on any Android phone or tablet',
+                  'Always updated — no manual installs ever',
                 ].map(item => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-white/80">
                     <Check size={15} className="text-emerald-400 mt-0.5 flex-shrink-0" />
@@ -626,20 +627,26 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <div className="flex flex-wrap gap-4 items-center">
-                <a
-                  href="https://api-production-00d0.up.railway.app/uniduka.apk"
-                  download="MauzoSmart.apk"
-                  className="inline-flex items-center gap-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold px-8 py-4 rounded-lg transition-colors shadow-lg text-base"
-                >
-                  <Smartphone size={20} />
-                  Download APK
-                </a>
-                <p className="text-white/40 text-xs">v1.0 · ~18 MB · Android 7.0+</p>
+
+              {/* Install steps */}
+              <div className="bg-white/5 border border-white/10 rounded-xl p-5 mb-6">
+                <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-4">How to install</p>
+                <div className="space-y-3">
+                  {[
+                    { step: '1', text: 'Open Chrome and go to the MauzoSmart URL' },
+                    { step: '2', text: 'Tap the three-dot menu ⋮ in the top-right corner' },
+                    { step: '3', text: 'Tap "Add to Home screen" → "Add"' },
+                    { step: '4', text: 'Done — MauzoSmart icon appears on your home screen' },
+                  ].map(({ step, text }) => (
+                    <div key={step} className="flex items-start gap-3">
+                      <span className="w-6 h-6 rounded-full bg-primary-600 text-white text-xs font-bold flex items-center justify-center shrink-0">{step}</span>
+                      <p className="text-sm text-white/70">{text}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <p className="mt-4 text-xs text-white/40">
-                Enable "Install from unknown sources" in Android settings to install.
-              </p>
+
+              <p className="text-xs text-white/30">Works on Chrome for Android 8.0+. No "unknown sources" setting needed.</p>
             </div>
 
             {/* Phone mockup */}
@@ -665,11 +672,11 @@ export default function LandingPage() {
                         <p className="text-white font-bold text-sm">128</p>
                       </div>
                     </div>
-                    <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-lg p-2.5 text-center">
-                      <p className="text-emerald-400 font-bold text-xs">New Sale</p>
+                    <div className="bg-primary-600/30 border border-primary-500/30 rounded-lg p-2.5 text-center">
+                      <p className="text-primary-300 font-bold text-xs">✓ Installed as App</p>
                     </div>
                     <div className="space-y-1.5">
-                      {['Amoxicillin 500mg', 'Paracetamol 1g', 'ORS Sachets'].map(p => (
+                      {['Unga wa Dona 2kg', 'Mafuta ya Bia 1L', 'Sukari Kilo 1'].map(p => (
                         <div key={p} className="bg-stone-800 rounded p-2 flex justify-between items-center">
                           <p className="text-white/70 text-[9px]">{p}</p>
                           <p className="text-white text-[9px] font-bold">× 1</p>
@@ -747,7 +754,7 @@ export default function LandingPage() {
                 {[
                   { label: 'Features', href: '#features' },
                   { label: 'Pricing', href: '#pricing' },
-                  { label: 'Android App', href: '#android-app' },
+                  { label: 'Install App', href: '#android-app' },
                 ].map(({ label, href }) => (
                   <li key={label}><a href={href} className="text-sm hover:text-white transition-colors">{label}</a></li>
                 ))}
