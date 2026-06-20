@@ -272,7 +272,7 @@ export default function LandingPage() {
 
           <div className="hidden md:flex items-center gap-3">
             <Link to="/login"
-              className="text-sm font-medium text-stone-700 hover:text-stone-900 transition-colors px-4 py-2">
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-700 border border-stone-400 px-5 py-2 rounded-sm hover:border-stone-900 hover:text-stone-900 hover:bg-stone-50 transition-colors">
               Sign In
             </Link>
             <Link to="/register"
@@ -281,10 +281,16 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Mobile hamburger */}
-          <button className="md:hidden p-2 text-stone-600" onClick={() => setMobileOpen(o => !o)}>
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          {/* Mobile: Sign In always visible + hamburger */}
+          <div className="md:hidden flex items-center gap-2">
+            <Link to="/login"
+              className="inline-flex items-center text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 px-4 py-2 rounded-sm transition-colors">
+              Sign In
+            </Link>
+            <button className="p-2 text-stone-600" onClick={() => setMobileOpen(o => !o)}>
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile menu */}
@@ -334,16 +340,20 @@ export default function LandingPage() {
                 with built-in TRA compliance, real-time inventory, and Android POS.
               </p>
 
-              <div className="flex flex-wrap gap-3 mb-10">
+              <div className="flex flex-wrap gap-3 mb-5">
                 <Link to="/register"
                   className="inline-flex items-center gap-2 bg-stone-900 text-white text-sm font-semibold px-7 py-3.5 rounded-sm hover:bg-stone-800 transition-colors shadow-sm">
                   Start Free Trial <ArrowRight size={16} />
                 </Link>
-                <a href="#features"
-                  className="inline-flex items-center gap-2 border border-stone-300 text-stone-700 text-sm font-semibold px-7 py-3.5 rounded-sm hover:border-stone-500 transition-colors">
-                  See all features <ChevronRight size={16} />
-                </a>
+                <Link to="/login"
+                  className="inline-flex items-center gap-2 bg-primary-600 text-white text-sm font-semibold px-7 py-3.5 rounded-sm hover:bg-primary-700 transition-colors shadow-sm">
+                  Sign In <ArrowRight size={16} />
+                </Link>
               </div>
+              <p className="text-xs text-stone-400 mb-8">
+                New here?{' '}
+                <a href="#features" className="underline hover:text-stone-600 transition-colors">See what MauzoSmart can do →</a>
+              </p>
 
               {/* Trust signals */}
               <div className="flex flex-wrap items-center gap-6 text-xs text-stone-500">
@@ -712,7 +722,7 @@ export default function LandingPage() {
               Create Free Account <ArrowRight size={18} />
             </Link>
             <Link to="/login"
-              className="inline-flex items-center gap-2 border border-stone-300 text-stone-700 font-semibold px-8 py-4 rounded-sm hover:border-stone-500 transition-colors">
+              className="inline-flex items-center gap-2 bg-primary-600 text-white font-semibold px-8 py-4 rounded-sm hover:bg-primary-700 transition-colors shadow-sm">
               Sign In
             </Link>
           </div>
