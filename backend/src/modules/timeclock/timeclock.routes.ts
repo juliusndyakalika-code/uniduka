@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { getStatus, clockIn, clockOut, listShifts, deleteShift } from './timeclock.controller';
+import { authenticate } from '../../middleware/auth';
+const router = Router();
+router.use(authenticate);
+router.get('/status',   getStatus);
+router.post('/clock-in',  clockIn);
+router.post('/clock-out', clockOut);
+router.get('/',         listShifts);
+router.delete('/:id',   deleteShift);
+export default router;

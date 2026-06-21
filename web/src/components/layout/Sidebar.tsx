@@ -4,7 +4,8 @@ import {
   LayoutDashboard, ShoppingCart, Package, Users, Calendar,
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
-  Hotel, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
+  Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
@@ -20,7 +21,7 @@ const BUSINESS_ICONS: Record<string, React.ReactNode> = {
   SALON_SPA:           <Scissors size={14} />,
   CLINIC_MEDICAL:      <Stethoscope size={14} />,
   REPAIR_WORKSHOP:     <Wrench size={14} />,
-  HOTEL_GUESTHOUSE:    <Hotel size={14} />,
+  HOTEL_GUESTHOUSE:    <HotelIcon size={14} />,
 };
 
 interface NavItemProps { to: string; icon: React.ReactNode; label: string; end?: boolean; }
@@ -207,34 +208,50 @@ export default function Sidebar({ open, onClose }: Props) {
         <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
           <NavItem to="/dashboard" icon={<LayoutDashboard size={16} />} label="Dashboard" end />
 
-          {/* Cashier sees POS + Customers only */}
+          {/* Cashier sees POS + Customers + Timeclock */}
           {role === 'CASHIER' && (
             <>
-              <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label="Point of Sale" />
-              <NavItem to="/customers" icon={<Users size={16} />}        label="Customers" />
+              <NavItem to="/pos"        icon={<ShoppingCart size={16} />} label="Point of Sale" />
+              <NavItem to="/customers"  icon={<Users size={16} />}        label="Customers" />
+              <NavItem to="/timeclock"  icon={<Clock size={16} />}        label="Timeclock" />
             </>
           )}
 
           {/* Inventory staff sees Inventory + Customers */}
           {role === 'INVENTORY_STAFF' && (
             <>
-              <NavItem to="/inventory"          icon={<BarChart2 size={16} />} label="Stock Overview" end />
-              <NavItem to="/inventory/products" icon={<Package size={16} />}   label="Products" />
-              <NavItem to="/customers"          icon={<Users size={16} />}     label="Customers" />
+              <NavItem to="/inventory"          icon={<BarChart2 size={16} />}   label="Stock Overview" end />
+              <NavItem to="/inventory/products" icon={<Package size={16} />}     label="Products" />
+              <NavItem to="/inventory/stock"    icon={<ArrowUpDown size={16} />} label="Stock Movements" />
+              <NavItem to="/customers"          icon={<Users size={16} />}       label="Customers" />
             </>
           )}
 
           {/* Owner sees everything */}
           {isOwner && (
             <>
-              <NavItem to="/pos"                icon={<ShoppingCart size={16} />} label="Point of Sale" />
-              <NavItem to="/pos/debts"         icon={<Clock size={16} />}        label="Debts" />
-              <NavItem to="/pos/voids"         icon={<Trash2 size={16} />}       label="Voided Sales" />
-              <NavItem to="/inventory"          icon={<BarChart2 size={16} />}     label="Stock Overview" end />
-              <NavItem to="/inventory/products" icon={<Package size={16} />}      label="Products" />
-              <NavItem to="/customers"          icon={<Users size={16} />}        label="Customers" />
-              <NavItem to="/consignment"        icon={<Handshake size={16} />}    label="Consignment" />
-              <NavItem to="/appointments"       icon={<Calendar size={16} />}     label="Appointments" />
+              <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label="Point of Sale" />
+              <NavItem to="/pos/debts" icon={<Clock size={16} />}        label="Debts" />
+              <NavItem to="/pos/voids" icon={<Trash2 size={16} />}       label="Voided Sales" />
+              {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
+                <NavItem to="/kds" icon={<ChefHat size={16} />} label="Kitchen Display" />
+              )}
+              {currentShop?.businessType === 'REPAIR_WORKSHOP' && (
+                <NavItem to="/repairs/work-orders" icon={<Wrench size={16} />} label="Work Orders" />
+              )}
+              {currentShop?.businessType === 'HOTEL_GUESTHOUSE' && (
+                <NavItem to="/hotel" icon={<BedDouble size={16} />} label="Hotel Rooms" />
+              )}
+              <NavGroup icon={<Package size={16} />} label="Inventory" prefix="/inventory">
+                <NavItem to="/inventory"                 icon={<BarChart2 size={14} />}     label="Stock Overview" end />
+                <NavItem to="/inventory/products"        icon={<Package size={14} />}       label="Products" />
+                <NavItem to="/inventory/stock"           icon={<ArrowUpDown size={14} />}   label="Stock Movements" />
+                <NavItem to="/inventory/purchase-orders" icon={<ClipboardList size={14} />} label="Purchase Orders" />
+                <NavItem to="/inventory/recipes"         icon={<Utensils size={14} />}      label="Recipes" />
+              </NavGroup>
+              <NavItem to="/customers"    icon={<Users size={16} />}     label="Customers" />
+              <NavItem to="/consignment"  icon={<Handshake size={16} />} label="Consignment" />
+              <NavItem to="/appointments" icon={<Calendar size={16} />}  label="Appointments" />
               <NavGroup icon={<TrendingUp size={16} />} label="Reports" prefix="/reports">
                 <NavItem to="/reports/sales"     icon={<TrendingUp size={14} />} label="Sales" />
                 <NavItem to="/reports/staff"     icon={<Users size={14} />}      label="By Seller" />
@@ -244,9 +261,11 @@ export default function Sidebar({ open, onClose }: Props) {
               <div className="pt-3 pb-1">
                 <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400">Management</p>
               </div>
+              <NavItem to="/timeclock"       icon={<Clock size={16} />}     label="Staff Timeclock" />
               <NavItem to="/admin/users"     icon={<Users size={16} />}     label="Users & Staff" />
               <NavItem to="/admin/shops"     icon={<Building2 size={16} />} label="Shops" />
               <NavItem to="/loyalty"         icon={<Star size={16} />}      label="Loyalty" />
+              <NavItem to="/admin/tax-rules" icon={<Percent size={16} />}   label="Tax Rules" />
               <NavItem to="/admin/shop"      icon={<Store size={16} />}     label="Shop Settings" />
               <NavItem to="/admin/business"  icon={<Settings size={16} />}  label="Business Settings" />
             </>

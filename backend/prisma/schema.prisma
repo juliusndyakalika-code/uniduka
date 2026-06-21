@@ -294,6 +294,7 @@ model Shop {
   recipes               Recipe[]
   consignmentPartners   ConsignmentPartner[]
   consignmentSales      ConsignmentSale[]
+  timeClocks            TimeClock[]
 
   @@map("shops")
 }
@@ -360,6 +361,7 @@ model User {
   auditLogs      AuditLog[]
   appointments   Appointment[]   @relation("StaffAppointments")
   consignmentSales ConsignmentSale[]
+  timeClocks     TimeClock[]
 
   @@map("users")
 }
@@ -931,6 +933,23 @@ model RoomCharge {
   chargedAt  DateTime  @default(now())
 
   @@map("room_charges")
+}
+
+// ─── STAFF TIMECLOCK ─────────────────────────────────────────────────────────
+
+model TimeClock {
+  id        String    @id @default(cuid())
+  shopId    String
+  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clockIn   DateTime
+  clockOut  DateTime?
+  totalMins Int?
+  note      String?
+  createdAt DateTime  @default(now())
+
+  @@map("time_clocks")
 }
 
 // ─── WEBHOOKS ────────────────────────────────────────────────────────────────

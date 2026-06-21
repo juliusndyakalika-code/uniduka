@@ -1,0 +1,15 @@
+import { Router } from 'express';
+import { listRooms, createRoom, updateRoom, deleteRoom, listFolios, checkIn, getFolio, addCharge, checkOut } from './hotel.controller';
+import { authenticate } from '../../middleware/auth';
+const router = Router();
+router.use(authenticate);
+router.get('/rooms',         listRooms);
+router.post('/rooms',        createRoom);
+router.put('/rooms/:id',     updateRoom);
+router.delete('/rooms/:id',  deleteRoom);
+router.get('/folios',        listFolios);
+router.post('/check-in',     checkIn);
+router.get('/folios/:id',    getFolio);
+router.post('/folios/:id/charges', addCharge);
+router.post('/folios/:id/check-out', checkOut);
+export default router;

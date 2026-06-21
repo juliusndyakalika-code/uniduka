@@ -353,6 +353,8 @@ export default function ProductsPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importError, setImportError]   = useState('');
+  const [importPreview, setImportPreview] = useState<Record<string, string>[] | null>(null);
+  const [importHeaders, setImportHeaders] = useState<string[]>([]);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [sortCol, setSortCol] = useState<SortCol>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -479,8 +481,33 @@ export default function ProductsPage() {
   }
   function closeForm() { setShowForm(false); setEditing(null); setOpenBoxMode(false); reset({}); }
 
-  function openImport() { setImportFile(null); setImportResult(null); setImportError(''); setShowImport(true); }
-  function closeImport() { setShowImport(false); setImportFile(null); setImportResult(null); setImportError(''); }
+  function parsePreview(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = (e.target?.result as string) || '';
+      const lines = text.split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
+      if (lines.length < 2) { setImportPreview([]); return; }
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      setImportHeaders(headers);
+      const rows = lines.slice(1, 51).map(line => {
+        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        return headers.reduce((obj, h, i) => ({ ...obj, [h]: vals[i] ?? '' }), {} as Record<string, string>);
+      }).filter(r => Object.values(r).some(v => v));
+      setImportPreview(rows);
+    };
+    reader.readAsText(file);
+  }
+
+  function setFileAndPreview(f: File | undefined) {
+    if (!f) return;
+    setImportFile(f);
+    setImportError('');
+    setImportPreview(null);
+    parsePreview(f);
+  }
+
+  function openImport() { setImportFile(null); setImportResult(null); setImportError(''); setImportPreview(null); setShowImport(true); }
+  function closeImport() { setShowImport(false); setImportFile(null); setImportResult(null); setImportError(''); setImportPreview(null); }
 
   const products = sortProducts(data?.items ?? [], sortCol, sortDir);
 
@@ -864,8 +891,8 @@ export default function ProductsPage() {
                 <div
                   onClick={() => fileRef.current?.click()}
                   onDragOver={e => e.preventDefault()}
-                  onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) { setImportFile(f); setImportError(''); } else setImportError('Only .csv files are accepted'); }}
-                  className="border-2 border-dashed border-stone-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary-400 hover:bg-primary-50/30 transition-colors"
+                  onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) setFileAndPreview(f); else setImportError('Only .csv files are accepted'); }}
+                  className="border-2 border-dashed border-stone-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary-400 hover:bg-primary-50/30 transition-colors"
                 >
                   <Upload size={24} className="mx-auto text-stone-300 mb-2" />
                   {importFile ? (
@@ -881,7 +908,42 @@ export default function ProductsPage() {
                   )}
                 </div>
                 <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) { setImportFile(f); setImportError(''); } }} />
+                  onChange={e => setFileAndPreview(e.target.files?.[0])} />
+
+                {/* CSV preview table */}
+                {importPreview && importPreview.length > 0 && (
+                  <div className="mt-4 border border-stone-200 rounded-lg overflow-hidden">
+                    <div className="bg-stone-50 px-3 py-2 flex items-center justify-between">
+                      <p className="text-xs font-semibold text-stone-700">{importPreview.length} row{importPreview.length > 1 ? 's' : ''} ready to import</p>
+                      {importPreview.length === 50 && <p className="text-[10px] text-stone-400">Showing first 50 rows</p>}
+                    </div>
+                    <div className="overflow-x-auto max-h-48">
+                      <table className="text-[10px] w-full">
+                        <thead className="sticky top-0 bg-stone-100">
+                          <tr>
+                            {importHeaders.slice(0, 6).map(h => (
+                              <th key={h} className="px-2 py-1.5 text-left text-stone-500 font-medium whitespace-nowrap">{h}</th>
+                            ))}
+                            {importHeaders.length > 6 && <th className="px-2 py-1.5 text-stone-400">+{importHeaders.length - 6} more</th>}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100">
+                          {importPreview.map((row, i) => (
+                            <tr key={i} className="hover:bg-stone-50">
+                              {importHeaders.slice(0, 6).map(h => (
+                                <td key={h} className="px-2 py-1.5 text-stone-700 truncate max-w-[100px]">{row[h] || '—'}</td>
+                              ))}
+                              {importHeaders.length > 6 && <td className="px-2 py-1.5 text-stone-400">…</td>}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                {importPreview && importPreview.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-2">No valid data rows found in this CSV.</p>
+                )}
 
                 <div className="flex gap-3 mt-4">
                   <button className="btn-secondary flex-1" onClick={closeImport}>Cancel</button>
@@ -890,7 +952,7 @@ export default function ProductsPage() {
                     onClick={() => importFile && runImport(importFile)}
                     className="btn-primary flex-1"
                   >
-                    {importing ? 'Importing…' : 'Import'}
+                    {importing ? 'Importing…' : importPreview ? `Import ${importPreview.length} Products` : 'Import'}
                   </button>
                 </div>
               </>

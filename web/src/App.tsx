@@ -38,6 +38,9 @@ import DebtsPage from './pages/pos/DebtsPage';
 import VoidsPage from './pages/pos/VoidsPage';
 
 import KdsPage from './pages/kds/KdsPage';
+import TimeclockPage from './pages/timeclock/TimeclockPage';
+import WorkOrdersPage from './pages/repairs/WorkOrdersPage';
+import HotelPage from './pages/hotel/HotelPage';
 
 import ConsignmentPage from './pages/consignment/ConsignmentPage';
 import ShopsPage from './pages/admin/ShopsPage';
@@ -100,6 +103,9 @@ export default function App() {
             <Route path="/pos/voids" element={<VoidsPage />} />
 
             <Route path="/kds" element={<KdsPage />} />
+            <Route path="/timeclock" element={<TimeclockPage />} />
+            <Route path="/repairs/work-orders" element={<WorkOrdersPage />} />
+            <Route path="/hotel" element={<HotelPage />} />
 
             {/* Owner-only management routes */}
             <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER']} />}>

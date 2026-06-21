@@ -30,6 +30,9 @@ import kdsRoutes        from './modules/kds/kds.routes';
 import webhookRoutes    from './modules/webhooks/webhooks.routes';
 import platformRoutes   from './modules/platform/platform.routes';
 import consignmentRoutes from './modules/consignment/consignment.routes';
+import timeclockRoutes  from './modules/timeclock/timeclock.routes';
+import workOrderRoutes  from './modules/work-orders/workOrders.routes';
+import hotelRoutes      from './modules/hotel/hotel.routes';
 
 const app  = express();
 const http = createServer(app);
@@ -73,6 +76,9 @@ app.use(`${v1}/kds`,          subscriptionGate, kdsRoutes);
 app.use(`${v1}/webhooks`,     webhookRoutes);
 app.use(`${v1}/platform`,     platformRoutes);
 app.use(`${v1}/consignment`,  subscriptionGate, consignmentRoutes);
+app.use(`${v1}/timeclock`,    subscriptionGate, timeclockRoutes);
+app.use(`${v1}/work-orders`,  subscriptionGate, workOrderRoutes);
+app.use(`${v1}/hotel`,        subscriptionGate, hotelRoutes);
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/', (_, res) => res.json({ status: 'ok', service: 'UniDuka API', version: '4.0.0' }));
