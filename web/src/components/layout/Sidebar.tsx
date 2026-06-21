@@ -247,7 +247,9 @@ export default function Sidebar({ open, onClose }: Props) {
                 <NavItem to="/inventory/products"        icon={<Package size={14} />}       label="Products" />
                 <NavItem to="/inventory/stock"           icon={<ArrowUpDown size={14} />}   label="Stock Movements" />
                 <NavItem to="/inventory/purchase-orders" icon={<ClipboardList size={14} />} label="Purchase Orders" />
-                <NavItem to="/inventory/recipes"         icon={<Utensils size={14} />}      label="Recipes" />
+                {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
+                  <NavItem to="/inventory/recipes" icon={<Utensils size={14} />} label="Recipes" />
+                )}
               </NavGroup>
               <NavItem to="/customers"    icon={<Users size={16} />}     label="Customers" />
               <NavItem to="/consignment"  icon={<Handshake size={16} />} label="Consignment" />
