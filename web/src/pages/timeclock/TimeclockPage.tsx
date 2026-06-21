@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Clock, LogIn, LogOut, User, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, LogIn, LogOut, User, Trash2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { format, formatDuration, intervalToDuration } from 'date-fns';
@@ -17,31 +17,52 @@ function dur(mins: number | null, clockIn: string) {
 }
 
 export default function TimeclockPage() {
-  const { user } = useAuthStore();
+  const { user, shopId } = useAuthStore();
   const isOwner = user?.role === 'ACCOUNT_OWNER';
   const qc = useQueryClient();
   const [note, setNote] = useState('');
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const [actionError, setActionError] = useState('');
 
-  const { data: status } = useQuery<Shift | null>({
-    queryKey: ['timeclock-status'],
+  const { data: status, isError: statusError } = useQuery<Shift | null>({
+    queryKey: ['timeclock-status', shopId],
     queryFn: () => api.get('/timeclock/status').then(r => r.data.data),
+    enabled: !!shopId,
     refetchInterval: 30_000,
   });
 
-  const { data: shifts = [] } = useQuery<Shift[]>({
-    queryKey: ['timeclock-shifts'],
+  const { data: shifts = [], isError: shiftsError } = useQuery<Shift[]>({
+    queryKey: ['timeclock-shifts', shopId],
     queryFn: () => api.get('/timeclock').then(r => r.data.data),
+    enabled: !!shopId,
   });
 
   const { mutate: doClockIn, isPending: clockingIn } = useMutation({
     mutationFn: () => api.post('/timeclock/clock-in', { note }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['timeclock-status'] }); qc.invalidateQueries({ queryKey: ['timeclock-shifts'] }); setNote(''); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['timeclock-status'] });
+      qc.invalidateQueries({ queryKey: ['timeclock-shifts'] });
+      setNote('');
+      setActionError('');
+    },
+    onError: (e: unknown) => {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setActionError(msg || 'Failed to clock in. Please try again.');
+    },
   });
 
   const { mutate: doClockOut, isPending: clockingOut } = useMutation({
     mutationFn: () => api.post('/timeclock/clock-out', { note }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['timeclock-status'] }); qc.invalidateQueries({ queryKey: ['timeclock-shifts'] }); setNote(''); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['timeclock-status'] });
+      qc.invalidateQueries({ queryKey: ['timeclock-shifts'] });
+      setNote('');
+      setActionError('');
+    },
+    onError: (e: unknown) => {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setActionError(msg || 'Failed to clock out. Please try again.');
+    },
   });
 
   const { mutate: deleteShift } = useMutation({
@@ -60,6 +81,18 @@ export default function TimeclockPage() {
 
   const isClockedIn = !!status;
 
+  if (!shopId) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        <div className="card p-8 text-center text-stone-400">
+          <AlertCircle size={24} className="mx-auto mb-3 text-amber-500" />
+          <p className="text-sm font-medium text-stone-700">No shop selected</p>
+          <p className="text-xs mt-1">Please select a shop to use the timeclock.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -72,11 +105,20 @@ export default function TimeclockPage() {
         <div className="flex items-center gap-3 mb-4">
           <div className={`w-3 h-3 rounded-full ${isClockedIn ? 'bg-emerald-500 animate-pulse' : 'bg-stone-300'}`} />
           <span className="font-semibold text-stone-900">
-            {isClockedIn
+            {statusError
+              ? 'Unable to load status'
+              : isClockedIn
               ? `Clocked in since ${format(new Date(status.clockIn), 'h:mm a')} · ${dur(null, status.clockIn)}`
               : 'Not clocked in'}
           </span>
         </div>
+
+        {actionError && (
+          <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+            <AlertCircle size={13} /> {actionError}
+          </div>
+        )}
+
         <input
           type="text" value={note} onChange={e => setNote(e.target.value)}
           placeholder="Optional note (e.g. Late due to transport)"
@@ -96,8 +138,13 @@ export default function TimeclockPage() {
       {/* Shift history */}
       <div>
         <h2 className="text-sm font-semibold text-stone-700 mb-3">Shift History</h2>
+        {shiftsError && (
+          <div className="card p-4 flex items-center gap-2 text-xs text-red-600 mb-2">
+            <AlertCircle size={13} /> Failed to load shifts. Please refresh the page.
+          </div>
+        )}
         <div className="space-y-2">
-          {dates.length === 0 && (
+          {dates.length === 0 && !shiftsError && (
             <div className="card p-6 text-center text-stone-400 text-sm">No shifts recorded yet</div>
           )}
           {dates.map(d => {
@@ -127,7 +174,7 @@ export default function TimeclockPage() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          {isOwner && <p className="text-xs font-medium text-stone-900 truncate">{s.user.fullName}</p>}
+                          {isOwner && <p className="text-xs font-medium text-stone-900 truncate">{s.user?.fullName ?? '—'}</p>}
                           <p className="text-xs text-stone-500">
                             {format(new Date(s.clockIn), 'h:mm a')} → {s.clockOut ? format(new Date(s.clockOut), 'h:mm a') : <span className="text-emerald-600 font-medium">Active</span>}
                             {s.totalMins ? ` · ${dur(s.totalMins, s.clockIn)}` : ''}
