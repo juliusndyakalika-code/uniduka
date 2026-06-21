@@ -388,17 +388,23 @@ export async function getInventoryDashboard(req: AuthRequest, res: Response) {
 }
 
 export async function adjustStock(req: AuthRequest, res: Response) {
-  const { productId, quantity, type, note, batchNo, expiryDate, unitCost } = req.body;
-  const item = await prisma.inventoryItem.upsert({
-    where: { id: `${shop(req)}-${productId}-default` },
-    create: { shopId: shop(req), productId, quantity, batchNo, expiryDate: expiryDate ? new Date(expiryDate) : undefined, costPrice: unitCost || 0 },
-    update: { quantity: { increment: quantity } },
-  }).catch(async () => {
-    // fallback: create new line
-    return prisma.inventoryItem.create({ data: { shopId: shop(req), productId, quantity, batchNo, expiryDate: expiryDate ? new Date(expiryDate) : undefined, costPrice: unitCost || 0 } });
-  });
-  await prisma.stockMovement.create({ data: { shopId: shop(req), productId, type: type || 'ADJUSTMENT', quantity, batchNo, unitCost: unitCost || 0, note } });
-  return R.ok(res, item);
+  const { productId, quantity, qty, type, note, reason, batchNo, expiryDate, unitCost } = req.body;
+  if (!productId) return R.badRequest(res, 'productId is required');
+  const rawQty = Number(quantity ?? qty ?? 0);
+  if (!rawQty || rawQty <= 0) return R.badRequest(res, 'Quantity must be a positive number');
+  const isOut = type === 'ADJUSTMENT_OUT';
+  const delta = isOut ? -rawQty : rawQty;
+  const actualNote = note || reason;
+
+  // Find existing inventory item for this product in this shop
+  const existing = await prisma.inventoryItem.findFirst({ where: { shopId: shop(req), productId } });
+  if (existing) {
+    await prisma.inventoryItem.update({ where: { id: existing.id }, data: { quantity: { increment: delta } } });
+  } else {
+    await prisma.inventoryItem.create({ data: { shopId: shop(req), productId, quantity: delta, batchNo, expiryDate: expiryDate ? new Date(expiryDate) : undefined, costPrice: unitCost || 0 } });
+  }
+  await prisma.stockMovement.create({ data: { shopId: shop(req), productId, type: 'ADJUSTMENT', quantity: delta, batchNo, unitCost: unitCost || 0, note: actualNote } });
+  return R.ok(res, { message: 'Stock adjusted', delta });
 }
 
 export async function getExpiryAlerts(req: AuthRequest, res: Response) {
