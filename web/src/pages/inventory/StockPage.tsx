@@ -6,9 +6,9 @@ import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
 interface Movement {
-  id: string; type: string; qty: number; reason?: string;
+  id: string; type: string; quantity: number; note?: string;
   product: { name: string; sku: string; unit: string };
-  createdAt: string; user?: { fullName: string };
+  createdAt: string;
 }
 interface AdjustForm { productId: string; qty: number; reason: string; type: 'ADJUSTMENT_IN' | 'ADJUSTMENT_OUT'; }
 
@@ -23,7 +23,7 @@ export default function StockPage() {
 
   const { data: movements = [], isLoading } = useQuery<Movement[]>({
     queryKey: ['stock-movements', shopId, search],
-    queryFn: () => api.get('/inventory/stock/movements', { params: { search } }).then(r => r.data.data),
+    queryFn: () => api.get('/inventory/movements', { params: { search } }).then(r => r.data.data),
     enabled: !!shopId,
   });
 
@@ -90,11 +90,11 @@ export default function StockPage() {
                       <p className="font-medium text-stone-900">{m.product.name}</p>
                       <p className="text-xs text-stone-400 font-mono">{m.product.sku}</p>
                     </td>
-                    <td className={`font-mono font-medium ${m.type.includes('OUT') || m.type === 'SALE' ? 'text-red-600' : 'text-green-600'}`}>
-                      {m.type.includes('OUT') || m.type === 'SALE' ? '-' : '+'}{Math.abs(m.qty)} {m.product.unit}
+                    <td className={`font-mono font-medium ${m.quantity < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {m.quantity > 0 ? '+' : ''}{m.quantity} {m.product.unit}
                     </td>
-                    <td className="text-stone-400 text-xs">{m.reason || '—'}</td>
-                    <td className="text-stone-400 text-xs">{m.user?.fullName || '—'}</td>
+                    <td className="text-stone-400 text-xs">{m.note || '—'}</td>
+                    <td className="text-stone-400 text-xs">—</td>
                     <td className="text-stone-400 text-xs">
                       {new Date(m.createdAt).toLocaleDateString('sw-TZ')}
                     </td>

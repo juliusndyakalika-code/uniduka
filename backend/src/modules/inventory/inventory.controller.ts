@@ -499,7 +499,7 @@ export async function receivePO(req: AuthRequest, res: Response) {
 }
 
 export async function listMovements(req: AuthRequest, res: Response) {
-  const { productId, type, from, to } = req.query as Record<string, string>;
+  const { productId, type, from, to, search } = req.query as Record<string, string>;
   const movements = await prisma.stockMovement.findMany({
     where: {
       shopId: shop(req),
@@ -507,10 +507,13 @@ export async function listMovements(req: AuthRequest, res: Response) {
       ...(type && { type: type as never }),
       ...(from && { createdAt: { gte: new Date(from) } }),
       ...(to && { createdAt: { lte: new Date(to) } }),
+      ...(search && { product: { name: { contains: search, mode: 'insensitive' } } }),
     },
-    include: { product: { select: { name: true, sku: true } } },
+    include: {
+      product: { select: { name: true, sku: true, unit: true } },
+    },
     orderBy: { createdAt: 'desc' },
-    take: 200,
+    take: 300,
   });
   return R.ok(res, movements);
 }
