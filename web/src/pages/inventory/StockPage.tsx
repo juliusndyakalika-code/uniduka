@@ -29,7 +29,7 @@ export default function StockPage() {
 
   const { data: products = [] } = useQuery<{ id: string; name: string; sku: string }[]>({
     queryKey: ['products-min', shopId],
-    queryFn: () => api.get('/inventory/products', { params: { limit: 200 } }).then(r => r.data.data.items),
+    queryFn: () => api.get('/inventory/products', { params: { limit: 500 } }).then(r => r.data.data),
     enabled: !!shopId,
   });
 
