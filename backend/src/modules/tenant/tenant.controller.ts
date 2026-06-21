@@ -16,7 +16,10 @@ export async function getAccount(req: AuthRequest, res: Response) {
     include: { shops: { select: { id: true, tradingName: true, businessType: true, isActive: true, wizardCompleted: true, configScore: true } } },
   });
   if (!account) return R.notFound(res, 'Account not found');
-  return R.ok(res, { ...account, limits: PLAN_LIMITS[account.subscriptionPlan] });
+  const daysRemaining = account.subscriptionExpiresAt
+    ? Math.max(0, Math.ceil((account.subscriptionExpiresAt.getTime() - Date.now()) / 86_400_000))
+    : null;
+  return R.ok(res, { ...account, limits: PLAN_LIMITS[account.subscriptionPlan], daysRemaining });
 }
 
 export async function updateAccount(req: AuthRequest, res: Response) {

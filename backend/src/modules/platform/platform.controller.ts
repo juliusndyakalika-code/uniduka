@@ -89,28 +89,27 @@ export async function getAccount(req: Request, res: Response) {
   return R.ok(res, account);
 }
 
-// POST /api/v1/platform/accounts/:id/approve
-// body: { durationDays?: number }  — defaults to 30; pass 0 for no expiry (paid/enterprise)
-export async function approveAccount(req: Request, res: Response, next: NextFunction) {
+// POST /api/v1/platform/accounts/:id/activate
+// body: { plan, durationDays }  — durationDays=0 means never expires
+export async function activateAccount(req: Request, res: Response, next: NextFunction) {
   try {
-    const { durationDays = 30 } = req.body as { durationDays?: number };
-    const expiresAt = durationDays > 0 ? new Date(Date.now() + durationDays * 86_400_000) : null;
-
+    const { plan = 'STARTER', durationDays = 30 } = req.body as { plan?: string; durationDays?: number };
+    if (!Object.values(SubscriptionPlan).includes(plan as SubscriptionPlan)) return R.badRequest(res, 'Invalid plan');
+    const expiresAt = Number(durationDays) > 0 ? new Date(Date.now() + Number(durationDays) * 86_400_000) : null;
     const [account] = await prisma.$transaction([
       prisma.ownerAccount.update({
         where: { id: req.params.id },
-        data:  { subscriptionActive: true, isActive: true, subscriptionExpiresAt: expiresAt },
-        select: { id: true, legalName: true, subscriptionActive: true, isActive: true, subscriptionExpiresAt: true },
+        data:  { subscriptionPlan: plan as SubscriptionPlan, subscriptionActive: true, isActive: true, subscriptionExpiresAt: expiresAt },
+        select: { id: true, legalName: true, subscriptionPlan: true, subscriptionActive: true, isActive: true, subscriptionExpiresAt: true },
       }),
-      // Reactivate all shops belonging to this account
-      prisma.shop.updateMany({
-        where: { ownerAccountId: req.params.id },
-        data:  { isActive: true },
-      }),
+      prisma.shop.updateMany({ where: { ownerAccountId: req.params.id }, data: { isActive: true } }),
     ]);
     return R.ok(res, account);
   } catch (err) { next(err); }
 }
+
+// keep old route alias for backwards compat
+export const approveAccount = activateAccount;
 
 // POST /api/v1/platform/accounts/:id/suspend
 export async function suspendAccount(req: Request, res: Response, next: NextFunction) {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../../middleware/auth';
 import {
-  getMetrics, listAccounts, getAccount, updateAccount, createAccount, approveAccount, suspendAccount,
+  getMetrics, listAccounts, getAccount, updateAccount, createAccount, activateAccount, approveAccount, suspendAccount,
   listShops, updateShop, listUsers, updateUser,
 } from './platform.controller';
 
@@ -16,8 +16,9 @@ router.get('/accounts',         listAccounts);
 router.post('/accounts',        createAccount);
 router.get('/accounts/:id',        getAccount);
 router.patch('/accounts/:id',      updateAccount);
-router.post('/accounts/:id/approve', approveAccount);
-router.post('/accounts/:id/suspend', suspendAccount);
+router.post('/accounts/:id/activate', activateAccount);
+router.post('/accounts/:id/approve',  approveAccount); // alias
+router.post('/accounts/:id/suspend',  suspendAccount);
 
 router.get('/shops',            listShops);
 router.patch('/shops/:id',      updateShop);

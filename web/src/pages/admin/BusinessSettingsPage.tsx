@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { Building2, CreditCard, Shield } from 'lucide-react';
+import { Building2, CreditCard, Shield, CheckCircle2 } from 'lucide-react';
+import { format } from 'date-fns';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
 interface AccountInfo {
   id: string; legalName: string; tradingName?: string; email?: string; phone?: string;
-  country?: string; plan: string; planExpiresAt?: string;
+  country?: string; subscriptionPlan: string; subscriptionExpiresAt?: string | null;
+  subscriptionActive: boolean; daysRemaining: number | null;
 }
 interface Form { legalName: string; tradingName?: string; email?: string; phone?: string; }
 
@@ -41,10 +43,6 @@ export default function BusinessSettingsPage() {
     onError: (e: unknown) => setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
 
-  const { mutate: upgrade } = useMutation({
-    mutationFn: (plan: string) => api.post('/tenant/upgrade', { plan }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['account'] }),
-  });
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -89,36 +87,50 @@ export default function BusinessSettingsPage() {
       <div className="card p-6">
         <div className="flex items-center gap-2 mb-5">
           <CreditCard size={16} className="text-primary-600" />
-          <h3 className="text-sm font-bold text-stone-900">Subscription Plan</h3>
+          <h3 className="text-sm font-bold text-stone-900">Subscription</h3>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg font-bold text-stone-900">{info?.subscriptionPlan ?? '—'}</span>
+              {info?.subscriptionActive
+                ? <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1"><CheckCircle2 size={10} /> Active</span>
+                : <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Inactive</span>}
+            </div>
+            {info?.subscriptionExpiresAt ? (
+              <p className={`text-xs ${info.daysRemaining !== null && info.daysRemaining <= 7 ? 'text-red-600 font-medium' : 'text-stone-500'}`}>
+                Expires {format(new Date(info.subscriptionExpiresAt), 'MMM d, yyyy')}
+                {info.daysRemaining !== null && (
+                  <span className="ml-1">
+                    {info.daysRemaining === 0 ? '(expired)' : `· ${info.daysRemaining} day${info.daysRemaining === 1 ? '' : 's'} left`}
+                  </span>
+                )}
+              </p>
+            ) : info?.subscriptionActive ? (
+              <p className="text-xs text-stone-500">No expiry date</p>
+            ) : null}
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-stone-500 mb-2">To upgrade or renew your plan, contact support:</p>
+            <div className="flex gap-2 flex-wrap justify-end">
+              <a href="mailto:support@mauzosmart.com" className="btn-secondary text-xs py-1.5 px-3">Email Support</a>
+              <a href="https://wa.me/255700000000" target="_blank" rel="noreferrer" className="btn-primary text-xs py-1.5 px-3">WhatsApp</a>
+            </div>
+          </div>
+        </div>
+        {/* Plan comparison */}
+        <div className="mt-5 pt-5 border-t border-stone-100 grid grid-cols-2 sm:grid-cols-4 gap-3">
           {PLANS.map(plan => {
-            const isCurrent = info?.plan === plan.key;
+            const isCurrent = info?.subscriptionPlan === plan.key;
             return (
-              <div
-                key={plan.key}
-                className={`p-4 border-2 rounded-xl ${isCurrent ? 'border-primary-400 bg-primary-50' : 'border-stone-200'}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-bold text-stone-900">{plan.label}</p>
-                  {isCurrent && <span className="badge badge-amber text-xs">Current</span>}
-                </div>
-                <p className="text-lg font-bold text-primary-700 mb-1">{plan.price}</p>
-                <p className="text-xs text-stone-400">
-                  {plan.shops === -1 ? 'Unlimited shops' : `${plan.shops} shop${plan.shops > 1 ? 's' : ''}`} ·{' '}
+              <div key={plan.key} className={`p-3 rounded-xl border-2 ${isCurrent ? 'border-primary-400 bg-primary-50' : 'border-stone-100'}`}>
+                <p className="text-xs font-bold text-stone-900 mb-0.5">{plan.label}</p>
+                <p className="text-xs text-primary-700 font-semibold mb-1">{plan.price}</p>
+                <p className="text-[10px] text-stone-400">
+                  {plan.shops === -1 ? 'Unlimited shops' : `${plan.shops} shop${plan.shops > 1 ? 's' : ''}`}<br />
                   {plan.staff === -1 ? 'Unlimited staff' : `${plan.staff} staff`}
                 </p>
-                {!isCurrent && plan.key !== 'ENTERPRISE' && (
-                  <button
-                    onClick={() => upgrade(plan.key)}
-                    className="btn-primary text-xs px-3 py-1.5 mt-3"
-                  >
-                    Upgrade
-                  </button>
-                )}
-                {plan.key === 'ENTERPRISE' && !isCurrent && (
-                  <p className="text-xs text-stone-400 mt-3">Contact sales</p>
-                )}
+                {isCurrent && <p className="text-[10px] text-primary-600 font-semibold mt-1">✓ Current plan</p>}
               </div>
             );
           })}
