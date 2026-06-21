@@ -362,6 +362,7 @@ model User {
   appointments   Appointment[]   @relation("StaffAppointments")
   consignmentSales ConsignmentSale[]
   timeClocks     TimeClock[]
+  stockMovements StockMovement[]
 
   @@map("users")
 }
@@ -473,10 +474,12 @@ model StockMovement {
   shop        Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
   productId   String
   product     Product      @relation(fields: [productId], references: [id])
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   type        MovementType
   quantity    Float
   unitCost    Float        @default(0)
-  reference   String?      // tx id, po id, etc.
+  reference   String?
   note        String?
   batchNo     String?
   createdAt   DateTime     @default(now())

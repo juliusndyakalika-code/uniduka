@@ -403,7 +403,7 @@ export async function adjustStock(req: AuthRequest, res: Response) {
   } else {
     await prisma.inventoryItem.create({ data: { shopId: shop(req), productId, quantity: delta, batchNo, expiryDate: expiryDate ? new Date(expiryDate) : undefined, costPrice: unitCost || 0 } });
   }
-  await prisma.stockMovement.create({ data: { shopId: shop(req), productId, type: 'ADJUSTMENT', quantity: delta, batchNo, unitCost: unitCost || 0, note: actualNote } });
+  await prisma.stockMovement.create({ data: { shopId: shop(req), productId, userId: req.user!.sub, type: 'ADJUSTMENT', quantity: delta, batchNo, unitCost: unitCost || 0, note: actualNote } });
   return R.ok(res, { message: 'Stock adjusted', delta });
 }
 
@@ -499,21 +499,29 @@ export async function receivePO(req: AuthRequest, res: Response) {
 }
 
 export async function listMovements(req: AuthRequest, res: Response) {
-  const { productId, type, from, to, search } = req.query as Record<string, string>;
-  const movements = await prisma.stockMovement.findMany({
-    where: {
-      shopId: shop(req),
-      ...(productId && { productId }),
-      ...(type && { type: type as never }),
-      ...(from && { createdAt: { gte: new Date(from) } }),
-      ...(to && { createdAt: { lte: new Date(to) } }),
-      ...(search && { product: { name: { contains: search, mode: 'insensitive' } } }),
-    },
-    include: {
-      product: { select: { name: true, sku: true, unit: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 300,
-  });
-  return R.ok(res, movements);
+  const { productId, type, from, to, search, page = '1', limit = '50' } = req.query as Record<string, string>;
+  const take = Math.min(Number(limit) || 50, 200);
+  const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
+  const where = {
+    shopId: shop(req),
+    ...(productId && { productId }),
+    ...(type && { type: type as never }),
+    ...(from && { createdAt: { gte: new Date(from) } }),
+    ...(to && { createdAt: { lte: new Date(to) } }),
+    ...(search && { product: { name: { contains: search, mode: 'insensitive' as const } } }),
+  };
+  const [movements, total] = await Promise.all([
+    prisma.stockMovement.findMany({
+      where,
+      include: {
+        product: { select: { name: true, sku: true, unit: true } },
+        user: { select: { fullName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take,
+      skip,
+    }),
+    prisma.stockMovement.count({ where }),
+  ]);
+  return R.ok(res, movements, { total, page: Number(page), limit: take, pages: Math.ceil(total / take) });
 }
