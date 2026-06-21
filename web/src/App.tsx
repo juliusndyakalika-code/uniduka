@@ -9,6 +9,7 @@ import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import SetupWizard from './pages/setup/SetupWizard';
 import PendingApprovalPage from './pages/auth/PendingApprovalPage';
+import SubscriptionExpiredPage from './pages/auth/SubscriptionExpiredPage';
 
 import PlatformRoute from './components/layout/PlatformRoute';
 import PlatformLayout from './components/layout/PlatformLayout';
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/pending" element={<PendingApprovalPage />} />
+        <Route path="/expired" element={<SubscriptionExpiredPage />} />
 
         {/* Platform admin section — PLATFORM_ADMIN role only */}
         <Route element={<PlatformRoute />}>

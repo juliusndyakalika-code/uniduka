@@ -13,8 +13,13 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    if (err.response?.status === 401) {
+    const status = err.response?.status;
+    const code   = err.response?.data?.code;
+    if (status === 401) {
       useAuthStore.getState().logout();
+    }
+    if (status === 402 && (code === 'SUBSCRIPTION_EXPIRED' || code === 'SUBSCRIPTION_INACTIVE')) {
+      window.location.href = '/expired';
     }
     return Promise.reject(err);
   }
