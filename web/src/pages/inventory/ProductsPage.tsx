@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Trash2, Package, AlertTriangle, X, Upload, Download, CheckCircle2, FileWarning, ChevronUp, ChevronDown, ChevronsUpDown, Lock, PackagePlus, ScanLine } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, AlertTriangle, X, Upload, Download, CheckCircle2, FileWarning, ChevronUp, ChevronDown, ChevronsUpDown, Lock, PackagePlus, ScanLine, Camera } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
-import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
+import CameraScanner from '../../components/CameraScanner';
 
 interface Product {
   id: string; name: string; sku: string; barcode?: string;
@@ -396,16 +396,8 @@ export default function ProductsPage() {
   }, [flashId]);
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<Form>();
-  const [openBoxMode, setOpenBoxMode] = useState(false);
-  const [scanningBarcode, setScanningBarcode] = useState(false);
-
-  // When product form is open, scan to fill barcode field
-  useBarcodeScanner((code) => {
-    if (showForm) {
-      setValue('barcode', code, { shouldDirty: true });
-      setScanningBarcode(false);
-    }
-  }, { enabled: showForm });
+  const [openBoxMode, setOpenBoxMode]   = useState(false);
+  const [showBarcodeCamera, setShowBarcodeCamera] = useState(false);
 
   const currentShop  = shops.find(s => s.id === shopId);
   const businessType = currentShop?.businessType ?? 'RETAIL_STORE';
@@ -701,22 +693,25 @@ export default function ProductsPage() {
                   <input {...register('sku')} className="input" placeholder="Auto-generated" />
                 </div>
                 <div>
-                  <label className="label flex items-center justify-between">
-                    Barcode
-                    <span className="text-[10px] text-stone-400 font-normal flex items-center gap-1">
-                      <ScanLine size={10} /> Scan or type
-                    </span>
-                  </label>
-                  <div className="relative">
+                  <label className="label">Barcode</label>
+                  <div className="flex gap-1.5">
                     <input
                       {...register('barcode')}
-                      className={`input pr-8 ${scanningBarcode ? 'border-primary-400 ring-2 ring-primary-200' : ''}`}
-                      placeholder="Scan or enter barcode"
-                      onFocus={() => setScanningBarcode(true)}
-                      onBlur={() => setScanningBarcode(false)}
+                      className="input flex-1"
+                      placeholder="Focus here and scan"
                     />
-                    <ScanLine size={14} className={`absolute right-2.5 top-3 ${scanningBarcode ? 'text-primary-500 animate-pulse' : 'text-stone-300'}`} />
+                    <button
+                      type="button"
+                      title="Scan with camera"
+                      onClick={() => setShowBarcodeCamera(true)}
+                      className="flex-shrink-0 px-2.5 rounded-lg border border-stone-200 text-stone-400 hover:text-primary-600 hover:border-primary-300 transition-colors"
+                    >
+                      <Camera size={15} />
+                    </button>
                   </div>
+                  <p className="text-[10px] text-stone-400 mt-1 flex items-center gap-1">
+                    <ScanLine size={9} /> Focus the field and scan with physical scanner, or use camera
+                  </p>
                 </div>
               </div>
 
@@ -845,6 +840,14 @@ export default function ProductsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ── Barcode camera scanner (for product form) ── */}
+      {showBarcodeCamera && (
+        <CameraScanner
+          onScan={(code) => { setValue('barcode', code, { shouldDirty: true }); setShowBarcodeCamera(false); }}
+          onClose={() => setShowBarcodeCamera(false)}
+        />
       )}
 
       {/* ── Import CSV modal ── */}
