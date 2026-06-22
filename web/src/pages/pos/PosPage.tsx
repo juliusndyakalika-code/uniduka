@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone,
   Printer, X, Tag, User, UserPlus, DollarSign, RotateCcw, ChevronDown,
-  AlertTriangle, Check, Clock, ShoppingCart, Package,
+  AlertTriangle, Check, Clock, ShoppingCart, Package, ScanLine,
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { printReceipt as doPrint } from '../../utils/printReceipt';
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
+import CameraScanner from '../../components/CameraScanner';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface Product {
@@ -98,6 +100,10 @@ export default function PosPage() {
   const [voidReason, setVoidReason]     = useState('');
   const [voidError, setVoidError]       = useState('');
 
+  // Barcode scanner
+  const [showCamera, setShowCamera]     = useState(false);
+  const [scanFeedback, setScanFeedback] = useState<{ msg: string; ok: boolean } | null>(null);
+
   const fmt = (n: number) => currency === 'USD' ? fmtUSD(n / exchangeRate) : fmtTZS(n);
 
   // ── Shop details ──────────────────────────────────────────────────────────
@@ -159,6 +165,24 @@ export default function PosPage() {
       return [...prev, { product, qty: 1, discountPct: 0, overridePrice: null, priceInput: null }];
     });
   }, []);
+
+  // ── Barcode scanner handler ───────────────────────────────────────────────
+  const handleScan = useCallback(async (barcode: string) => {
+    // Clear search field so the barcode text doesn't linger
+    setSearch('');
+    setShowCamera(false);
+    try {
+      const res = await api.get('/inventory/products/lookup', { params: { barcode } });
+      const product = res.data.data as Product;
+      addToCart(product);
+      setScanFeedback({ msg: `✓ ${product.name}`, ok: true });
+    } catch {
+      setScanFeedback({ msg: `Not found: ${barcode}`, ok: false });
+    }
+    setTimeout(() => setScanFeedback(null), 2500);
+  }, [addToCart]);
+
+  useBarcodeScanner(handleScan, { enabled: !showReturn && !showCamera });
 
   const updateQty = (productId: string, delta: number) => {
     setCart(prev =>
@@ -391,12 +415,20 @@ export default function PosPage() {
             <Search size={14} className="absolute left-3 top-3 text-stone-400" />
             <input
               ref={searchRef}
-              className="input pl-8"
-              placeholder="Search by name or SKU…"
+              className="input pl-8 pr-10"
+              placeholder="Search or scan barcode…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               autoFocus
             />
+            <button
+              type="button"
+              onClick={() => setShowCamera(true)}
+              title="Scan with camera"
+              className="absolute right-2 top-2 p-1 rounded text-stone-400 hover:text-primary-600 transition-colors"
+            >
+              <ScanLine size={16} />
+            </button>
           </div>
 
           {/* Currency toggle */}
@@ -444,6 +476,17 @@ export default function PosPage() {
             <RotateCcw size={13} /> Return
           </button>
         </div>
+
+        {/* Scan feedback banner */}
+        {scanFeedback && (
+          <div className={`mb-2 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
+            scanFeedback.ok
+              ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+              : 'bg-red-50 border border-red-200 text-red-700'
+          }`}>
+            <ScanLine size={13} /> {scanFeedback.msg}
+          </div>
+        )}
 
         {/* Product grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 overflow-y-auto flex-1 pb-2 content-start">
@@ -806,6 +849,11 @@ export default function PosPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Camera scanner modal ─────────────────────────────────────────── */}
+      {showCamera && (
+        <CameraScanner onScan={handleScan} onClose={() => setShowCamera(false)} />
       )}
 
       {/* ── Return / Void modal ──────────────────────────────────────────── */}

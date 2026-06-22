@@ -40,6 +40,8 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       letterSpacing: { widest: '0.15em' },
+      animation: { 'scan-line': 'scanLine 2s ease-in-out infinite' },
+      keyframes: { scanLine: { '0%, 100%': { top: '0%', opacity: '1' }, '50%': { top: '100%', opacity: '0.7' } } },
     },
   },
   plugins: [],

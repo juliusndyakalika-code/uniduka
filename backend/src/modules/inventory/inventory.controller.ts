@@ -93,6 +93,17 @@ export async function listProducts(req: AuthRequest, res: Response) {
   return R.ok(res, items.map(p => ({ ...normaliseProduct(p, p.inventory), inUse: p._count.txItems > 0 })), { total, page: Number(page), limit: Number(limit) });
 }
 
+export async function lookupByBarcode(req: AuthRequest, res: Response) {
+  const { barcode } = req.query as { barcode?: string };
+  if (!barcode) return R.badRequest(res, 'barcode query param required');
+  const product = await prisma.product.findFirst({
+    where: { shopId: shop(req), barcode },
+    include: { inventory: { select: { quantity: true } } },
+  });
+  if (!product) return R.notFound(res, 'No product with this barcode');
+  return R.ok(res, normaliseProduct(product, product.inventory));
+}
+
 export async function getProduct(req: AuthRequest, res: Response) {
   const product = await prisma.product.findFirst({
     where: { id: req.params.id, shopId: shop(req) },
