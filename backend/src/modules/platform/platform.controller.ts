@@ -266,3 +266,63 @@ export async function createAccount(req: AuthRequest, res: Response) {
 
   return R.created(res, account);
 }
+
+// POST /api/v1/platform/shops/:shopId/reset
+// Wipes all business data for a shop but keeps the shop, account, users, tax rules, and settings.
+export async function resetShopData(req: Request, res: Response) {
+  const { shopId } = req.params;
+
+  const shop = await prisma.shop.findUnique({
+    where: { id: shopId },
+    select: { id: true, tradingName: true, ownerAccountId: true },
+  });
+  if (!shop) return R.notFound(res, 'Shop not found');
+
+  // Cascade order matters — delete children before parents
+  await prisma.$transaction([
+    // Appointments
+    prisma.appointmentService.deleteMany({ where: { appointment: { shopId } } }),
+    prisma.appointment.deleteMany({ where: { shopId } }),
+    // KDS
+    prisma.kdsOrder.deleteMany({ where: { shopId } }),
+    // Work orders
+    prisma.workOrderPart.deleteMany({ where: { workOrder: { shopId } } }),
+    prisma.workOrder.deleteMany({ where: { shopId } }),
+    // Hotel
+    prisma.roomCharge.deleteMany({ where: { folio: { room: { shopId } } } }),
+    prisma.roomFolio.deleteMany({ where: { room: { shopId } } }),
+    prisma.room.deleteMany({ where: { shopId } }),
+    // Consignment
+    prisma.consignmentSale.deleteMany({ where: { shopId } }),
+    prisma.consignmentPartner.deleteMany({ where: { shopId } }),
+    // Timeclock
+    prisma.timeClock.deleteMany({ where: { shopId } }),
+    // Transactions
+    prisma.transactionPayment.deleteMany({ where: { transaction: { shopId } } }),
+    prisma.transactionItem.deleteMany({ where: { transaction: { shopId } } }),
+    prisma.transaction.deleteMany({ where: { shopId } }),
+    // Customers
+    prisma.customer.deleteMany({ where: { shopId } }),
+    // Purchase orders
+    prisma.purchaseOrderLine.deleteMany({ where: { purchaseOrder: { shopId } } }),
+    prisma.purchaseOrder.deleteMany({ where: { shopId } }),
+    // Stock
+    prisma.stockMovement.deleteMany({ where: { shopId } }),
+    prisma.inventoryItem.deleteMany({ where: { product: { shopId } } }),
+    // Recipes
+    prisma.recipeLine.deleteMany({ where: { recipe: { shopId } } }),
+    prisma.recipe.deleteMany({ where: { shopId } }),
+    // Suppliers
+    prisma.supplier.deleteMany({ where: { shopId } }),
+    // Products
+    prisma.product.deleteMany({ where: { shopId } }),
+    // Audit logs
+    prisma.auditLog.deleteMany({ where: { shopId } }),
+  ]);
+
+  return R.ok(res, {
+    shopId: shop.id,
+    tradingName: shop.tradingName,
+    message: 'All business data wiped. Shop, account, users and settings retained.',
+  });
+}

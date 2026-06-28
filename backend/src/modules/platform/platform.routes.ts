@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../../middleware/auth';
 import {
   getMetrics, listAccounts, getAccount, updateAccount, createAccount, activateAccount, approveAccount, suspendAccount,
-  listShops, updateShop, listUsers, updateUser,
+  listShops, updateShop, listUsers, updateUser, resetShopData,
 } from './platform.controller';
 
 const router = Router();
@@ -22,6 +22,7 @@ router.post('/accounts/:id/suspend',  suspendAccount);
 
 router.get('/shops',            listShops);
 router.patch('/shops/:id',      updateShop);
+router.post('/shops/:shopId/reset', resetShopData);
 
 router.get('/users',            listUsers);
 router.patch('/users/:id',      updateUser);
