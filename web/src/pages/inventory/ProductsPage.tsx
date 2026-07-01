@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Trash2, Package, AlertTriangle, X, Upload, Download, CheckCircle2, FileWarning, ChevronUp, ChevronDown, ChevronsUpDown, Lock, PackagePlus, ScanLine, Camera } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, AlertTriangle, X, Upload, Download, CheckCircle2, FileWarning, ChevronUp, ChevronDown, ChevronsUpDown, Lock, PackagePlus, ScanLine, Camera, Ship } from 'lucide-react';
+import ShipmentImportModal from './ShipmentImportModal';
 import { useForm } from 'react-hook-form';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -348,7 +349,8 @@ export default function ProductsPage() {
   const [search, setSearch]       = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [showForm, setShowForm]   = useState(false);
-  const [showImport, setShowImport] = useState(false);
+  const [showImport, setShowImport]           = useState(false);
+  const [showShipmentImport, setShowShipmentImport] = useState(false);
   const [editing, setEditing]     = useState<Product | null>(null);
   const [error, setError]         = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -523,6 +525,9 @@ export default function ProductsPage() {
         <div className="flex items-center gap-2">
           <button className="btn-secondary" onClick={openImport}>
             <Upload size={14} className="mr-1.5" /> Import CSV
+          </button>
+          <button className="btn-secondary" onClick={() => setShowShipmentImport(true)}>
+            <Ship size={14} className="mr-1.5" /> Import Shipment
           </button>
           <button className="btn-primary" onClick={openNew}>
             <Plus size={14} className="mr-1.5" /> Add Product
@@ -840,6 +845,14 @@ export default function ProductsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ── Shipment import modal ── */}
+      {showShipmentImport && (
+        <ShipmentImportModal
+          onClose={() => setShowShipmentImport(false)}
+          onImported={() => qc.invalidateQueries({ queryKey: ['products'] })}
+        />
       )}
 
       {/* ── Barcode camera scanner (for product form) ── */}

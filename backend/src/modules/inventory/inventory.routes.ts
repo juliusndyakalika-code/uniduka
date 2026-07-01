@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import {
-  listProducts, getProduct, lookupByBarcode, createProduct, updateProduct, deleteProduct, importProducts, addProductStock,
+  listProducts, getProduct, lookupByBarcode, createProduct, updateProduct, deleteProduct, importProducts, importShipment, addProductStock,
   getInventoryDashboard,
   listStock, adjustStock, receivePO, createPO, listPOs, getPO, updatePO,
   listMovements, listSuppliers, createSupplier, updateSupplier,
@@ -28,8 +28,9 @@ router.get('/dashboard',              getInventoryDashboard);
 // Products
 router.get('/products',               listProducts);
 router.post('/products',              createProduct);
-router.post('/products/import',       upload.single('file'), importProducts);
-router.get('/products/lookup',        lookupByBarcode);   // must be before /:id
+router.post('/products/import',          upload.single('file'), importProducts);
+router.post('/products/import-shipment', upload.single('file'), importShipment);
+router.get('/products/lookup',           lookupByBarcode);   // must be before /:id
 router.get('/products/:id',           getProduct);
 router.put('/products/:id',           updateProduct);
 router.patch('/products/:id',         updateProduct);

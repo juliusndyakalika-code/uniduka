@@ -266,6 +266,155 @@ export async function importProducts(req: AuthRequest, res: Response) {
   return R.ok(res, { imported: imported.length, skipped: rowErrors.length, errors: rowErrors });
 }
 
+// POST /inventory/products/import-shipment
+// Imports products from a shipment CSV, calculating landed cost per item from
+// shared freight/clearance/transport costs and a foreign-currency exchange rate.
+export async function importShipment(req: AuthRequest, res: Response) {
+  if (!req.file) return R.badRequest(res, 'No CSV file uploaded');
+
+  const exchangeRate  = parseFloat(req.body.exchangeRate)  || 0;
+  const shippingCost  = parseFloat(req.body.shipping)      || 0;
+  const clearanceCost = parseFloat(req.body.clearance)     || 0;
+  const transportCost = parseFloat(req.body.transport)     || 0;
+  const otherCost     = parseFloat(req.body.other)         || 0;
+  const isPreview     = req.body.preview === 'true';
+
+  if (exchangeRate <= 0) return R.badRequest(res, 'Exchange rate must be greater than 0');
+
+  const sharedCosts = shippingCost + clearanceCost + transportCost + otherCost;
+
+  const text = req.file.buffer.toString('utf-8');
+  const rows = parseCsv(text);
+  if (rows.length < 2) return R.badRequest(res, 'CSV must have a header row and at least one product row');
+
+  const headers = rows[0].map(h => h.toLowerCase().trim().replace(/[\s-]+/g, '_'));
+  const requiredCols = ['style', 'qty', 'unit_price_cny'];
+  const missingCols  = requiredCols.filter(h => !headers.includes(h));
+  if (missingCols.length) return R.badRequest(res, `Missing required columns: ${missingCols.join(', ')}`);
+
+  const col = (row: string[], key: string) => {
+    const i = headers.indexOf(key);
+    return i >= 0 ? (row[i] ?? '').trim() : '';
+  };
+
+  interface ParsedRow {
+    style: string; qty: number; unitPriceCny: number; sellingPrice: number;
+    color: string; sizeRange: string; supplier: string;
+  }
+
+  const errors: { row: number; message: string }[] = [];
+  const parsed: ParsedRow[] = [];
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row.some(v => v.trim())) continue;
+
+    const style        = col(row, 'style');
+    const qty          = parseInt(col(row, 'qty'))            || 0;
+    const unitPriceCny = parseFloat(col(row, 'unit_price_cny')) || 0;
+    const sellingPrice = parseFloat(col(row, 'selling_price') || '0') || 0;
+
+    if (!style)            { errors.push({ row: r + 1, message: 'style is required' });            continue; }
+    if (qty <= 0)          { errors.push({ row: r + 1, message: 'qty must be > 0' });              continue; }
+    if (unitPriceCny <= 0) { errors.push({ row: r + 1, message: 'unit_price_cny must be > 0' });  continue; }
+
+    parsed.push({
+      style, qty, unitPriceCny, sellingPrice,
+      color:     col(row, 'color'),
+      sizeRange: col(row, 'size_range') || col(row, 'sizes'),
+      supplier:  col(row, 'supplier'),
+    });
+  }
+
+  if (parsed.length === 0) return R.badRequest(res, 'No valid product rows found', { errors });
+
+  const totalQty    = parsed.reduce((s, p) => s + p.qty, 0);
+  const extraPerItem = totalQty > 0 ? sharedCosts / totalQty : 0;
+
+  const calculated = parsed.map(p => {
+    const costPerItem   = Math.round(p.unitPriceCny * exchangeRate);
+    const overhead      = Math.round(extraPerItem);
+    const landedCost    = costPerItem + overhead;
+    const profitPerItem = p.sellingPrice > 0 ? p.sellingPrice - landedCost : null;
+    return {
+      ...p,
+      costPerItem,
+      extraPerItem: overhead,
+      landedCost,
+      profitPerItem,
+      profitTotal: profitPerItem !== null ? profitPerItem * p.qty : null,
+    };
+  });
+
+  const summary = {
+    totalPieces:       totalQty,
+    totalSharedCosts:  Math.round(sharedCosts),
+    extraPerItem:      Math.round(extraPerItem),
+    totalLandingValue: calculated.reduce((s, p) => s + p.landedCost * p.qty, 0),
+    exchangeRate,
+  };
+
+  if (isPreview) return R.ok(res, { items: calculated, summary, errors });
+
+  // ── Commit to database ────────────────────────────────────────────────────
+  const shopId = shop(req);
+  const userId = req.user!.sub;
+  const imported: string[] = [];
+  const rowErrors = [...errors];
+
+  for (const p of calculated) {
+    try {
+      const nameParts = [
+        p.style,
+        p.color     ? `- ${p.color}` : '',
+        p.sizeRange ? `(${p.sizeRange})` : '',
+      ].filter(Boolean).join(' ');
+
+      const costNote = `¥${p.unitPriceCny} × ${exchangeRate} = ${p.costPerItem.toLocaleString()} + ${p.extraPerItem.toLocaleString()} overhead = ${p.landedCost.toLocaleString()} TZS`;
+      const description = [
+        p.supplier  ? `Supplier: ${p.supplier}` : '',
+        `Landed cost: ${costNote}`,
+      ].filter(Boolean).join(' | ');
+
+      const product = await prisma.product.create({
+        data: {
+          shopId,
+          name:        nameParts,
+          sku:         p.style,
+          type:        'PRODUCT' as never,
+          unit:        'pcs',
+          sellPrice:   p.sellingPrice || p.landedCost,
+          costPrice:   p.landedCost,
+          category:    p.color || undefined,
+          description,
+          reorderPoint: 0,
+        },
+      });
+
+      await prisma.inventoryItem.create({
+        data: { shopId, productId: product.id, quantity: p.qty, costPrice: p.landedCost },
+      });
+
+      await prisma.stockMovement.create({
+        data: {
+          shopId, productId: product.id,
+          type: 'PURCHASE', quantity: p.qty, unitCost: p.landedCost,
+          note: `Shipment import — ${costNote}`,
+          userId,
+        },
+      });
+
+      imported.push(product.id);
+    } catch (e: unknown) {
+      const msg = (e as { message?: string })?.message ?? 'Unknown error';
+      const isDupe = msg.includes('Unique constraint') && msg.includes('sku');
+      rowErrors.push({ row: -1, message: isDupe ? `Style "${p.style}" already exists — skipped (delete or update it first)` : msg });
+    }
+  }
+
+  return R.created(res, { imported: imported.length, skipped: calculated.length - imported.length, items: calculated, summary, errors: rowErrors });
+}
+
 // ── Stock ─────────────────────────────────────────────────────────────────────
 export async function listStock(req: AuthRequest, res: Response) {
   const items = await prisma.inventoryItem.findMany({
