@@ -894,22 +894,42 @@ export default function PosPage() {
             <p className="text-xs text-stone-400 mb-4">
               {fmt(qtyPick.product.sellingPrice)} &middot; {qtyPick.product.stock} {qtyPick.product.unit} in stock
             </p>
-            <label className="label">Quantity</label>
-            <input
-              ref={qtyPickInputRef}
-              type="number"
-              min="1"
-              max={qtyPick.product.stock}
-              value={qtyPick.qty}
-              autoFocus
-              onFocus={e => e.target.select()}
-              onChange={e => setQtyPick(prev => prev ? { ...prev, qty: e.target.value } : null)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') confirmQtyPick();
-                if (e.key === 'Escape') setQtyPick(null);
-              }}
-              className="input text-center text-xl font-bold mb-4"
-            />
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setQtyPick(prev => {
+                  if (!prev) return null;
+                  const n = Math.max(1, parseInt(prev.qty, 10) - 1);
+                  return { ...prev, qty: String(n) };
+                })}
+                className="w-10 h-10 flex items-center justify-center rounded-xl border-2 border-stone-200 text-stone-600 hover:border-primary-400 hover:text-primary-600 text-lg font-bold transition-colors"
+              ><Minus size={16} /></button>
+              <input
+                ref={qtyPickInputRef}
+                type="number"
+                min="1"
+                max={qtyPick.product.stock}
+                value={qtyPick.qty}
+                autoFocus
+                onFocus={e => e.target.select()}
+                onChange={e => setQtyPick(prev => prev ? { ...prev, qty: e.target.value } : null)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') confirmQtyPick();
+                  if (e.key === 'Escape') setQtyPick(null);
+                }}
+                className="input text-center text-xl font-bold flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => setQtyPick(prev => {
+                  if (!prev) return null;
+                  const n = Math.min(prev.product.stock, parseInt(prev.qty, 10) + 1);
+                  return { ...prev, qty: String(n) };
+                })}
+                disabled={parseInt(qtyPick.qty, 10) >= qtyPick.product.stock}
+                className="w-10 h-10 flex items-center justify-center rounded-xl border-2 border-stone-200 text-stone-600 hover:border-primary-400 hover:text-primary-600 text-lg font-bold transition-colors disabled:opacity-30"
+              ><Plus size={16} /></button>
+            </div>
             <div className="flex gap-2">
               <button className="btn-secondary flex-1 text-xs" onClick={() => setQtyPick(null)}>Cancel</button>
               <button className="btn-primary flex-1 text-xs" onClick={confirmQtyPick}>
