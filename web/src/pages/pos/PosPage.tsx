@@ -104,6 +104,10 @@ export default function PosPage() {
   const [showCamera, setShowCamera]     = useState(false);
   const [scanFeedback, setScanFeedback] = useState<{ msg: string; ok: boolean } | null>(null);
 
+  // Qty picker (product grid click)
+  const [qtyPick, setQtyPick] = useState<{ product: Product; qty: string } | null>(null);
+  const qtyPickInputRef = useRef<HTMLInputElement>(null);
+
   const fmt = (n: number) => currency === 'USD' ? fmtUSD(n / exchangeRate) : fmtTZS(n);
 
   // ── Shop details ──────────────────────────────────────────────────────────
@@ -182,7 +186,20 @@ export default function PosPage() {
     setTimeout(() => setScanFeedback(null), 2500);
   }, [addToCart]);
 
-  useBarcodeScanner(handleScan, { enabled: !showReturn && !showCamera });
+  useBarcodeScanner(handleScan, { enabled: !showReturn && !showCamera && !qtyPick });
+
+  const confirmQtyPick = () => {
+    if (!qtyPick) return;
+    const n = Math.round(parseFloat(qtyPick.qty));
+    if (isNaN(n) || n < 1) { setQtyPick(null); return; }
+    const qty = Math.min(n, qtyPick.product.stock);
+    setCart(prev => {
+      const ex = prev.find(i => i.product.id === qtyPick.product.id);
+      if (ex) return prev.map(i => i.product.id === qtyPick.product.id ? { ...i, qty } : i);
+      return [...prev, { product: qtyPick.product, qty, discountPct: 0, overridePrice: null, priceInput: null }];
+    });
+    setQtyPick(null);
+  };
 
   const updateQty = (productId: string, delta: number) => {
     setCart(prev =>
@@ -494,7 +511,9 @@ export default function PosPage() {
             const inCart = cart.find(i => i.product.id === p.id);
             const outOfStock = p.stock <= 0;
             return (
-              <button key={p.id} onClick={() => addToCart(p)} disabled={outOfStock}
+              <button key={p.id}
+                onClick={() => !outOfStock && setQtyPick({ product: p, qty: String(inCart?.qty ?? 1) })}
+                disabled={outOfStock}
                 className={`card p-3 text-left transition-all ${
                   outOfStock ? 'opacity-40 cursor-not-allowed'
                   : inCart ? 'border-primary-400 bg-primary-50 shadow-sm'
@@ -625,7 +644,23 @@ export default function PosPage() {
                     <button onClick={() => updateQty(item.product.id, -1)} className="px-2 py-1 text-stone-500 hover:text-stone-900">
                       <Minus size={11} />
                     </button>
-                    <span className="w-6 text-center text-xs font-bold">{item.qty}</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={item.product.stock}
+                      value={item.qty}
+                      onChange={e => {
+                        const v = parseInt(e.target.value, 10);
+                        if (!isNaN(v) && v >= 1)
+                          setCart(prev => prev.map(i => i.product.id === item.product.id ? { ...i, qty: Math.min(v, i.product.stock) } : i));
+                      }}
+                      onBlur={e => {
+                        if (!e.target.value || parseInt(e.target.value, 10) < 1)
+                          setCart(prev => prev.map(i => i.product.id === item.product.id ? { ...i, qty: 1 } : i));
+                      }}
+                      onClick={e => (e.target as HTMLInputElement).select()}
+                      className="w-10 text-center text-xs font-bold bg-transparent border-0 outline-none focus:bg-stone-50 rounded"
+                    />
                     <button onClick={() => updateQty(item.product.id, 1)} disabled={item.qty >= item.product.stock}
                       className="px-2 py-1 text-stone-500 hover:text-stone-900 disabled:opacity-30">
                       <Plus size={11} />
@@ -846,6 +881,40 @@ export default function PosPage() {
                   {savingCust ? 'Saving…' : 'Add'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Qty picker modal ─────────────────────────────────────────────── */}
+      {qtyPick && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-40" onClick={() => setQtyPick(null)}>
+          <div className="bg-white rounded-2xl shadow-xl p-5 w-64" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-bold text-stone-900 truncate mb-0.5">{qtyPick.product.name}</p>
+            <p className="text-xs text-stone-400 mb-4">
+              {fmt(qtyPick.product.sellingPrice)} &middot; {qtyPick.product.stock} {qtyPick.product.unit} in stock
+            </p>
+            <label className="label">Quantity</label>
+            <input
+              ref={qtyPickInputRef}
+              type="number"
+              min="1"
+              max={qtyPick.product.stock}
+              value={qtyPick.qty}
+              autoFocus
+              onFocus={e => e.target.select()}
+              onChange={e => setQtyPick(prev => prev ? { ...prev, qty: e.target.value } : null)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') confirmQtyPick();
+                if (e.key === 'Escape') setQtyPick(null);
+              }}
+              className="input text-center text-xl font-bold mb-4"
+            />
+            <div className="flex gap-2">
+              <button className="btn-secondary flex-1 text-xs" onClick={() => setQtyPick(null)}>Cancel</button>
+              <button className="btn-primary flex-1 text-xs" onClick={confirmQtyPick}>
+                Add to Cart
+              </button>
             </div>
           </div>
         </div>
