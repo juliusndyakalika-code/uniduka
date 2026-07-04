@@ -724,8 +724,9 @@ export default function ProductsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">{isService ? 'Charge / Rate' : 'Selling Price'}</label>
-                  <input {...register('sellingPrice', { required: true, valueAsNumber: true })} type="number" step="0.01" className="input" placeholder="0.00" />
-                  {errors.sellingPrice && <p className="mt-1 text-xs text-red-600">Required</p>}
+                  <input {...register('sellingPrice', { required: true, valueAsNumber: true, min: 0.01 })} type="number" step="0.01" min="0.01" className="input" placeholder="0.00" />
+                  {errors.sellingPrice?.type === 'min' && <p className="mt-1 text-xs text-red-600">Selling price must be greater than 0</p>}
+                  {errors.sellingPrice?.type === 'required' && <p className="mt-1 text-xs text-red-600">Selling price is required</p>}
                 </div>
                 {!isService && (
                   <div>

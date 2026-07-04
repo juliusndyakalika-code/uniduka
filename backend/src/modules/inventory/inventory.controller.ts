@@ -146,6 +146,7 @@ async function generateSku(shopId: string, name: string): Promise<string> {
 
 export async function createProduct(req: AuthRequest, res: Response) {
   const { initialStock, ...fields } = extractProductFields(req.body);
+  if (!fields.sellPrice || fields.sellPrice <= 0) return R.badRequest(res, 'Selling price must be greater than 0');
   const sku = fields.sku || await generateSku(shop(req), fields.name);
   const product = await prisma.product.create({
     data: { ...fields, sku, type: (fields.type as never) ?? 'PRODUCT', shopId: shop(req) },
@@ -159,6 +160,7 @@ export async function createProduct(req: AuthRequest, res: Response) {
 
 export async function updateProduct(req: AuthRequest, res: Response) {
   const { initialStock: _, type, ...fields } = extractProductFields(req.body);
+  if (fields.sellPrice !== undefined && fields.sellPrice <= 0) return R.badRequest(res, 'Selling price must be greater than 0');
   const isActive = req.body.isActive as boolean | undefined;
   const r = await prisma.product.updateMany({
     where: { id: req.params.id, shopId: shop(req) },
@@ -230,7 +232,7 @@ export async function importProducts(req: AuthRequest, res: Response) {
     if (!type)               { errors.push({ row: r + 1, message: 'type is required' }); continue; }
     if (!unit)               { errors.push({ row: r + 1, message: 'unit is required' }); continue; }
     if (isNaN(sellingPrice)) { errors.push({ row: r + 1, message: 'selling_price must be a number' }); continue; }
-    if (sellingPrice < 0)    { errors.push({ row: r + 1, message: 'selling_price must be ≥ 0' }); continue; }
+    if (sellingPrice <= 0)   { errors.push({ row: r + 1, message: 'selling_price must be greater than 0' }); continue; }
     if (!allowedTypes.includes(type)) {
       errors.push({ row: r + 1, message: `type "${type}" is not allowed for this business — use: ${allowedTypes.join(', ')}` });
       continue;
