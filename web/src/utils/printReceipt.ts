@@ -38,8 +38,6 @@ export interface ReceiptData {
 }
 
 export function printReceipt(r: ReceiptData) {
-  const w = window.open('', '_blank', 'width=400,height=750');
-  if (!w) return;
 
   const orig = new Date(r.printedAt);
   const pad  = (n: number) => String(n).padStart(2, '0');
@@ -86,7 +84,8 @@ export function printReceipt(r: ReceiptData) {
   const now = new Date();
   const reprintStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/>
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Receipt ${r.receiptNo}</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
@@ -162,7 +161,28 @@ ${r.paymentMethod === 'DEBIT' ? '<p class="debit-warn">*** PAYMENT PENDING ***</
 <p class="footer-msg">ASANTE KWA KUNUNUA!</p>
 <hr class="sep"/>
 <p class="footer">Powered by MauzoSmart</p>
-<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
-</body></html>`);
-  w.document.close();
+</body></html>`;
+
+  // Use a hidden iframe so no popup is needed — works on mobile browsers
+  // where window.open() is blocked or hangs on the print preview.
+  const existing = document.getElementById('_receipt_frame');
+  if (existing) existing.remove();
+
+  const iframe = document.createElement('iframe');
+  iframe.id = '_receipt_frame';
+  iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;top:0;left:0;opacity:0';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow!.document;
+  doc.open(); doc.write(html); doc.close();
+
+  // Wait for content to render, then print; clean up after dialog closes
+  setTimeout(() => {
+    try {
+      iframe.contentWindow!.focus();
+      iframe.contentWindow!.print();
+    } finally {
+      setTimeout(() => iframe.remove(), 2000);
+    }
+  }, 300);
 }
