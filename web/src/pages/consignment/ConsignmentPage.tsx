@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, Users, Package, AlertCircle, Trash2, Trophy } from 'lucide-react';
+import { Plus, X, Users, Package, AlertCircle, Trash2, Trophy, Calendar } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -42,6 +42,8 @@ export default function ConsignmentPage() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>('Sales');
   const [error, setError] = useState('');
+  const [reportFrom, setReportFrom] = useState('');
+  const [reportTo, setReportTo]     = useState('');
 
   // modal state
   const [showPartnerForm, setShowPartnerForm] = useState(false);
@@ -66,8 +68,13 @@ export default function ConsignmentPage() {
   });
 
   const { data: report = [], isLoading: reportLoading } = useQuery<SellerStat[]>({
-    queryKey: ['consignment-profit-report', shopId],
-    queryFn: () => api.get('/consignment/profit-report').then(r => r.data.data),
+    queryKey: ['consignment-profit-report', shopId, reportFrom, reportTo],
+    queryFn: () => api.get('/consignment/profit-report', {
+      params: {
+        ...(reportFrom && { from: reportFrom }),
+        ...(reportTo   && { to: reportTo }),
+      },
+    }).then(r => r.data.data),
     enabled: !!shopId && tab === 'Profit Report',
   });
 
@@ -265,6 +272,28 @@ export default function ConsignmentPage() {
 
       {/* ── Profit Report Tab ────────────────────────────────────────────────── */}
       {tab === 'Profit Report' && (
+        <>
+          {/* Date filter */}
+          <div className="card px-4 py-3 flex flex-wrap items-center gap-3">
+            <Calendar size={15} className="text-stone-400 shrink-0" />
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-stone-600">From</label>
+              <input type="date" value={reportFrom} onChange={e => setReportFrom(e.target.value)}
+                className="input py-1.5 text-xs w-36" />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-stone-600">To</label>
+              <input type="date" value={reportTo} onChange={e => setReportTo(e.target.value)}
+                className="input py-1.5 text-xs w-36" />
+            </div>
+            {(reportFrom || reportTo) && (
+              <button onClick={() => { setReportFrom(''); setReportTo(''); }}
+                className="text-xs text-stone-400 hover:text-red-500 transition-colors">
+                Clear
+              </button>
+            )}
+          </div>
+
         <div className="card">
           {reportLoading ? (
             <div className="p-8 text-center text-stone-400">Loading…</div>
@@ -294,6 +323,7 @@ export default function ConsignmentPage() {
             </div>
           )}
         </div>
+        </>
       )}
 
       {/* ── Modal: Add Partner ───────────────────────────────────────────────── */}

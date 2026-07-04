@@ -102,8 +102,13 @@ export async function deleteSale(req: AuthRequest, res: Response) {
 // ── Profit report (by seller) ───────────────────────────────────────────────
 
 export async function getProfitReport(req: AuthRequest, res: Response) {
+  const { from, to } = req.query as Record<string, string>;
   const sales = await prisma.consignmentSale.findMany({
-    where: { shopId: shop(req) },
+    where: {
+      shopId: shop(req),
+      ...(from && { soldAt: { gte: new Date(from) } }),
+      ...(to   && { soldAt: { lte: new Date(new Date(to).setHours(23, 59, 59, 999)) } }),
+    },
     include: { soldBy: { select: { id: true, fullName: true } } },
   });
 
