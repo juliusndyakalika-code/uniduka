@@ -43,6 +43,7 @@ import TimeclockPage from './pages/timeclock/TimeclockPage';
 import WorkOrdersPage from './pages/repairs/WorkOrdersPage';
 import HotelPage from './pages/hotel/HotelPage';
 
+import PrintReceiptPage from './pages/PrintReceiptPage';
 import ConsignmentPage from './pages/consignment/ConsignmentPage';
 import ShopsPage from './pages/admin/ShopsPage';
 import UsersPage from './pages/admin/UsersPage';
@@ -58,6 +59,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Receipt print page — no app chrome, accessible without auth */}
+        <Route path="/print-receipt" element={<PrintReceiptPage />} />
+
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />

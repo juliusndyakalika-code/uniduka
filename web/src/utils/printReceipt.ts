@@ -33,20 +33,21 @@ export interface ReceiptData {
   customerTin?: string;
   currency?: 'TZS' | 'USD';
   exchangeRate?: number;
-  printedAt: string;       // ISO string of ORIGINAL sale time
+  printedAt: string;
   isReprint?: boolean;
 }
 
-export function printReceipt(r: ReceiptData) {
+export const RECEIPT_SESSION_KEY = '_rpt_data';
 
+export function buildReceiptContent(r: ReceiptData): { bodyHtml: string; cssText: string } {
   const orig = new Date(r.printedAt);
   const pad  = (n: number) => String(n).padStart(2, '0');
   const dateStr = `${pad(orig.getDate())}/${pad(orig.getMonth()+1)}/${orig.getFullYear()}`;
   const timeStr = `${pad(orig.getHours())}:${pad(orig.getMinutes())}:${pad(orig.getSeconds())}`;
 
-  const currency    = r.currency ?? 'TZS';
-  const exchRate    = r.exchangeRate ?? 1;
-  const showUSD     = currency === 'USD';
+  const currency = r.currency ?? 'TZS';
+  const exchRate = r.exchangeRate ?? 1;
+  const showUSD  = currency === 'USD';
 
   const hasVrn   = !!r.shop.vrn;
   const isStdVat = hasVrn && (r.shop.taxMode === 'STANDARD_VAT' || r.shop.taxMode === 'FAB_STANDARD');
@@ -65,8 +66,11 @@ export function printReceipt(r: ReceiptData) {
     CASH: 'CASH', MOBILE_MONEY: mmLabel, CARD: 'CARD', DEBIT: 'DEBIT (PAY LATER)',
   };
 
+  const now = new Date();
+  const reprintStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
   const itemRows = r.items.map(i => {
-    const disc = i.discountPct > 0 ? ` <span style="font-size:9px">(-${i.discountPct}%)</span>` : '';
+    const disc = i.discountPct > 0 ? ` <span class="sm">(-${i.discountPct}%)</span>` : '';
     return `<tr>
       <td>${i.name}${disc}</td>
       <td class="c">${i.qty}&nbsp;${i.unit}</td>
@@ -80,109 +84,103 @@ export function printReceipt(r: ReceiptData) {
        <tr><td colspan="2" class="r">A 18% VAT</td><td class="r">${fA(vatAmt)}</td></tr>`
     : `<tr><td colspan="2" class="r">E Exempt</td><td class="r">${fA(r.total)}</td></tr>`;
 
-  // Reprint timestamp
-  const now = new Date();
-  const reprintStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const bodyHtml = `
+    ${r.isReprint ? `<p class="rp-banner">*** REPRINT ***</p><p class="sm c" style="color:#555">Reprinted: ${reprintStr}</p>` : ''}
+    <p class="hdr">${r.shop.tradingName}</p>
+    ${r.shop.addressLine1 ? `<p class="sub">${r.shop.addressLine1}${r.shop.city ? ', ' + r.shop.city : ''}</p>` : (r.shop.city ? `<p class="sub">${r.shop.city}</p>` : '')}
+    ${r.shop.phone ? `<p class="sub">Tel: ${r.shop.phone}</p>` : ''}
+    <hr class="sep"/>
+    ${r.shop.tin ? `<p class="tin"><b>TIN: ${r.shop.tin}</b></p>` : ''}
+    ${r.shop.vrn ? `<p class="tin">VRN: ${r.shop.vrn}</p>` : ''}
+    <hr class="sep2"/>
+    ${r.customerName ? `<p class="cust">Customer: <b>${r.customerName}</b></p>` : ''}
+    ${r.customerTin  ? `<p class="tin">Buyer TIN: <b>${r.customerTin}</b></p>` : ''}
+    ${r.customerName || r.customerTin ? '<hr class="sep"/>' : ''}
+    <table><tbody>
+      <tr><td>Date:</td><td class="r">${dateStr}</td></tr>
+      <tr><td>Time:</td><td class="r">${timeStr}</td></tr>
+      <tr><td>Receipt No:</td><td class="r b">${r.receiptNo}</td></tr>
+    </tbody></table>
+    <hr class="sep"/>
+    <table><thead>
+      <tr><td class="b">Description</td><td class="c b">Qty</td><td class="r b">TC</td><td class="r b">Amt (${curr})</td></tr>
+    </thead><tbody>${itemRows}</tbody></table>
+    <hr class="sep"/>
+    <table><tbody>
+      <tr><td>Subtotal</td><td class="r">${fA(r.subtotal)}</td></tr>
+      ${r.discount > 0 ? `<tr><td>Discount</td><td class="r">-${fA(r.discount)}</td></tr>` : ''}
+      <tr class="tl"><td>TOTAL (${curr})</td><td class="r">${fA(r.total)}</td></tr>
+    </tbody></table>
+    <hr class="sep"/>
+    <p class="sh">TAX SUMMARY</p>
+    <table><tbody>
+      ${taxRows}
+      <tr><td class="b">TOTAL TAX</td><td colspan="2" class="r b">${fA(vatAmt)}</td></tr>
+    </tbody></table>
+    <hr class="sep"/>
+    <p class="sh">PAYMENT</p>
+    <table><tbody>
+      <tr><td>${payLabel[r.paymentMethod] ?? r.paymentMethod}</td><td class="r">${fA(r.total)}</td></tr>
+      ${r.paymentMethod === 'CASH' ? `
+      <tr><td>Cash Received</td><td class="r">${fA(r.cashReceived)}</td></tr>
+      <tr><td>Change</td><td class="r">${fA(r.change)}</td></tr>` : ''}
+      ${r.paymentRef ? `<tr><td>Ref:</td><td class="r mono">${r.paymentRef}</td></tr>` : ''}
+      ${showUSD ? `<tr><td colspan="2" class="sm" style="color:#555">Rate: 1 USD = ${exchRate} TZS</td></tr>` : ''}
+    </tbody></table>
+    <hr class="sep2"/>
+    ${r.paymentMethod === 'DEBIT' ? '<p class="dw">*** PAYMENT PENDING ***</p><hr class="sep"/>' : ''}
+    <p class="fm">ASANTE KWA KUNUNUA!</p>
+    <hr class="sep"/>
+    <p class="ft">Powered by MauzoSmart</p>
+  `;
 
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Receipt ${r.receiptNo}</title>
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Courier New',monospace;font-size:11.5px;width:80mm;padding:4mm 5mm}
-  .bold{font-weight:bold}.c{text-align:center}.r{text-align:right}
-  .hdr{font-size:14px;font-weight:bold;text-align:center}
-  .sub{font-size:10px;text-align:center;color:#333;margin:1px 0}
-  .tin{font-size:10.5px;text-align:center;margin:2px 0}
-  .cust{font-size:11px;text-align:center;margin:3px 0}
-  .sep{border:none;border-top:1px dashed #000;margin:5px 0}
-  .sep2{border:none;border-top:2px solid #000;margin:5px 0}
-  table{width:100%;border-collapse:collapse}
-  td{padding:2px 1px;vertical-align:top;font-size:11px}
-  .total-line td{font-weight:bold;font-size:12.5px;border-top:1px solid #000;padding-top:4px}
-  .sec-hdr{font-size:9.5px;font-weight:bold;letter-spacing:1px;margin:3px 0 2px}
-  .footer-msg{font-size:10px;text-align:center;font-weight:bold;margin:4px 0 2px}
-  .footer{font-size:9.5px;text-align:center;color:#555;margin-top:5px}
-  .reprint-banner{font-size:11px;text-align:center;font-weight:bold;border:1px solid #000;padding:3px;margin:5px 0;letter-spacing:1px}
-  .debit-warn{font-size:10px;text-align:center;color:#c00;font-weight:bold;margin:4px 0}
-  @media print{@page{margin:0;size:80mm auto}body{padding:2mm 4mm}}
-</style></head><body>
-
-${r.isReprint ? `<p class="reprint-banner">*** REPRINT ***</p><p style="font-size:9px;text-align:center;color:#555">Reprinted: ${reprintStr}</p>` : ''}
-
-<p class="hdr">${r.shop.tradingName}</p>
-${r.shop.addressLine1 ? `<p class="sub">${r.shop.addressLine1}${r.shop.city ? ', ' + r.shop.city : ''}</p>` : (r.shop.city ? `<p class="sub">${r.shop.city}</p>` : '')}
-${r.shop.phone ? `<p class="sub">Tel: ${r.shop.phone}</p>` : ''}
-<hr class="sep"/>
-${r.shop.tin ? `<p class="tin"><span class="bold">TIN: ${r.shop.tin}</span></p>` : ''}
-${r.shop.vrn ? `<p class="tin">VRN: ${r.shop.vrn}</p>` : ''}
-<hr class="sep2"/>
-${r.customerName ? `<p class="cust">Customer: <span class="bold">${r.customerName}</span></p>` : ''}
-${r.customerTin  ? `<p class="tin">Buyer TIN: <span class="bold">${r.customerTin}</span></p>` : ''}
-${r.customerName || r.customerTin ? '<hr class="sep"/>' : ''}
-<table><tbody>
-  <tr><td>Date:</td><td class="r">${dateStr}</td></tr>
-  <tr><td>Time:</td><td class="r">${timeStr}</td></tr>
-  <tr><td>Receipt No:</td><td class="r bold">${r.receiptNo}</td></tr>
-</tbody></table>
-<hr class="sep"/>
-
-<table><thead>
-  <tr><td class="bold">Description</td><td class="c bold">Qty</td><td class="r bold">TC</td><td class="r bold">Amt (${curr})</td></tr>
-</thead><tbody>${itemRows}</tbody></table>
-<hr class="sep"/>
-
-<table><tbody>
-  <tr><td>Subtotal</td><td class="r">${fA(r.subtotal)}</td></tr>
-  ${r.discount > 0 ? `<tr><td>Discount</td><td class="r">-${fA(r.discount)}</td></tr>` : ''}
-  <tr class="total-line"><td>TOTAL (${curr})</td><td class="r">${fA(r.total)}</td></tr>
-</tbody></table>
-<hr class="sep"/>
-
-<p class="sec-hdr">TAX SUMMARY</p>
-<table><tbody>
-  ${taxRows}
-  <tr><td class="bold">TOTAL TAX</td><td colspan="2" class="r bold">${fA(vatAmt)}</td></tr>
-</tbody></table>
-<hr class="sep"/>
-
-<p class="sec-hdr">PAYMENT</p>
-<table><tbody>
-  <tr><td>${payLabel[r.paymentMethod] ?? r.paymentMethod}</td><td class="r">${fA(r.total)}</td></tr>
-  ${r.paymentMethod === 'CASH' ? `
-  <tr><td>Cash Received</td><td class="r">${fA(r.cashReceived)}</td></tr>
-  <tr><td>Change</td><td class="r">${fA(r.change)}</td></tr>` : ''}
-  ${r.paymentRef ? `<tr><td>Ref:</td><td class="r" style="font-family:monospace">${r.paymentRef}</td></tr>` : ''}
-  ${showUSD ? `<tr><td colspan="2" style="font-size:9px;color:#555">Rate: 1 USD = ${exchRate} TZS</td></tr>` : ''}
-</tbody></table>
-<hr class="sep2"/>
-
-${r.paymentMethod === 'DEBIT' ? '<p class="debit-warn">*** PAYMENT PENDING ***</p><hr class="sep"/>' : ''}
-<p class="footer-msg">ASANTE KWA KUNUNUA!</p>
-<hr class="sep"/>
-<p class="footer">Powered by MauzoSmart</p>
-</body></html>`;
-
-  // Use a hidden iframe so no popup is needed — works on mobile browsers
-  // where window.open() is blocked or hangs on the print preview.
-  const existing = document.getElementById('_receipt_frame');
-  if (existing) existing.remove();
-
-  const iframe = document.createElement('iframe');
-  iframe.id = '_receipt_frame';
-  iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;top:0;left:0;opacity:0';
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentWindow!.document;
-  doc.open(); doc.write(html); doc.close();
-
-  // Wait for content to render, then print; clean up after dialog closes
-  setTimeout(() => {
-    try {
-      iframe.contentWindow!.focus();
-      iframe.contentWindow!.print();
-    } finally {
-      setTimeout(() => iframe.remove(), 2000);
+  const cssText = `
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #fff; color: #000; }
+    .receipt {
+      font-family: 'Courier New', monospace;
+      font-size: 11.5px;
+      width: 80mm;
+      max-width: 100%;
+      padding: 4mm 5mm;
+      margin: 0 auto;
+      background: #fff;
+      color: #000;
     }
-  }, 300);
+    .receipt .b    { font-weight: bold }
+    .receipt .c    { text-align: center }
+    .receipt .r    { text-align: right }
+    .receipt .sm   { font-size: 9px }
+    .receipt .mono { font-family: monospace }
+    .receipt .hdr  { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 2px }
+    .receipt .sub  { font-size: 10px; text-align: center; color: #333; margin: 1px 0 }
+    .receipt .tin  { font-size: 10.5px; text-align: center; margin: 2px 0 }
+    .receipt .cust { font-size: 11px; text-align: center; margin: 3px 0 }
+    .receipt .sep  { border: none; border-top: 1px dashed #000; margin: 5px 0 }
+    .receipt .sep2 { border: none; border-top: 2px solid #000; margin: 5px 0 }
+    .receipt table { width: 100%; border-collapse: collapse }
+    .receipt td    { padding: 2px 1px; vertical-align: top; font-size: 11px }
+    .receipt .tl td{ font-weight: bold; font-size: 12.5px; border-top: 1px solid #000; padding-top: 4px }
+    .receipt .sh   { font-size: 9.5px; font-weight: bold; letter-spacing: 1px; margin: 3px 0 2px }
+    .receipt .fm   { font-size: 10px; text-align: center; font-weight: bold; margin: 4px 0 2px }
+    .receipt .ft   { font-size: 9.5px; text-align: center; color: #555; margin-top: 5px }
+    .receipt .rp-banner { font-size: 11px; text-align: center; font-weight: bold; border: 1px solid #000; padding: 3px; margin: 5px 0; letter-spacing: 1px }
+    .receipt .dw   { font-size: 10px; text-align: center; color: #c00; font-weight: bold; margin: 4px 0 }
+    .back-btn {
+      display: block; margin: 16px auto; padding: 8px 24px;
+      font-family: sans-serif; font-size: 14px; cursor: pointer;
+      border: 1px solid #ccc; border-radius: 4px; background: white;
+    }
+    @media print {
+      .back-btn { display: none !important; }
+      @page { margin: 0; size: 80mm auto; }
+    }
+  `;
+
+  return { bodyHtml, cssText };
+}
+
+export function printReceipt(r: ReceiptData) {
+  sessionStorage.setItem(RECEIPT_SESSION_KEY, JSON.stringify(r));
+  window.location.href = '/print-receipt';
 }
