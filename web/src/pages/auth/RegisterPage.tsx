@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import LanguageToggle from '../../components/ui/LanguageToggle';
 
 interface Form { fullName: string; legalName: string; email: string; phone?: string; password: string; confirmPassword: string; }
 
@@ -29,7 +30,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F5F0] flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-[#F8F5F0] flex items-center justify-center px-4 py-8 relative">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5 mb-2">

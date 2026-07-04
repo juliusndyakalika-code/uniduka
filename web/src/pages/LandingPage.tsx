@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import LanguageToggle from '../components/ui/LanguageToggle';
 import {
   ShoppingCart, Package, Users, BarChart2, Shield, Zap, Globe,
   Receipt, Star, ChevronRight, Check, ArrowRight, Menu, X,
@@ -271,6 +272,7 @@ export default function LandingPage() {
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
+            <LanguageToggle />
             <Link to="/login"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-700 border border-stone-400 px-5 py-2 rounded-sm hover:border-stone-900 hover:text-stone-900 hover:bg-stone-50 transition-colors">
               Sign In
@@ -283,6 +285,7 @@ export default function LandingPage() {
 
           {/* Mobile: Sign In always visible + hamburger */}
           <div className="md:hidden flex items-center gap-2">
+            <LanguageToggle />
             <Link to="/login"
               className="inline-flex items-center text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 px-4 py-2 rounded-sm transition-colors">
               Sign In

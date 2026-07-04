@@ -5,6 +5,7 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import LanguageToggle from '../../components/ui/LanguageToggle';
 
 interface Form { email: string; password: string; totp?: string; }
 
@@ -33,7 +34,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F5F0] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#F8F5F0] flex items-center justify-center px-4 relative">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
