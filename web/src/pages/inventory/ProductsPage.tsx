@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Trash2, Package, AlertTriangle, X, Upload, Download, CheckCircle2, FileWarning, ChevronUp, ChevronDown, ChevronsUpDown, Lock, PackagePlus, ScanLine, Camera, Ship } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, AlertTriangle, X, Upload, Download, CheckCircle2, FileWarning, ChevronUp, ChevronDown, ChevronsUpDown, Lock, PackagePlus, ArrowUpDown, ScanLine, Camera, Ship } from 'lucide-react';
 import ShipmentImportModal from './ShipmentImportModal';
 import { useForm } from 'react-hook-form';
 import api from '../../api/client';
@@ -363,6 +363,11 @@ export default function ProductsPage() {
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [stockTarget, setStockTarget] = useState<Product | null>(null);
   const [stockError, setStockError]   = useState('');
+  const [adjTarget, setAdjTarget]     = useState<Product | null>(null);
+  const [adjType, setAdjType]         = useState<'ADJUSTMENT_IN' | 'ADJUSTMENT_OUT'>('ADJUSTMENT_IN');
+  const [adjQty, setAdjQty]           = useState('');
+  const [adjReason, setAdjReason]     = useState('');
+  const [adjError, setAdjError]       = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const stockForm = useForm<StockForm>();
 
@@ -452,6 +457,20 @@ export default function ProductsPage() {
       setStockTarget(null); stockForm.reset(); setStockError('');
     },
     onError: (e: unknown) => setStockError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to add stock'),
+  });
+
+  const { mutate: doAdjust, isPending: adjusting } = useMutation({
+    mutationFn: () => api.post('/inventory/stock/adjust', {
+      productId: adjTarget!.id,
+      type: adjType,
+      qty: Number(adjQty),
+      reason: adjReason,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      setAdjTarget(null); setAdjQty(''); setAdjReason(''); setAdjError('');
+    },
+    onError: (e: unknown) => setAdjError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
 
   const { mutate: runImport, isPending: importing } = useMutation({
@@ -608,13 +627,22 @@ export default function ProductsPage() {
                     </td>
                     <td>
                       <div className="flex items-center gap-1">
-                        {/* Add stock — always available */}
+                        {/* Add stock */}
                         <button
                           onClick={() => { setStockTarget(p); setStockError(''); stockForm.reset({ unitCost: p.costPrice }); }}
                           className="p-1.5 rounded hover:bg-emerald-50 text-stone-400 hover:text-emerald-600 transition-colors"
                           title="Add stock"
                         >
                           <PackagePlus size={13} />
+                        </button>
+
+                        {/* Adjust stock (in or out) */}
+                        <button
+                          onClick={() => { setAdjTarget(p); setAdjType('ADJUSTMENT_IN'); setAdjQty(''); setAdjReason(''); setAdjError(''); }}
+                          className="p-1.5 rounded hover:bg-blue-50 text-stone-400 hover:text-blue-600 transition-colors"
+                          title="Adjust stock"
+                        >
+                          <ArrowUpDown size={13} />
                         </button>
 
                         {/* Edit — locked if product has been sold */}
@@ -1012,6 +1040,59 @@ export default function ProductsPage() {
           onSubmit={d => addStock({ id: stockTarget.id, data: d })}
           onClose={() => { setStockTarget(null); stockForm.reset(); setStockError(''); }}
         />
+      )}
+
+      {/* ── Adjust Stock modal ── */}
+      {adjTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="card p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-base font-bold text-stone-900">Adjust Stock</h3>
+              <button onClick={() => setAdjTarget(null)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+            </div>
+            <p className="text-xs text-stone-500 mb-5 truncate">{adjTarget.name} &nbsp;·&nbsp; current stock: <span className="font-semibold">{adjTarget.stock} {adjTarget.unit}</span></p>
+            {adjError && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{adjError}</div>}
+            <div className="space-y-4">
+              <div>
+                <label className="label">Direction</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['ADJUSTMENT_IN', 'ADJUSTMENT_OUT'] as const).map(t => (
+                    <button key={t} type="button" onClick={() => setAdjType(t)}
+                      className={`py-2 text-xs rounded-lg border-2 font-semibold transition-colors ${
+                        adjType === t
+                          ? t === 'ADJUSTMENT_IN'
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                            : 'border-red-400 bg-red-50 text-red-700'
+                          : 'border-stone-200 text-stone-500 hover:border-stone-300'
+                      }`}>
+                      {t === 'ADJUSTMENT_IN' ? '+ Add stock' : '− Remove stock'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="label">Quantity</label>
+                <input type="number" min="1" value={adjQty} onChange={e => setAdjQty(e.target.value)}
+                  className="input" placeholder="1" autoFocus />
+              </div>
+              <div>
+                <label className="label">Reason</label>
+                <input type="text" value={adjReason} onChange={e => setAdjReason(e.target.value)}
+                  className="input" placeholder="Damage, count correction, theft…" />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button className="btn-secondary flex-1" onClick={() => setAdjTarget(null)}>Cancel</button>
+                <button
+                  className="btn-primary flex-1"
+                  disabled={adjusting || !adjQty || Number(adjQty) < 1 || !adjReason.trim()}
+                  onClick={() => doAdjust()}
+                >
+                  {adjusting ? 'Saving…' : 'Adjust'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
