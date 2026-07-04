@@ -34,14 +34,14 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
   icon: React.ElementType; label: string; value: string; sub?: string; color: string;
 }) {
   return (
-    <div className="card p-5">
+    <div className="card p-4 sm:p-5 min-w-0 overflow-hidden">
       <div className="flex items-start justify-between mb-3">
         <div className={`p-2 rounded-lg ${color}`}><Icon size={18} /></div>
-        <ArrowUpRight size={14} className="text-stone-400" />
+        <ArrowUpRight size={14} className="text-stone-400 shrink-0" />
       </div>
-      <p className="stat-value">{value}</p>
-      <p className="stat-label">{label}</p>
-      {sub && <p className="text-xs text-stone-400 mt-1">{sub}</p>}
+      <p className="stat-value leading-tight">{value}</p>
+      <p className="stat-label truncate">{label}</p>
+      {sub && <p className="text-[10px] sm:text-xs text-stone-400 mt-1 truncate">{sub}</p>}
     </div>
   );
 }

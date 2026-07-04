@@ -120,7 +120,7 @@
     @apply card p-5;
   }
   .stat-value {
-    @apply text-2xl font-bold text-stone-900 tracking-tight;
+    @apply text-lg sm:text-2xl font-bold text-stone-900 tracking-tight break-words;
   }
   .stat-label {
     @apply text-xs uppercase tracking-widest text-stone-400 mt-1;

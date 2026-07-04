@@ -298,16 +298,16 @@ export default function ConsignmentPage() {
 
       {/* ── Modal: Add Partner ───────────────────────────────────────────────── */}
       {showPartnerForm && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <div className="modal-header">
-              <h2 className="modal-title">New Consignment Partner</h2>
-              <button onClick={() => { setShowPartnerForm(false); setError(''); }} className="modal-close"><X size={16} /></button>
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="card w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+              <h2 className="text-sm font-bold text-stone-900">New Consignment Partner</h2>
+              <button onClick={() => { setShowPartnerForm(false); setError(''); }} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
-            <form onSubmit={partnerForm.handleSubmit(d => savePartner(d))} className="space-y-3 p-4">
+            <form onSubmit={partnerForm.handleSubmit(d => savePartner(d))} className="space-y-4 p-5">
               <div>
                 <label className="label">Name *</label>
-                <input className="input" {...partnerForm.register('name', { required: true })} placeholder="Partner / business name" />
+                <input className="input" {...partnerForm.register('name', { required: true })} placeholder="Partner / business name" autoFocus />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -323,9 +323,9 @@ export default function ConsignmentPage() {
                 <label className="label">Notes</label>
                 <textarea className="input" rows={2} {...partnerForm.register('notes')} />
               </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <button type="button" className="btn-ghost" onClick={() => { setShowPartnerForm(false); setError(''); }}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={savingPartner}>
+              <div className="flex gap-3 pt-1 pb-2">
+                <button type="button" className="btn-secondary flex-1" onClick={() => { setShowPartnerForm(false); setError(''); }}>Cancel</button>
+                <button type="submit" className="btn-primary flex-1" disabled={savingPartner}>
                   {savingPartner ? 'Saving…' : 'Save Partner'}
                 </button>
               </div>
@@ -336,16 +336,16 @@ export default function ConsignmentPage() {
 
       {/* ── Modal: Record Sale ───────────────────────────────────────────────── */}
       {showSaleForm && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <div className="modal-header">
-              <h2 className="modal-title">Record Consignment Sale</h2>
-              <button onClick={() => { setShowSaleForm(false); setError(''); }} className="modal-close"><X size={16} /></button>
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="card w-full sm:max-w-md rounded-t-2xl sm:rounded-xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+              <h2 className="text-sm font-bold text-stone-900">Record Consignment Sale</h2>
+              <button onClick={() => { setShowSaleForm(false); setError(''); }} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
-            <form onSubmit={saleForm.handleSubmit(d => saveSale(d))} className="space-y-3 p-4">
+            <form onSubmit={saleForm.handleSubmit(d => saveSale(d))} className="space-y-4 p-5">
               <div>
                 <label className="label">Partner *</label>
-                <select className="input" {...saleForm.register('partnerId', { required: true })}>
+                <select className="select w-full" {...saleForm.register('partnerId', { required: true })} autoFocus>
                   <option value="">Select partner…</option>
                   {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
@@ -384,9 +384,9 @@ export default function ConsignmentPage() {
                   <input className="input" {...saleForm.register('notes')} placeholder="Optional" />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <button type="button" className="btn-ghost" onClick={() => { setShowSaleForm(false); setError(''); }}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={savingSale}>
+              <div className="flex gap-3 pt-1 pb-2">
+                <button type="button" className="btn-secondary flex-1" onClick={() => { setShowSaleForm(false); setError(''); }}>Cancel</button>
+                <button type="submit" className="btn-primary flex-1" disabled={savingSale}>
                   {savingSale ? 'Saving…' : 'Record Sale'}
                 </button>
               </div>
