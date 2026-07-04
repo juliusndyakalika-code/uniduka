@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Store, Pencil, Trash2, X, Check, AlertTriangle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -16,6 +17,7 @@ const CURRENCIES = ['TZS','KES','UGX','USD','EUR','GBP','ZAR','NGN','GHS'];
 
 export default function ShopsPage() {
   const { setShopId } = useAuthStore();
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const navigate = useNavigate();
 
@@ -79,16 +81,16 @@ export default function ShopsPage() {
     <div className="space-y-4">
       <div className="page-header">
         <div>
-          <h1 className="page-title">My Shops</h1>
+          <h1 className="page-title">{t('nav.shops')}</h1>
           <p className="page-subtitle">{shops.length} shop{shops.length !== 1 ? 's' : ''}</p>
         </div>
         <button className="btn-primary" onClick={() => navigate('/setup/wizard')}>
-          <Plus size={14} className="mr-1.5" /> New Shop
+          <Plus size={14} className="mr-1.5" /> {t('common.add')}
         </button>
       </div>
 
       {isLoading ? (
-        <div className="card p-8 text-center text-stone-400">Loading…</div>
+        <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>
       ) : (
         <div className="card overflow-hidden">
           <table className="table">
@@ -132,7 +134,7 @@ export default function ShopsPage() {
                         }`}
                         title={s.isActive ? 'Click to deactivate' : 'Click to activate'}
                       >
-                        {s.isActive ? 'Active' : 'Inactive'}
+                        {s.isActive ? t('common.active') : t('common.inactive')}
                       </button>
                       {!s.wizardCompleted && <span className="badge badge-amber">Setup incomplete</span>}
                     </div>
@@ -165,7 +167,7 @@ export default function ShopsPage() {
                 </tr>
               ))}
               {shops.length === 0 && (
-                <tr><td colSpan={6} className="text-center text-stone-400 py-10">No shops yet</td></tr>
+                <tr><td colSpan={6} className="text-center text-stone-400 py-10">{t('common.noShopsYet')}</td></tr>
               )}
             </tbody>
           </table>
@@ -182,16 +184,16 @@ export default function ShopsPage() {
             </div>
             <form onSubmit={handleSubmit(d => save(d))} className="space-y-4">
               <div>
-                <label className="label">Trading Name *</label>
+                <label className="label">{t('settings.tradingName')} *</label>
                 <input {...register('tradingName', { required: true })} className="input" />
               </div>
               <div>
-                <label className="label">Legal Name</label>
+                <label className="label">{t('settings.legalName')}</label>
                 <input {...register('legalName')} className="input" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="label">City</label>
+                  <label className="label">{t('settings.city')}</label>
                   <input {...register('city')} className="input" />
                 </div>
                 <div>
@@ -200,14 +202,14 @@ export default function ShopsPage() {
                 </div>
               </div>
               <div>
-                <label className="label">Currency</label>
+                <label className="label">{t('settings.currency')}</label>
                 <select {...register('currency')} className="select">
                   {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" className="btn-secondary flex-1" onClick={() => setEditShop(null)}>Cancel</button>
-                <button type="submit" disabled={saving} className="btn-primary flex-1">{saving ? 'Saving…' : 'Save'}</button>
+                <button type="button" className="btn-secondary flex-1" onClick={() => setEditShop(null)}>{t('common.cancel')}</button>
+                <button type="submit" disabled={saving} className="btn-primary flex-1">{saving ? t('common.saving') : t('common.save')}</button>
               </div>
             </form>
           </div>
@@ -243,13 +245,13 @@ export default function ShopsPage() {
             </div>
 
             <div className="flex gap-3">
-              <button className="btn-secondary flex-1" onClick={() => { setDeleteShop(null); setConfirmName(''); }}>Cancel</button>
+              <button className="btn-secondary flex-1" onClick={() => { setDeleteShop(null); setConfirmName(''); }}>{t('common.cancel')}</button>
               <button
                 disabled={deleting || confirmName !== deleteShop.tradingName}
                 onClick={handleDelete}
                 className="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-40 transition-colors"
               >
-                {deleting ? 'Deleting…' : 'Delete Shop'}
+                {deleting ? t('common.saving') : t('common.delete')}
               </button>
             </div>
           </div>

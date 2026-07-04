@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Store, CreditCard, Printer, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { printReceipt as doPrint } from '../../utils/printReceipt';
@@ -49,6 +50,7 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
 export default function Dashboard() {
   const { shopId, account, user } = useAuthStore();
   const qc = useQueryClient();
+  const { t } = useTranslation();
 
   const [printTx, setPrintTx]     = useState<TxDetail | null>(null);
   const [loadingTxId, setLoadingTxId] = useState<string | null>(null);
@@ -112,7 +114,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="page-header"><h1 className="page-title">Dashboard</h1></div>
+        <div className="page-header"><h1 className="page-title">{t('dashboard.title')}</h1></div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => <div key={i} className="card p-5 animate-pulse h-28 bg-stone-100" />)}
         </div>
@@ -125,27 +127,27 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Dashboard</h1>
+          <h1 className="page-title">{t('dashboard.title')}</h1>
           <p className="page-subtitle">{account?.legalName}</p>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={TrendingUp} label="Revenue today" value={fmt(data?.revenue?.today ?? 0)}
-          sub={`${fmt(data?.revenue?.month ?? 0)} this month`} color="bg-primary-50 text-primary-600" />
-        <StatCard icon={ShoppingCart} label="Transactions today" value={String(data?.transactions?.today ?? 0)}
-          sub={`${data?.transactions?.week ?? 0} this week`} color="bg-duka-50 text-duka-600" />
-        <StatCard icon={Users} label="Total customers" value={String(data?.customers?.total ?? 0)}
-          sub={`+${data?.customers?.new ?? 0} new`} color="bg-blue-50 text-blue-600" />
-        <StatCard icon={Package} label="Low stock alerts" value={String(data?.lowStock ?? 0)}
+        <StatCard icon={TrendingUp} label={t('dashboard.revenueToday')} value={fmt(data?.revenue?.today ?? 0)}
+          sub={`${fmt(data?.revenue?.month ?? 0)} ${t('dashboard.thisMonth')}`} color="bg-primary-50 text-primary-600" />
+        <StatCard icon={ShoppingCart} label={t('dashboard.transactionsToday')} value={String(data?.transactions?.today ?? 0)}
+          sub={`${data?.transactions?.week ?? 0} ${t('dashboard.thisWeek')}`} color="bg-duka-50 text-duka-600" />
+        <StatCard icon={Users} label={t('dashboard.totalCustomers')} value={String(data?.customers?.total ?? 0)}
+          sub={t('dashboard.new', { count: data?.customers?.new ?? 0 })} color="bg-blue-50 text-blue-600" />
+        <StatCard icon={Package} label={t('dashboard.lowStockAlerts')} value={String(data?.lowStock ?? 0)}
           color={data?.lowStock ? 'bg-red-50 text-red-600' : 'bg-stone-50 text-stone-500'} />
       </div>
 
       {/* Charts + top products */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="card p-5 lg:col-span-2">
-          <h3 className="text-sm font-semibold text-stone-700 mb-4">Sales — last 14 days</h3>
+          <h3 className="text-sm font-semibold text-stone-700 mb-4">{t('dashboard.salesChart')}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data?.salesChart ?? []} barSize={14}>
               <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
@@ -156,7 +158,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
         <div className="card p-5">
-          <h3 className="text-sm font-semibold text-stone-700 mb-4">Top products</h3>
+          <h3 className="text-sm font-semibold text-stone-700 mb-4">{t('dashboard.topProducts')}</h3>
           <div className="space-y-3">
             {(data?.topProducts ?? []).slice(0, 6).map((p, i) => (
               <div key={i} className="flex items-center justify-between">
@@ -167,7 +169,7 @@ export default function Dashboard() {
                 <span className="text-xs font-medium text-stone-900 ml-2 shrink-0">{fmt(p.revenue)}</span>
               </div>
             ))}
-            {!data?.topProducts?.length && <p className="text-xs text-stone-400">No sales yet</p>}
+            {!data?.topProducts?.length && <p className="text-xs text-stone-400">{t('dashboard.noSalesYet')}</p>}
           </div>
         </div>
       </div>
@@ -175,19 +177,19 @@ export default function Dashboard() {
       {/* Recent transactions */}
       <div className="card">
         <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-stone-700">Recent transactions</h3>
-          <a href="/reports/sales" className="text-xs text-primary-600 hover:underline">View all</a>
+          <h3 className="text-sm font-semibold text-stone-700">{t('dashboard.recentTransactions')}</h3>
+          <a href="/reports/sales" className="text-xs text-primary-600 hover:underline">{t('dashboard.viewAll')}</a>
         </div>
         <div className="table-wrapper">
           <table className="table">
             <thead>
               <tr>
-                <th>Receipt</th>
-                <th className="hidden sm:table-cell">Customer / Cashier</th>
+                <th>{t('dashboard.receipt')}</th>
+                <th className="hidden sm:table-cell">{t('dashboard.customerCashier')}</th>
                 <th>Amount</th>
-                <th className="hidden sm:table-cell">Payment</th>
-                <th className="hidden sm:table-cell">Date & Time</th>
-                <th>Print</th>
+                <th className="hidden sm:table-cell">{t('dashboard.payment')}</th>
+                <th className="hidden sm:table-cell">{t('dashboard.dateTime')}</th>
+                <th>{t('common.print')}</th>
               </tr>
             </thead>
             <tbody>
@@ -211,7 +213,7 @@ export default function Dashboard() {
                       onClick={() => fetchAndPrint(tx.id)}
                       disabled={loadingTxId === tx.id}
                       className="p-1.5 rounded text-stone-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
-                      title="Reprint receipt"
+                      title={t('dashboard.printReceipt')}
                     >
                       {loadingTxId === tx.id ? <span className="text-[10px]">…</span> : <Printer size={13} />}
                     </button>
@@ -219,7 +221,7 @@ export default function Dashboard() {
                 </tr>
               ))}
               {!data?.recentTransactions?.length && (
-                <tr><td colSpan={6} className="text-center text-stone-400 py-6">No transactions yet</td></tr>
+                <tr><td colSpan={6} className="text-center text-stone-400 py-6">{t('dashboard.noTransactionsYet')}</td></tr>
               )}
             </tbody>
           </table>
@@ -231,11 +233,11 @@ export default function Dashboard() {
         <div className="card p-5 flex items-center gap-4">
           <div className="p-2 rounded-lg bg-primary-50 text-primary-600"><Store size={18} /></div>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-stone-900">{account.plan} plan</p>
+            <p className="text-sm font-semibold text-stone-900">{t('dashboard.plan', { plan: account.plan })}</p>
             <p className="text-xs text-stone-400">{account.legalName}</p>
           </div>
           <a href="/admin/business" className="btn-secondary text-xs px-3 py-1.5">
-            <CreditCard size={12} className="mr-1.5" /> Manage
+            <CreditCard size={12} className="mr-1.5" /> {t('dashboard.managePlan')}
           </a>
         </div>
       )}
@@ -245,7 +247,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-5 w-full max-w-xs">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-stone-900">Reprint Receipt</h3>
+              <h3 className="text-sm font-bold text-stone-900">{t('dashboard.reprintTitle')}</h3>
               <button onClick={() => setPrintTx(null)} className="text-stone-400 hover:text-stone-700"><X size={16} /></button>
             </div>
             <div className="bg-stone-50 rounded-lg p-3 mb-4 text-xs space-y-1">
@@ -266,9 +268,9 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button className="btn-secondary flex-1 text-xs" onClick={() => setPrintTx(null)}>Cancel</button>
+              <button className="btn-secondary flex-1 text-xs" onClick={() => setPrintTx(null)}>{t('common.cancel')}</button>
               <button className="btn-primary flex-1 text-xs" onClick={() => executePrint(printTx)}>
-                <Printer size={12} className="mr-1.5" /> Print
+                <Printer size={12} className="mr-1.5" /> {t('common.print')}
               </button>
             </div>
           </div>

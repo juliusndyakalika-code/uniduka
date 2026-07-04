@@ -6,6 +6,7 @@ import { downloadCsv } from '../../utils/exportCsv';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { printReceipt } from '../../utils/printReceipt';
+import { useTranslation } from 'react-i18next';
 
 interface StaffStat {
   userId: string; fullName: string; role: string;
@@ -41,6 +42,7 @@ interface SellerRowProps {
 }
 
 function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [loadingPrint, setLoadingPrint] = useState<string | null>(null);
 
@@ -132,19 +134,19 @@ function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
           <td colSpan={7} className="p-0">
             <div className="bg-stone-50 border-t border-b border-stone-200 px-6 py-3">
               {loadingTx ? (
-                <p className="text-xs text-stone-400 py-2">Loading transactions…</p>
+                <p className="text-xs text-stone-400 py-2">{t('common.loading')}</p>
               ) : txns.length === 0 ? (
-                <p className="text-xs text-stone-400 py-2">No transactions in this period</p>
+                <p className="text-xs text-stone-400 py-2">{t('reports.noSales')}</p>
               ) : (
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="text-stone-500 border-b border-stone-200">
-                      <th className="text-left py-1.5 pr-3 font-semibold">Receipt</th>
-                      <th className="text-left py-1.5 pr-3 font-semibold">Date & Time</th>
-                      <th className="text-left py-1.5 pr-3 font-semibold">Customer</th>
+                      <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.receipt')}</th>
+                      <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.date')}</th>
+                      <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.customer')}</th>
                       <th className="text-left py-1.5 pr-3 font-semibold">Items sold</th>
-                      <th className="text-right py-1.5 pr-3 font-semibold">Total</th>
-                      <th className="text-right py-1.5 font-semibold">Payment</th>
+                      <th className="text-right py-1.5 pr-3 font-semibold">{t('common.total')}</th>
+                      <th className="text-right py-1.5 font-semibold">{t('reports.payment')}</th>
                       <th className="w-8"></th>
                     </tr>
                   </thead>
@@ -225,6 +227,7 @@ function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
 }
 
 export default function StaffReportPage() {
+  const { t } = useTranslation();
   const { shopId } = useAuthStore();
   const location = useLocation();
   const [from, setFrom] = useState(() => {
@@ -245,7 +248,7 @@ export default function StaffReportPage() {
     <div className="space-y-6">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Reports</h1>
+          <h1 className="page-title">{t('reports.staffTitle')}</h1>
           <p className="page-subtitle">Sales performance by seller</p>
         </div>
       </div>
@@ -278,7 +281,7 @@ export default function StaffReportPage() {
               ['Seller', 'Role', 'Transactions', 'Revenue (TZS)', 'Avg Sale (TZS)']
             )}
           >
-            <Download size={13} className="mr-1" /> Summary CSV
+            <Download size={13} className="mr-1" /> {t('reports.exportCsv')}
           </button>
           <button
             className="btn-secondary text-xs"
@@ -307,7 +310,7 @@ export default function StaffReportPage() {
               );
             }}
           >
-            <Download size={13} className="mr-1" /> Transactions CSV
+            <Download size={13} className="mr-1" /> {t('reports.exportCsv')}
           </button>
         </div>
       </div>
@@ -327,20 +330,20 @@ export default function StaffReportPage() {
           <p className="text-xs text-stone-400">Click a row to expand and see individual sales</p>
         </div>
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">Loading…</div>
+          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : isError ? (
-          <div className="p-8 text-center text-red-500 text-sm">Failed to load report</div>
+          <div className="p-8 text-center text-red-500 text-sm">{t('common.error')}</div>
         ) : (
           <div className="table-wrapper overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Seller</th>
+                  <th>{t('reports.staffName')}</th>
                   <th>Role</th>
-                  <th>Transactions</th>
-                  <th>Revenue</th>
-                  <th>Avg. Sale</th>
+                  <th>{t('reports.transactions')}</th>
+                  <th>{t('reports.revenue')}</th>
+                  <th>{t('reports.avgTicket')}</th>
                   <th>Share %</th>
                 </tr>
               </thead>
@@ -357,13 +360,13 @@ export default function StaffReportPage() {
                   />
                 ))}
                 {data.length === 0 && (
-                  <tr><td colSpan={7} className="text-center text-stone-400 py-10">No sales data for this period</td></tr>
+                  <tr><td colSpan={7} className="text-center text-stone-400 py-10">{t('reports.noSales')}</td></tr>
                 )}
               </tbody>
               {sorted.length > 1 && (
                 <tfoot>
                   <tr className="border-t-2 border-stone-200 bg-stone-50">
-                    <td colSpan={3} className="font-semibold text-stone-700 py-2 px-3">Total</td>
+                    <td colSpan={3} className="font-semibold text-stone-700 py-2 px-3">{t('common.total')}</td>
                     <td className="font-bold">{total.tx}</td>
                     <td className="font-bold">{fmt(total.rev)}</td>
                     <td className="font-bold">{total.tx > 0 ? fmt(total.rev / total.tx) : '—'}</td>

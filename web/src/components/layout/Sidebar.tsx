@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Calendar,
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
-  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound,
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
+import i18n from '../../i18n';
 
 const BUSINESS_ICONS: Record<string, React.ReactNode> = {
   RETAIL_STORE:        <ShoppingBag size={14} />,
@@ -61,6 +63,7 @@ function NavGroup({ icon, label, prefix, children }: {
 
 interface Props { open: boolean; onClose: () => void; }
 export default function Sidebar({ open, onClose }: Props) {
+  const { t } = useTranslation();
   const { user, account, shopId, shops, logout, setShopId } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -73,14 +76,21 @@ export default function Sidebar({ open, onClose }: Props) {
   const [pwError, setPwError]               = useState('');
   const [pwDone, setPwDone]                 = useState(false);
   const [pwSaving, setPwSaving]             = useState(false);
+  const [currentLang, setCurrentLang]       = useState(i18n.language);
 
-  // Close sidebar on mobile whenever the route changes
   useEffect(() => { onClose(); }, [location.pathname]);
   const [switching, setSwitching] = useState(false);
 
   const role = user?.role ?? '';
   const isOwner = role === 'ACCOUNT_OWNER';
   const currentShop = shops.find(s => s.id === shopId);
+
+  function toggleLang() {
+    const next = currentLang === 'en' ? 'sw' : 'en';
+    i18n.changeLanguage(next);
+    localStorage.setItem('lang', next);
+    setCurrentLang(next);
+  }
 
   async function switchShop(id: string) {
     if (id === shopId) { setShopPickerOpen(false); return; }
@@ -94,14 +104,14 @@ export default function Sidebar({ open, onClose }: Props) {
   }
 
   async function handleChangePassword() {
-    if (newPw.length < 8) { setPwError('New password must be at least 8 characters'); return; }
-    if (newPw !== confirmPw) { setPwError('Passwords do not match'); return; }
+    if (newPw.length < 8) { setPwError(t('sidebar.pwMinLength')); return; }
+    if (newPw !== confirmPw) { setPwError(t('sidebar.pwNoMatch')); return; }
     setPwSaving(true); setPwError('');
     try {
       await api.put('/auth/password', { currentPassword: currentPw, newPassword: newPw });
       setPwDone(true);
     } catch (e: unknown) {
-      setPwError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to update password');
+      setPwError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || t('sidebar.pwFailed'));
     } finally { setPwSaving(false); }
   }
 
@@ -117,7 +127,6 @@ export default function Sidebar({ open, onClose }: Props) {
 
   return (
     <>
-      {/* Backdrop (mobile) */}
       {open && (
         <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={onClose} />
       )}
@@ -150,7 +159,6 @@ export default function Sidebar({ open, onClose }: Props) {
         {/* Shop display */}
         <div className="px-3 py-3 border-b border-stone-100 flex-shrink-0 relative">
           {isOwner ? (
-            /* Owner: clickable shop switcher */
             <>
               <button
                 onClick={() => setShopPickerOpen(o => !o)}
@@ -159,7 +167,7 @@ export default function Sidebar({ open, onClose }: Props) {
                 <div className="flex items-center gap-2 min-w-0">
                   <Store size={16} className="text-primary-500 flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-stone-900 truncate">{currentShop?.tradingName || 'Select Shop'}</p>
+                    <p className="text-xs font-semibold text-stone-900 truncate">{currentShop?.tradingName || t('common.selectShop')}</p>
                     {currentShop && (
                       <p className="text-[10px] text-stone-400 uppercase tracking-widest flex items-center gap-1">
                         {BUSINESS_ICONS[currentShop.businessType]}
@@ -195,7 +203,7 @@ export default function Sidebar({ open, onClose }: Props) {
                       </button>
                     ))}
                     {shops.length === 0 && (
-                      <p className="text-xs text-stone-400 px-3 py-3">No shops yet</p>
+                      <p className="text-xs text-stone-400 px-3 py-3">{t('common.noShopsYet')}</p>
                     )}
                     <div className="border-t border-stone-100">
                       <NavLink
@@ -203,7 +211,7 @@ export default function Sidebar({ open, onClose }: Props) {
                         onClick={() => setShopPickerOpen(false)}
                         className="flex items-center gap-2 px-3 py-2.5 text-xs text-primary-600 hover:bg-primary-50 transition-colors"
                       >
-                        <Plus size={12} /> Add new shop
+                        <Plus size={12} /> {t('common.addNewShop')}
                       </NavLink>
                     </div>
                   </div>
@@ -211,12 +219,11 @@ export default function Sidebar({ open, onClose }: Props) {
               )}
             </>
           ) : (
-            /* Staff: static shop name, no interaction */
             <div className="flex items-center gap-2 px-3 py-2">
               <Store size={16} className="text-primary-500 flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-stone-900 truncate">
-                  {currentShop?.tradingName || 'No shop assigned'}
+                  {currentShop?.tradingName || t('common.noShopAssigned')}
                 </p>
                 {currentShop && (
                   <p className="text-[10px] text-stone-400 uppercase tracking-widest flex items-center gap-1">
@@ -231,76 +238,73 @@ export default function Sidebar({ open, onClose }: Props) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
-          <NavItem to="/dashboard" icon={<LayoutDashboard size={16} />} label="Dashboard" end />
+          <NavItem to="/dashboard" icon={<LayoutDashboard size={16} />} label={t('nav.dashboard')} end />
 
-          {/* Cashier sees POS + Customers + Timeclock + Consignment */}
           {role === 'CASHIER' && (
             <>
-              <NavItem to="/pos"          icon={<ShoppingCart size={16} />} label="Point of Sale" />
-              <NavItem to="/customers"    icon={<Users size={16} />}        label="Customers" />
-              <NavItem to="/consignment"  icon={<Handshake size={16} />}    label="Consignment" />
-              <NavItem to="/timeclock"    icon={<Clock size={16} />}        label="Timeclock" />
+              <NavItem to="/pos"          icon={<ShoppingCart size={16} />} label={t('nav.pos')} />
+              <NavItem to="/customers"    icon={<Users size={16} />}        label={t('nav.customers')} />
+              <NavItem to="/consignment"  icon={<Handshake size={16} />}    label={t('nav.consignment')} />
+              <NavItem to="/timeclock"    icon={<Clock size={16} />}        label={t('nav.timeclock')} />
             </>
           )}
 
-          {/* Inventory staff sees Inventory + Customers */}
           {role === 'INVENTORY_STAFF' && (
             <>
-              <NavItem to="/inventory"          icon={<BarChart2 size={16} />}   label="Stock Overview" end />
-              <NavItem to="/inventory/products" icon={<Package size={16} />}     label="Products" />
-              <NavItem to="/inventory/stock"    icon={<ArrowUpDown size={16} />} label="Stock Movements" />
-              <NavItem to="/customers"          icon={<Users size={16} />}       label="Customers" />
+              <NavItem to="/inventory"          icon={<BarChart2 size={16} />}   label={t('nav.stockOverview')} end />
+              <NavItem to="/inventory/products" icon={<Package size={16} />}     label={t('nav.products')} />
+              <NavItem to="/inventory/stock"    icon={<ArrowUpDown size={16} />} label={t('nav.stockMovements')} />
+              <NavItem to="/customers"          icon={<Users size={16} />}       label={t('nav.customers')} />
             </>
           )}
 
-          {/* Owner sees everything */}
           {isOwner && (
             <>
-              <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label="Point of Sale" />
-              <NavItem to="/pos/debts" icon={<Clock size={16} />}        label="Debts" />
-              <NavItem to="/pos/voids" icon={<Trash2 size={16} />}       label="Voided Sales" />
+              <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label={t('nav.pos')} />
+              <NavItem to="/pos/debts" icon={<Clock size={16} />}        label={t('nav.debts')} />
+              <NavItem to="/pos/voids" icon={<Trash2 size={16} />}       label={t('nav.voidedSales')} />
               {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
-                <NavItem to="/kds" icon={<ChefHat size={16} />} label="Kitchen Display" />
+                <NavItem to="/kds" icon={<ChefHat size={16} />} label={t('nav.kitchenDisplay')} />
               )}
               {currentShop?.businessType === 'REPAIR_WORKSHOP' && (
-                <NavItem to="/repairs/work-orders" icon={<Wrench size={16} />} label="Work Orders" />
+                <NavItem to="/repairs/work-orders" icon={<Wrench size={16} />} label={t('nav.workOrders')} />
               )}
               {currentShop?.businessType === 'HOTEL_GUESTHOUSE' && (
-                <NavItem to="/hotel" icon={<BedDouble size={16} />} label="Hotel Rooms" />
+                <NavItem to="/hotel" icon={<BedDouble size={16} />} label={t('nav.hotelRooms')} />
               )}
-              <NavGroup icon={<Package size={16} />} label="Inventory" prefix="/inventory">
-                <NavItem to="/inventory"                 icon={<BarChart2 size={14} />}     label="Stock Overview" end />
-                <NavItem to="/inventory/products"        icon={<Package size={14} />}       label="Products" />
-                <NavItem to="/inventory/stock"           icon={<ArrowUpDown size={14} />}   label="Stock Movements" />
-                <NavItem to="/inventory/purchase-orders" icon={<ClipboardList size={14} />} label="Purchase Orders" />
+              <NavGroup icon={<Package size={16} />} label={t('nav.inventory')} prefix="/inventory">
+                <NavItem to="/inventory"                 icon={<BarChart2 size={14} />}     label={t('nav.stockOverview')} end />
+                <NavItem to="/inventory/products"        icon={<Package size={14} />}       label={t('nav.products')} />
+                <NavItem to="/inventory/stock"           icon={<ArrowUpDown size={14} />}   label={t('nav.stockMovements')} />
+                <NavItem to="/inventory/purchase-orders" icon={<ClipboardList size={14} />} label={t('nav.purchaseOrders')} />
                 {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
-                  <NavItem to="/inventory/recipes" icon={<Utensils size={14} />} label="Recipes" />
+                  <NavItem to="/inventory/recipes" icon={<Utensils size={14} />} label={t('nav.recipes')} />
                 )}
               </NavGroup>
-              <NavItem to="/customers"    icon={<Users size={16} />}     label="Customers" />
-              <NavItem to="/consignment"  icon={<Handshake size={16} />} label="Consignment" />
-              <NavItem to="/appointments" icon={<Calendar size={16} />}  label="Appointments" />
-              <NavGroup icon={<TrendingUp size={16} />} label="Reports" prefix="/reports">
-                <NavItem to="/reports/sales"     icon={<TrendingUp size={14} />} label="Sales" />
-                <NavItem to="/reports/staff"     icon={<Users size={14} />}      label="By Seller" />
-                <NavItem to="/reports/inventory" icon={<Package size={14} />}    label="Stock" />
+              <NavItem to="/customers"    icon={<Users size={16} />}     label={t('nav.customers')} />
+              <NavItem to="/consignment"  icon={<Handshake size={16} />} label={t('nav.consignment')} />
+              <NavItem to="/appointments" icon={<Calendar size={16} />}  label={t('nav.appointments')} />
+              <NavGroup icon={<TrendingUp size={16} />} label={t('nav.reports')} prefix="/reports">
+                <NavItem to="/reports/sales"     icon={<TrendingUp size={14} />} label={t('nav.sales')} />
+                <NavItem to="/reports/staff"     icon={<Users size={14} />}      label={t('nav.bySeller')} />
+                <NavItem to="/reports/inventory" icon={<Package size={14} />}    label={t('nav.stock')} />
               </NavGroup>
 
               <div className="pt-3 pb-1">
-                <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400">Management</p>
+                <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400">{t('nav.management')}</p>
               </div>
-              <NavItem to="/timeclock"       icon={<Clock size={16} />}     label="Staff Timeclock" />
-              <NavItem to="/admin/users"     icon={<Users size={16} />}     label="Users & Staff" />
-              <NavItem to="/admin/shops"     icon={<Building2 size={16} />} label="Shops" />
-              <NavItem to="/loyalty"         icon={<Star size={16} />}      label="Loyalty" />
-              <NavItem to="/admin/tax-rules" icon={<Percent size={16} />}   label="Tax Rules" />
-              <NavItem to="/admin/shop"      icon={<Store size={16} />}     label="Shop Settings" />
-              <NavItem to="/admin/business"  icon={<Settings size={16} />}  label="Business Settings" />
+              <NavItem to="/timeclock"       icon={<Clock size={16} />}     label={t('nav.staffTimeclock')} />
+              <NavItem to="/admin/users"     icon={<Users size={16} />}     label={t('nav.usersStaff')} />
+              <NavItem to="/admin/shops"     icon={<Building2 size={16} />} label={t('nav.shops')} />
+              <NavItem to="/loyalty"         icon={<Star size={16} />}      label={t('nav.loyalty')} />
+              <NavItem to="/admin/tax-rules" icon={<Percent size={16} />}   label={t('nav.taxRules')} />
+              <NavItem to="/admin/shop"      icon={<Store size={16} />}     label={t('nav.shopSettings')} />
+              <NavItem to="/admin/business"  icon={<Settings size={16} />}  label={t('nav.businessSettings')} />
             </>
           )}
         </nav>
 
-        {/* Subscription expiry banner (owner only) */}
+        {/* Subscription banner */}
         {isOwner && account?.daysRemaining !== null && account?.daysRemaining !== undefined && (
           <div className={`mx-3 mb-2 px-3 py-2 rounded-lg text-[10px] leading-tight flex-shrink-0 ${
             account.daysRemaining <= 3
@@ -310,8 +314,8 @@ export default function Sidebar({ open, onClose }: Props) {
               : 'bg-primary-50 border border-primary-200 text-primary-700'
           }`}>
             {account.daysRemaining === 0
-              ? '⚠ Trial expired — contact support'
-              : `Trial: ${account.daysRemaining}d remaining`}
+              ? t('common.trialExpired')
+              : t('common.trialRemaining', { days: account.daysRemaining })}
           </div>
         )}
 
@@ -323,15 +327,27 @@ export default function Sidebar({ open, onClose }: Props) {
               {isOwner ? `${account?.plan} · ` : ''}{role.replace(/_/g, ' ')}
             </p>
           </div>
+
+          {/* Language toggle */}
+          <button
+            onClick={toggleLang}
+            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors"
+            title={t('lang.switch')}
+          >
+            <Languages size={14} />
+            <span>{currentLang === 'en' ? 'English' : 'Kiswahili'}</span>
+            <span className="ml-auto text-[10px] font-bold text-stone-400 uppercase">{currentLang === 'en' ? 'SW' : 'EN'}</span>
+          </button>
+
           <button onClick={openChangePw}
             className="flex items-center gap-2 w-full px-3 py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors"
           >
-            <KeyRound size={14} /> Change Password
+            <KeyRound size={14} /> {t('sidebar.changePassword')}
           </button>
           <button onClick={handleLogout}
             className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-500 hover:bg-red-50 rounded-sm transition-colors"
           >
-            <LogOut size={14} /> Sign Out
+            <LogOut size={14} /> {t('sidebar.signOut')}
           </button>
         </div>
       </aside>
@@ -341,63 +357,63 @@ export default function Sidebar({ open, onClose }: Props) {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-stone-900">Change Password</h3>
+              <h3 className="text-base font-bold text-stone-900">{t('sidebar.changePwTitle')}</h3>
               <button onClick={() => setShowChangePw(false)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
 
             {pwDone ? (
               <div className="space-y-4">
                 <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700 font-medium text-center">
-                  Password updated successfully!
+                  {t('sidebar.passwordUpdated')}
                 </div>
                 <button className="w-full py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-colors"
-                  onClick={() => setShowChangePw(false)}>Done</button>
+                  onClick={() => setShowChangePw(false)}>{t('common.done')}</button>
               </div>
             ) : (
               <div className="space-y-4">
                 {pwError && <div className="px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{pwError}</div>}
 
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">Current Password</label>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">{t('sidebar.currentPassword')}</label>
                   <input type={showPws ? 'text' : 'password'} value={currentPw}
                     onChange={e => setCurrentPw(e.target.value)}
                     className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
-                    placeholder="Your current password" autoFocus />
+                    placeholder={t('sidebar.currentPasswordPlaceholder')} autoFocus />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">New Password</label>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">{t('sidebar.newPassword')}</label>
                   <input type={showPws ? 'text' : 'password'} value={newPw}
                     onChange={e => setNewPw(e.target.value)}
                     className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
-                    placeholder="Min. 8 characters" />
+                    placeholder={t('sidebar.newPasswordPlaceholder')} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">Confirm New Password</label>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">{t('sidebar.confirmNewPassword')}</label>
                   <input type={showPws ? 'text' : 'password'} value={confirmPw}
                     onChange={e => setConfirmPw(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
                     className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                       confirmPw && confirmPw !== newPw ? 'border-red-300' : 'border-stone-200'
                     }`}
-                    placeholder="Repeat new password" />
+                    placeholder={t('sidebar.confirmNewPasswordPlaceholder')} />
                   {confirmPw && confirmPw !== newPw && (
-                    <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+                    <p className="mt-1 text-xs text-red-500">{t('sidebar.pwNoMatch')}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="show-pws" checked={showPws} onChange={e => setShowPws(e.target.checked)}
                     className="rounded" />
-                  <label htmlFor="show-pws" className="text-xs text-stone-500 cursor-pointer">Show passwords</label>
+                  <label htmlFor="show-pws" className="text-xs text-stone-500 cursor-pointer">{t('sidebar.showPasswords')}</label>
                 </div>
                 <div className="flex gap-3 pt-1">
                   <button className="flex-1 py-2 border border-stone-200 text-stone-600 text-sm font-semibold rounded-lg hover:bg-stone-50 transition-colors"
-                    onClick={() => setShowChangePw(false)}>Cancel</button>
+                    onClick={() => setShowChangePw(false)}>{t('common.cancel')}</button>
                   <button
                     disabled={pwSaving || !currentPw || newPw.length < 8 || newPw !== confirmPw}
                     onClick={handleChangePassword}
                     className="flex-1 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40"
                   >
-                    {pwSaving ? 'Saving…' : 'Update Password'}
+                    {pwSaving ? t('common.saving') : t('sidebar.updatePassword')}
                   </button>
                 </div>
               </div>

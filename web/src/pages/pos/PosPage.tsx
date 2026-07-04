@@ -5,6 +5,7 @@ import {
   Printer, X, Tag, User, UserPlus, DollarSign, RotateCcw, ChevronDown,
   AlertTriangle, Check, Clock, ShoppingCart, Package, ScanLine,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { printReceipt as doPrint } from '../../utils/printReceipt';
@@ -43,13 +44,6 @@ interface TxForVoid {
   status: string;
 }
 
-const PAYMENT_METHODS = [
-  { key: 'CASH',         label: 'Cash',    icon: Banknote },
-  { key: 'MOBILE_MONEY', label: 'Mobile',  icon: Smartphone },
-  { key: 'CARD',         label: 'Card',    icon: CreditCard },
-  { key: 'DEBIT',        label: 'Debit',   icon: Clock },
-];
-
 const USD_RATE_DEFAULT = 2650;
 
 const fmtTZS = (n: number) =>
@@ -59,10 +53,18 @@ const fmtUSD = (n: number) =>
 
 // ── Component ──────────────────────────────────────────────────────────────
 export default function PosPage() {
+  const { t } = useTranslation();
   const { shopId, shops } = useAuthStore();
   const qc = useQueryClient();
   const searchRef = useRef<HTMLInputElement>(null);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
+
+  const PAYMENT_METHODS = [
+    { key: 'CASH',         label: t('pos.cash'),   icon: Banknote },
+    { key: 'MOBILE_MONEY', label: t('pos.mobile'),  icon: Smartphone },
+    { key: 'CARD',         label: t('pos.card'),   icon: CreditCard },
+    { key: 'DEBIT',        label: t('pos.debit'),  icon: Clock },
+  ];
 
   // Cart state
   const [search, setSearch]             = useState('');
@@ -404,7 +406,7 @@ export default function PosPage() {
             mobileView === 'products' ? 'bg-primary-600 text-white' : 'bg-white text-stone-500'
           }`}
         >
-          <Package size={15} /> Products
+          <Package size={15} /> {t('pos.browseProd')}
         </button>
         <button
           onClick={() => setMobileView('cart')}
@@ -413,7 +415,7 @@ export default function PosPage() {
           }`}
         >
           <ShoppingCart size={15} />
-          Cart{cart.length > 0 ? ` (${cart.length})` : ''}
+          {`${t('pos.cart')}${cart.length > 0 ? ` (${cart.length})` : ''}`}
           {cart.length > 0 && mobileView === 'products' && (
             <span className="ml-1 text-xs font-bold text-emerald-400">{fmt(total)}</span>
           )}
@@ -433,7 +435,7 @@ export default function PosPage() {
             <input
               ref={searchRef}
               className="input pl-8 pr-10"
-              placeholder="Search or scan barcode…"
+              placeholder={t('pos.searchProducts')}
               value={search}
               onChange={e => setSearch(e.target.value)}
               autoFocus
@@ -464,7 +466,7 @@ export default function PosPage() {
             </button>
             {showRateEdit && (
               <div className="absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg p-3 z-20 w-52">
-                <p className="text-xs font-semibold text-stone-700 mb-2">Currency & Rate</p>
+                <p className="text-xs font-semibold text-stone-700 mb-2">{t('pos.currency')}</p>
                 <div className="flex gap-2 mb-2">
                   {(['TZS', 'USD'] as const).map(c => (
                     <button key={c} onClick={() => setCurrency(c)}
@@ -490,7 +492,7 @@ export default function PosPage() {
             onClick={() => { setShowReturn(true); setReturnSearch(''); setReturnTx(null); setVoidError(''); }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-stone-200 text-stone-500 hover:border-amber-400 hover:text-amber-600 text-xs font-medium transition-colors"
           >
-            <RotateCcw size={13} /> Return
+            <RotateCcw size={13} /> {t('pos.returnVoid')}
           </button>
         </div>
 
@@ -525,7 +527,7 @@ export default function PosPage() {
                 <p className="text-sm font-bold text-primary-700">{fmt(p.sellingPrice)}</p>
                 <div className="flex items-center justify-between mt-1">
                   <p className={`text-[10px] ${p.stock <= 5 ? 'text-amber-600 font-medium' : 'text-stone-400'}`}>
-                    {outOfStock ? 'Out of stock' : `${p.stock} ${p.unit}`}
+                    {outOfStock ? t('pos.outOfStock') : `${p.stock} ${p.unit}`}
                   </p>
                   {inCart && <span className="text-[10px] font-bold bg-primary-600 text-white rounded-full px-1.5">×{inCart.qty}</span>}
                 </div>
@@ -534,7 +536,7 @@ export default function PosPage() {
           })}
           {products.length === 0 && (
             <div className="col-span-full text-center text-stone-400 text-sm py-16">
-              {search ? 'No products found' : 'No active products in inventory'}
+              {t('pos.noProducts')}
             </div>
           )}
         </div>
@@ -546,9 +548,9 @@ export default function PosPage() {
 
           {/* Cart header */}
           <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-stone-800">Cart {cart.length > 0 && `(${cart.length})`}</h3>
+            <h3 className="text-sm font-semibold text-stone-800">{`${t('pos.cart')} ${cart.length > 0 ? `(${cart.length})` : ''}`}</h3>
             {cart.length > 0 && (
-              <button onClick={clearCart} className="text-xs text-stone-400 hover:text-red-500 transition-colors">Clear</button>
+              <button onClick={clearCart} className="text-xs text-stone-400 hover:text-red-500 transition-colors">{t('common.clear')}</button>
             )}
           </div>
 
@@ -566,7 +568,7 @@ export default function PosPage() {
                 <User size={12} className="absolute left-2.5 top-2.5 text-stone-400" />
                 <input
                   className="input pl-7 text-xs py-1.5 pr-20"
-                  placeholder="Customer (optional)"
+                  placeholder={t('pos.searchCustomer')}
                   value={customerQuery}
                   onChange={e => { setCustomerQuery(e.target.value); setShowCustomerDrop(true); }}
                   onFocus={() => setShowCustomerDrop(true)}
@@ -602,7 +604,7 @@ export default function PosPage() {
           {/* Cart items */}
           <div className="flex-1 overflow-y-auto px-3 py-1 space-y-1">
             {cart.length === 0 && (
-              <p className="text-center text-xs text-stone-400 py-8">Tap a product to add it</p>
+              <p className="text-center text-xs text-stone-400 py-8">{t('pos.addProductsHint')}</p>
             )}
             {cart.map(item => (
               <div key={item.product.id} className="bg-stone-50 rounded-lg p-2.5 space-y-1.5">
@@ -694,15 +696,15 @@ export default function PosPage() {
             {/* Totals */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-stone-500">
-                <span>Subtotal</span><span>{fmt(subtotal)}</span>
+                <span>{t('pos.subtotal')}</span><span>{fmt(subtotal)}</span>
               </div>
               {orderDiscount > 0 && (
                 <div className="flex justify-between text-xs text-emerald-600">
-                  <span>Discount</span><span>−{fmt(orderDiscount)}</span>
+                  <span>{t('pos.totalDiscount')}</span><span>−{fmt(orderDiscount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-bold text-stone-900 pt-1 border-t border-stone-100">
-                <span>Total</span>
+                <span>{t('pos.total')}</span>
                 <span>
                   {fmt(total)}
                   {currency === 'USD' && <span className="text-[10px] font-normal text-stone-400 ml-1">({fmtTZS(total)})</span>}
@@ -746,7 +748,7 @@ export default function PosPage() {
               <div className="space-y-2">
                 {(shopDetail?.mobileMoneyProviders ?? []).length > 0 && (
                   <div>
-                    <p className="text-[10px] text-stone-400 mb-1.5 font-semibold uppercase tracking-widest">Provider</p>
+                    <p className="text-[10px] text-stone-400 mb-1.5 font-semibold uppercase tracking-widest">{t('pos.mobileProvider')}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {(shopDetail?.mobileMoneyProviders ?? []).map(p => (
                         <button key={p} onClick={() => setMmProvider(p)}
@@ -804,9 +806,9 @@ export default function PosPage() {
 
             <button className="btn-primary w-full text-sm py-2.5" disabled={!canCheckout}
               onClick={() => { setError(''); checkout(); }}>
-              {isPending ? 'Processing…'
+              {isPending ? t('common.loading')
                 : paymentMethod === 'DEBIT' ? `Record Debt  ${fmt(total)}`
-                : `Charge  ${fmt(total)}`}
+                : `${t('pos.charge')}  ${fmt(total)}`}
             </button>
           </div>
         </div>
@@ -844,11 +846,11 @@ export default function PosPage() {
             </div>
             <div className="flex gap-2">
               <button className="btn-secondary flex-1 text-xs" onClick={() => printReceipt(receipt)}>
-                <Printer size={12} className="mr-1.5" />Print
+                <Printer size={12} className="mr-1.5" />{t('pos.printReceipt')}
               </button>
               <button className="btn-primary flex-1 text-xs"
                 onClick={() => { setReceipt(null); searchRef.current?.focus(); }}>
-                New Sale
+                {t('pos.newSale')}
               </button>
             </div>
           </div>
@@ -860,25 +862,25 @@ export default function PosPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-5 w-full max-w-xs">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-stone-900">New Customer</h3>
+              <h3 className="text-sm font-bold text-stone-900">{t('pos.newCustomer')}</h3>
               <button onClick={() => setShowNewCustomer(false)} className="text-stone-400 hover:text-stone-700"><X size={16} /></button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="label">Full Name</label>
+                <label className="label">{t('pos.customerName')}</label>
                 <input className="input" value={newCustName} onChange={e => setNewCustName(e.target.value)} placeholder="Amina Hassan" autoFocus />
               </div>
               <div>
-                <label className="label">Phone (optional)</label>
+                <label className="label">{t('pos.customerPhone')}</label>
                 <input className="input" value={newCustPhone} onChange={e => setNewCustPhone(e.target.value)} placeholder="+255 7XX XXX XXX" type="tel" />
               </div>
               {newCustError && (
                 <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5">{newCustError}</p>
               )}
               <div className="flex gap-2 pt-1">
-                <button className="btn-secondary flex-1 text-xs" onClick={() => { setShowNewCustomer(false); setNewCustError(''); }}>Cancel</button>
+                <button className="btn-secondary flex-1 text-xs" onClick={() => { setShowNewCustomer(false); setNewCustError(''); }}>{t('common.cancel')}</button>
                 <button className="btn-primary flex-1 text-xs" disabled={savingCust || !newCustName.trim()} onClick={saveNewCustomer}>
-                  {savingCust ? 'Saving…' : 'Add'}
+                  {savingCust ? t('common.saving') : t('common.add')}
                 </button>
               </div>
             </div>
@@ -892,7 +894,7 @@ export default function PosPage() {
           <div className="bg-white rounded-2xl shadow-xl p-5 w-64" onClick={e => e.stopPropagation()}>
             <p className="text-sm font-bold text-stone-900 truncate mb-0.5">{qtyPick.product.name}</p>
             <p className="text-xs text-stone-400 mb-4">
-              {fmt(qtyPick.product.sellingPrice)} &middot; {qtyPick.product.stock} {qtyPick.product.unit} in stock
+              {fmt(qtyPick.product.sellingPrice)} &middot; {t('pos.inStock', { qty: qtyPick.product.stock })}
             </p>
             <div className="flex items-center gap-2 mb-4">
               <button
@@ -931,9 +933,9 @@ export default function PosPage() {
               ><Plus size={16} /></button>
             </div>
             <div className="flex gap-2">
-              <button className="btn-secondary flex-1 text-xs" onClick={() => setQtyPick(null)}>Cancel</button>
+              <button className="btn-secondary flex-1 text-xs" onClick={() => setQtyPick(null)}>{t('common.cancel')}</button>
               <button className="btn-primary flex-1 text-xs" onClick={confirmQtyPick}>
-                Add to Cart
+                {t('pos.addToCart')}
               </button>
             </div>
           </div>
@@ -951,7 +953,7 @@ export default function PosPage() {
           <div className="card p-5 w-full max-w-md">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-bold text-stone-900">Return / Void Sale</h3>
+                <h3 className="text-sm font-bold text-stone-900">{t('pos.returnVoid')}</h3>
                 <p className="text-xs text-stone-400">Find a transaction to amend or reverse</p>
               </div>
               <button onClick={() => setShowReturn(false)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
@@ -962,13 +964,13 @@ export default function PosPage() {
                 <div className="flex gap-2 mb-3">
                   <input
                     className="input flex-1 text-xs"
-                    placeholder="Receipt No. or date (YYYY-MM-DD)"
+                    placeholder={t('pos.searchReceipt')}
                     value={returnSearch}
                     onChange={e => setReturnSearch(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && searchReturn()}
                   />
                   <button className="btn-secondary text-xs px-3" onClick={() => searchReturn()} disabled={searchingReturn}>
-                    {searchingReturn ? '…' : 'Search'}
+                    {searchingReturn ? '…' : t('common.search')}
                   </button>
                 </div>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -991,7 +993,7 @@ export default function PosPage() {
                     </button>
                   ))}
                   {returnResults.length === 0 && returnSearch && !searchingReturn && (
-                    <p className="text-center text-xs text-stone-400 py-4">No transactions found</p>
+                    <p className="text-center text-xs text-stone-400 py-4">{t('pos.noProducts')}</p>
                   )}
                 </div>
               </>
@@ -1019,17 +1021,17 @@ export default function PosPage() {
                 ) : (
                   <>
                     <div className="mb-3">
-                      <label className="label">Reason for void/return</label>
-                      <input className="input text-xs" placeholder="e.g. Wrong item, customer returned"
+                      <label className="label">{t('pos.voidReason')}</label>
+                      <input className="input text-xs" placeholder={t('pos.voidReasonPlaceholder')}
                         value={voidReason} onChange={e => setVoidReason(e.target.value)} />
                     </div>
                     {voidError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5 mb-3">{voidError}</p>}
                     <div className="flex gap-2">
-                      <button className="btn-secondary flex-1 text-xs" onClick={() => setReturnTx(null)}>← Back</button>
+                      <button className="btn-secondary flex-1 text-xs" onClick={() => setReturnTx(null)}>{t('common.back')}</button>
                       <button
                         className="flex-1 text-xs py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
                         disabled={voiding} onClick={() => voidTx(returnTx.id)}>
-                        {voiding ? 'Voiding…' : 'Void & Restore Stock'}
+                        {voiding ? t('pos.voiding') : t('pos.confirmVoid')}
                       </button>
                     </div>
                   </>

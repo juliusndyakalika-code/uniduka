@@ -4,6 +4,7 @@ import { Clock, LogIn, LogOut, User, Trash2, ChevronDown, ChevronUp, AlertCircle
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { format, formatDuration, intervalToDuration, startOfMonth, endOfMonth } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 interface Shift {
   id: string; userId: string; clockIn: string; clockOut: string | null;
@@ -40,6 +41,7 @@ function downloadCsv(shifts: Shift[]) {
 }
 
 export default function TimeclockPage() {
+  const { t } = useTranslation();
   const { user, shopId } = useAuthStore();
   const isOwner = user?.role === 'ACCOUNT_OWNER';
   const qc = useQueryClient();
@@ -142,11 +144,11 @@ export default function TimeclockPage() {
         {/* Header */}
         <div className="page-header">
           <div>
-            <h1 className="page-title">Timeclock Report</h1>
+            <h1 className="page-title">{t('timeclock.reportTitle')}</h1>
             <p className="page-subtitle">{shifts.length} shifts · {fmtHours(totalHours)} total</p>
           </div>
           <button className="btn-secondary" onClick={() => downloadCsv(shifts)}>
-            <Download size={14} className="mr-1.5" /> Export CSV
+            <Download size={14} className="mr-1.5" /> {t('timeclock.exportCsv')}
           </button>
         </div>
 
@@ -154,20 +156,20 @@ export default function TimeclockPage() {
         <div className="card px-4 py-3 flex flex-wrap items-center gap-3">
           <Calendar size={15} className="text-stone-400 shrink-0" />
           <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-stone-600">From</label>
+            <label className="text-xs font-semibold text-stone-600">{t('common.from')}</label>
             <input type="date" value={from} onChange={e => setFrom(e.target.value)}
               className="input py-1.5 text-xs w-36" />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-stone-600">To</label>
+            <label className="text-xs font-semibold text-stone-600">{t('common.to')}</label>
             <input type="date" value={to} onChange={e => setTo(e.target.value)}
               className="input py-1.5 text-xs w-36" />
           </div>
           {/* Quick presets */}
           {[
-            { label: 'This month', f: format(startOfMonth(new Date()), 'yyyy-MM-dd'), t: format(endOfMonth(new Date()), 'yyyy-MM-dd') },
-            { label: 'Today',      f: format(new Date(), 'yyyy-MM-dd'),               t: format(new Date(), 'yyyy-MM-dd') },
-            { label: 'This week',  f: format(new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 1)), 'yyyy-MM-dd'), t: format(new Date(), 'yyyy-MM-dd') },
+            { label: t('timeclock.thisMonth'), f: format(startOfMonth(new Date()), 'yyyy-MM-dd'), t: format(endOfMonth(new Date()), 'yyyy-MM-dd') },
+            { label: t('timeclock.today'),     f: format(new Date(), 'yyyy-MM-dd'),               t: format(new Date(), 'yyyy-MM-dd') },
+            { label: t('timeclock.thisWeek'),  f: format(new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 1)), 'yyyy-MM-dd'), t: format(new Date(), 'yyyy-MM-dd') },
           ].map(p => (
             <button key={p.label} onClick={() => { setFrom(p.f); setTo(p.t); }}
               className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${from === p.f && to === p.t ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-stone-200 text-stone-500 hover:border-stone-300'}`}>
@@ -180,16 +182,16 @@ export default function TimeclockPage() {
         {summaryRows.length > 0 && (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-stone-100">
-              <h2 className="text-sm font-semibold text-stone-800">Staff Summary</h2>
+              <h2 className="text-sm font-semibold text-stone-800">{t('timeclock.staffSummary')}</h2>
             </div>
             <div className="table-wrapper">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Staff Member</th>
-                    <th className="text-right">Shifts</th>
-                    <th className="text-right">Total Hours</th>
-                    <th className="text-right">Avg / Shift</th>
+                    <th>{t('timeclock.staff')}</th>
+                    <th className="text-right">{t('timeclock.totalShifts')}</th>
+                    <th className="text-right">{t('timeclock.totalHours')}</th>
+                    <th className="text-right">{t('timeclock.avgPerShift')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -211,7 +213,7 @@ export default function TimeclockPage() {
                 </tbody>
                 <tfoot className="bg-stone-50 border-t border-stone-200">
                   <tr>
-                    <td className="px-4 py-2 text-xs font-bold text-stone-700">Total</td>
+                    <td className="px-4 py-2 text-xs font-bold text-stone-700">{t('common.total')}</td>
                     <td className="px-4 py-2 text-right text-xs font-bold text-stone-700">{summaryRows.reduce((s,r)=>s+r.shifts,0)}</td>
                     <td className="px-4 py-2 text-right text-xs font-bold text-stone-900">{fmtHours(totalHours)}</td>
                     <td></td>
@@ -224,15 +226,15 @@ export default function TimeclockPage() {
 
         {/* Detailed shift log */}
         <div>
-          <h2 className="text-sm font-semibold text-stone-700 mb-3">Shift Log</h2>
+          <h2 className="text-sm font-semibold text-stone-700 mb-3">{t('timeclock.shiftLog')}</h2>
           {shiftsError && (
             <div className="card p-4 flex items-center gap-2 text-xs text-red-600 mb-2">
-              <AlertCircle size={13} /> Failed to load shifts.
+              <AlertCircle size={13} /> {t('common.error')}
             </div>
           )}
           <div className="space-y-2">
             {dates.length === 0 && !shiftsError && (
-              <div className="card p-6 text-center text-stone-400 text-sm">No shifts found for this period</div>
+              <div className="card p-6 text-center text-stone-400 text-sm">{t('timeclock.noData')}</div>
             )}
             {dates.map(d => {
               const dayShifts = grouped[d];
@@ -287,7 +289,7 @@ export default function TimeclockPage() {
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-3">
         <Clock size={20} className="text-primary-600" />
-        <h1 className="text-xl font-bold text-stone-900">Staff Timeclock</h1>
+        <h1 className="text-xl font-bold text-stone-900">{t('timeclock.title')}</h1>
       </div>
 
       {/* Clock in/out card */}
@@ -298,7 +300,7 @@ export default function TimeclockPage() {
             {statusError
               ? 'Unable to load status'
               : isClockedIn
-              ? `Clocked in since ${format(new Date(status.clockIn), 'h:mm a')} · ${dur(null, status.clockIn)}`
+              ? t('timeclock.clockedInAt', { time: `${format(new Date(status.clockIn), 'h:mm a')} · ${dur(null, status.clockIn)}` })
               : 'Not clocked in'}
           </span>
         </div>
@@ -311,31 +313,31 @@ export default function TimeclockPage() {
 
         <input
           type="text" value={note} onChange={e => setNote(e.target.value)}
-          placeholder="Optional note (e.g. Late due to transport)"
+          placeholder={t('timeclock.notePlaceholder')}
           className="input w-full mb-4 text-sm"
         />
         {isClockedIn ? (
           <button className="btn-danger w-full flex items-center justify-center gap-2" onClick={() => doClockOut()} disabled={clockingOut}>
-            <LogOut size={16} /> {clockingOut ? 'Clocking out…' : 'Clock Out'}
+            <LogOut size={16} /> {clockingOut ? t('timeclock.clockingOut') : t('timeclock.clockOut')}
           </button>
         ) : (
           <button className="btn-primary w-full flex items-center justify-center gap-2" onClick={() => doClockIn()} disabled={clockingIn}>
-            <LogIn size={16} /> {clockingIn ? 'Clocking in…' : 'Clock In'}
+            <LogIn size={16} /> {clockingIn ? t('timeclock.clockingIn') : t('timeclock.clockIn')}
           </button>
         )}
       </div>
 
       {/* Own shift history */}
       <div>
-        <h2 className="text-sm font-semibold text-stone-700 mb-3">My Shift History</h2>
+        <h2 className="text-sm font-semibold text-stone-700 mb-3">{t('timeclock.history')}</h2>
         {shiftsError && (
           <div className="card p-4 flex items-center gap-2 text-xs text-red-600 mb-2">
-            <AlertCircle size={13} /> Failed to load shifts. Please refresh the page.
+            <AlertCircle size={13} /> {t('common.error')}
           </div>
         )}
         <div className="space-y-2">
           {dates.length === 0 && !shiftsError && (
-            <div className="card p-6 text-center text-stone-400 text-sm">No shifts recorded yet</div>
+            <div className="card p-6 text-center text-stone-400 text-sm">{t('timeclock.noShifts')}</div>
           )}
           {dates.map(d => {
             const dayShifts = grouped[d];

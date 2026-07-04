@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -18,6 +19,7 @@ function fmt(n: number) {
 }
 
 export default function VoidsPage() {
+  const { t } = useTranslation();
   const { shopId } = useAuthStore();
   const [from, setFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().split('T')[0]; });
   const [to, setTo]     = useState(() => new Date().toISOString().split('T')[0]);
@@ -41,7 +43,7 @@ export default function VoidsPage() {
     <div className="space-y-6">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Voided Transactions</h1>
+          <h1 className="page-title">{t('voids.title')}</h1>
           <p className="page-subtitle">Reversed / amended sales</p>
         </div>
       </div>
@@ -73,21 +75,21 @@ export default function VoidsPage() {
       {/* Table */}
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">Loading…</div>
+          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-stone-400">No voided transactions in this period</div>
+          <div className="p-8 text-center text-stone-400">{t('voids.noVoids')}</div>
         ) : (
           <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Receipt</th>
-                  <th>Date & Time</th>
+                  <th>{t('voids.receipt')}</th>
+                  <th>{t('voids.date')}</th>
                   <th>Customer</th>
-                  <th>Cashier</th>
+                  <th>{t('voids.cashier')}</th>
                   <th>Items</th>
-                  <th>Sale Total</th>
-                  <th>Void Reason</th>
+                  <th>{t('voids.amount')}</th>
+                  <th>{t('voids.reason')}</th>
                 </tr>
               </thead>
               <tbody>

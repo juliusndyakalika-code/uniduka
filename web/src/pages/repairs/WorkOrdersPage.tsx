@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Wrench, X, ChevronRight, Trash2, CheckCircle2, Clock, Package, AlertCircle } from 'lucide-react';
 import { useForm, useFieldArray } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { format } from 'date-fns';
 
@@ -36,6 +37,7 @@ interface WOForm {
 }
 
 export default function WorkOrdersPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<JobStatus | ''>('');
@@ -92,9 +94,9 @@ export default function WorkOrdersPage() {
       <div className="w-80 border-r border-stone-200 flex flex-col bg-white flex-shrink-0">
         <div className="p-3 border-b border-stone-200 space-y-2">
           <div className="flex items-center justify-between">
-            <h1 className="font-bold text-stone-900 flex items-center gap-2"><Wrench size={16} className="text-primary-600" /> Work Orders</h1>
+            <h1 className="font-bold text-stone-900 flex items-center gap-2"><Wrench size={16} className="text-primary-600" /> {t('repairs.title')}</h1>
             <button className="btn-primary py-1 px-2 text-xs flex items-center gap-1" onClick={() => setShowCreate(true)}>
-              <Plus size={13} /> New
+              <Plus size={13} /> {t('repairs.addOrder')}
             </button>
           </div>
           <div className="relative">
@@ -112,7 +114,7 @@ export default function WorkOrdersPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto divide-y divide-stone-100">
-          {orders.length === 0 && <p className="text-xs text-stone-400 text-center py-8">No work orders found</p>}
+          {orders.length === 0 && <p className="text-xs text-stone-400 text-center py-8">{t('repairs.noOrders')}</p>}
           {orders.map(o => {
             const meta = STATUS_META[o.status];
             return (
@@ -166,12 +168,12 @@ export default function WorkOrdersPage() {
             {/* Info cards */}
             <div className="grid grid-cols-2 gap-4">
               <div className="card p-4">
-                <p className="text-[10px] text-stone-400 uppercase tracking-wide mb-2">Device</p>
+                <p className="text-[10px] text-stone-400 uppercase tracking-wide mb-2">{t('repairs.device')}</p>
                 <p className="text-sm font-medium text-stone-900">{selected.deviceDesc || '—'}</p>
                 {selected.serialNo && <p className="text-xs text-stone-500">S/N: {selected.serialNo}</p>}
               </div>
               <div className="card p-4">
-                <p className="text-[10px] text-stone-400 uppercase tracking-wide mb-2">Fault Reported</p>
+                <p className="text-[10px] text-stone-400 uppercase tracking-wide mb-2">{t('repairs.issue')}</p>
                 <p className="text-sm text-stone-900">{selected.fault || '—'}</p>
               </div>
               {selected.diagnosis && (
@@ -215,13 +217,13 @@ export default function WorkOrdersPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card w-full max-w-xl max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-stone-900">New Work Order</h3>
+              <h3 className="font-bold text-stone-900">{t('repairs.addOrder')}</h3>
               <button onClick={() => { setShowCreate(false); reset(); }} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <label className="label">Device / Item Description</label>
+                  <label className="label">{t('repairs.device')}</label>
                   <input {...register('deviceDesc')} className="input w-full" placeholder="e.g. Samsung Galaxy S22" />
                 </div>
                 <div>
@@ -229,7 +231,7 @@ export default function WorkOrdersPage() {
                   <input {...register('serialNo')} className="input w-full" placeholder="Optional" />
                 </div>
                 <div>
-                  <label className="label">Fault Reported *</label>
+                  <label className="label">{t('repairs.issue')} *</label>
                   <input {...register('fault', { required: true })} className="input w-full" placeholder="e.g. Screen cracked" />
                 </div>
                 <div>
@@ -280,8 +282,8 @@ export default function WorkOrdersPage() {
               </div>
 
               <div className="flex gap-3">
-                <button type="button" className="btn-secondary flex-1" onClick={() => { setShowCreate(false); reset(); }}>Cancel</button>
-                <button type="submit" className="btn-primary flex-1" disabled={creating}>{creating ? 'Creating…' : 'Create Work Order'}</button>
+                <button type="button" className="btn-secondary flex-1" onClick={() => { setShowCreate(false); reset(); }}>{t('common.cancel')}</button>
+                <button type="submit" className="btn-primary flex-1" disabled={creating}>{creating ? t('common.saving') : t('common.save')}</button>
               </div>
             </form>
           </div>

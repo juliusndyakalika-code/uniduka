@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, User, Phone, Mail, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -17,6 +18,7 @@ function fmt(n: number) {
 }
 
 export default function CustomersPage() {
+  const { t } = useTranslation();
   const { shopId } = useAuthStore();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
@@ -43,33 +45,33 @@ export default function CustomersPage() {
     <div className="space-y-4">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Customers</h1>
-          <p className="page-subtitle">{customers.length} customers</p>
+          <h1 className="page-title">{t('customers.title')}</h1>
+          <p className="page-subtitle">{t('customers.subtitle', { count: customers.length })}</p>
         </div>
         <button className="btn-primary" onClick={() => { setError(''); setShowForm(true); }}>
-          <Plus size={14} className="mr-1.5" /> Add Customer
+          <Plus size={14} className="mr-1.5" /> {t('customers.addCustomer')}
         </button>
       </div>
 
       <div className="relative">
         <Search size={14} className="absolute left-3 top-3 text-stone-400" />
-        <input className="input pl-8" placeholder="Search by name, phone, email…" value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="input pl-8" placeholder={t('customers.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">Loading…</div>
+          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : (
           <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Customer</th>
-                  <th className="hidden sm:table-cell">Contact</th>
-                  <th>Total Spend</th>
-                  <th className="hidden sm:table-cell">Visits</th>
-                  <th className="hidden sm:table-cell">Points</th>
-                  <th className="hidden sm:table-cell">Since</th>
+                  <th>{t('customers.customer')}</th>
+                  <th className="hidden sm:table-cell">{t('customers.contact')}</th>
+                  <th>{t('customers.totalSpend')}</th>
+                  <th className="hidden sm:table-cell">{t('customers.visits')}</th>
+                  <th className="hidden sm:table-cell">{t('customers.points')}</th>
+                  <th className="hidden sm:table-cell">{t('customers.since')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -101,7 +103,7 @@ export default function CustomersPage() {
                   </tr>
                 ))}
                 {customers.length === 0 && (
-                  <tr><td colSpan={6} className="text-center text-stone-400 py-8">No customers yet</td></tr>
+                  <tr><td colSpan={6} className="text-center text-stone-400 py-8">{t('customers.noCustomers')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -113,30 +115,30 @@ export default function CustomersPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-6 w-full max-w-sm">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-stone-900">New Customer</h3>
+              <h3 className="text-base font-bold text-stone-900">{t('customers.addTitle')}</h3>
               <button onClick={() => setShowForm(false)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
             {error && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{error}</div>}
             <form onSubmit={handleSubmit(d => save(d))} className="space-y-4">
               <div>
-                <label className="label">Full Name</label>
+                <label className="label">{t('customers.fullName')}</label>
                 <input {...register('fullName', { required: true })} className="input" placeholder="Amina Hassan" />
               </div>
               <div>
-                <label className="label">Phone</label>
+                <label className="label">{t('customers.phone')}</label>
                 <input {...register('phone')} type="tel" className="input" placeholder="+255 7XX XXX XXX" />
               </div>
               <div>
-                <label className="label">Email</label>
+                <label className="label">{t('customers.email')}</label>
                 <input {...register('email')} type="email" className="input" placeholder="amina@email.com" />
               </div>
               <div>
-                <label className="label">Notes</label>
+                <label className="label">{t('customers.notes')}</label>
                 <textarea {...register('notes')} className="input" rows={2} placeholder="Optional" />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>Cancel</button>
-                <button type="submit" disabled={isPending} className="btn-primary flex-1">{isPending ? 'Saving…' : 'Add Customer'}</button>
+                <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>{t('common.cancel')}</button>
+                <button type="submit" disabled={isPending} className="btn-primary flex-1">{isPending ? t('common.saving') : t('customers.addCustomer')}</button>
               </div>
             </form>
           </div>

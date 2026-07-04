@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm<Form>();
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -45,12 +47,12 @@ export default function LoginPage() {
             </svg>
             <span className="text-2xl font-bold tracking-tight">Mauzo<span className="font-light text-primary-600">Smart</span></span>
           </div>
-          <p className="text-xs uppercase tracking-widest text-stone-400">Smart Sales Platform</p>
+          <p className="text-xs uppercase tracking-widest text-stone-400">{t('auth.smartSalesPlatform')}</p>
         </div>
 
         <div className="card p-8">
-          <h2 className="text-lg font-bold text-stone-900 mb-1">Sign in</h2>
-          <p className="text-xs text-stone-400 mb-6">Access your business dashboard</p>
+          <h2 className="text-lg font-bold text-stone-900 mb-1">{t('auth.signInTitle')}</h2>
+          <p className="text-xs text-stone-400 mb-6">{t('auth.signInSubtitle')}</p>
 
           {error && (
             <div className="mb-4 px-3 py-2.5 bg-red-50 border border-red-200 rounded-sm text-xs text-red-700">{error}</div>
@@ -58,20 +60,20 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
-              <label className="label">Email address</label>
+              <label className="label">{t('auth.email')}</label>
               <input
-                {...register('email', { required: 'Email required', pattern: { value: /\S+@\S+\.\S+/, message: 'Invalid email' } })}
-                type="email" className="input" placeholder="you@business.com" autoComplete="email"
+                {...register('email', { required: t('auth.emailRequired'), pattern: { value: /\S+@\S+\.\S+/, message: t('auth.invalidEmail') } })}
+                type="email" className="input" placeholder={t('auth.emailPlaceholder')} autoComplete="email"
               />
               {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
             </div>
 
             <div>
-              <label className="label">Password</label>
+              <label className="label">{t('auth.password')}</label>
               <div className="relative">
                 <input
-                  {...register('password', { required: 'Password required' })}
-                  type={showPwd ? 'text' : 'password'} className="input pr-8" placeholder="••••••••" autoComplete="current-password"
+                  {...register('password', { required: t('auth.passwordRequired') })}
+                  type={showPwd ? 'text' : 'password'} className="input pr-8" placeholder={t('auth.passwordPlaceholder')} autoComplete="current-password"
                 />
                 <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-0 top-2.5 text-stone-400 hover:text-stone-700">
                   {showPwd ? <EyeOff size={16}/> : <Eye size={16}/>}
@@ -82,19 +84,19 @@ export default function LoginPage() {
 
             {need2fa && (
               <div>
-                <label className="label">2FA Code</label>
+                <label className="label">{t('auth.twoFactorCode')}</label>
                 <input {...register('totp')} type="text" inputMode="numeric" maxLength={6} className="input" placeholder="000000" />
               </div>
             )}
 
             <button type="submit" disabled={loading} className="btn-primary w-full">
-              {loading ? <Loader2 size={14} className="animate-spin" /> : 'Sign In'}
+              {loading ? <Loader2 size={14} className="animate-spin" /> : t('auth.signIn')}
             </button>
           </form>
 
           <p className="text-center text-xs text-stone-400 mt-6">
-            No account?{' '}
-            <Link to="/register" className="text-primary-600 font-semibold hover:underline">Create one</Link>
+            {t('auth.noAccount')}{' '}
+            <Link to="/register" className="text-primary-600 font-semibold hover:underline">{t('auth.createOne')}</Link>
           </p>
         </div>
       </div>

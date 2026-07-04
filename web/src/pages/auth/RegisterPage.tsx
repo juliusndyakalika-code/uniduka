@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -11,6 +12,7 @@ export default function RegisterPage() {
   const { register, handleSubmit, watch, formState: { errors } } = useForm<Form>();
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -43,49 +45,49 @@ export default function RegisterPage() {
         </div>
 
         <div className="card p-8">
-          <h2 className="text-lg font-bold text-stone-900 mb-1">Create account</h2>
+          <h2 className="text-lg font-bold text-stone-900 mb-1">{t('auth.registerTitle')}</h2>
           <p className="text-xs text-stone-400 mb-6">Start managing your business today</p>
 
           {error && <div className="mb-4 px-3 py-2.5 bg-red-50 border border-red-200 rounded-sm text-xs text-red-700">{error}</div>}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
-              <label className="label">Your Full Name</label>
+              <label className="label">{t('auth.fullName')}</label>
               <input {...register('fullName', { required: true })} className="input" placeholder="Amina Hassan" />
-              {errors.fullName && <p className="mt-1 text-xs text-red-600">Required</p>}
+              {errors.fullName && <p className="mt-1 text-xs text-red-600">{t('common.required')}</p>}
             </div>
             <div>
-              <label className="label">Business / Company Name</label>
+              <label className="label">{t('auth.businessName')}</label>
               <input {...register('legalName', { required: true })} className="input" placeholder="Mwangaza Enterprises Ltd" />
-              {errors.legalName && <p className="mt-1 text-xs text-red-600">Required</p>}
+              {errors.legalName && <p className="mt-1 text-xs text-red-600">{t('common.required')}</p>}
             </div>
             <div>
-              <label className="label">Email</label>
-              <input {...register('email', { required: true, pattern: /\S+@\S+\.\S+/ })} type="email" className="input" placeholder="you@business.com" />
-              {errors.email && <p className="mt-1 text-xs text-red-600">Valid email required</p>}
+              <label className="label">{t('auth.email')}</label>
+              <input {...register('email', { required: true, pattern: /\S+@\S+\.\S+/ })} type="email" className="input" placeholder={t('auth.emailPlaceholder')} />
+              {errors.email && <p className="mt-1 text-xs text-red-600">{t('auth.invalidEmail')}</p>}
             </div>
             <div>
               <label className="label">Phone (optional)</label>
               <input {...register('phone')} type="tel" className="input" placeholder="+255 7XX XXX XXX" />
             </div>
             <div>
-              <label className="label">Password</label>
-              <input {...register('password', { required: true, minLength: 8 })} type="password" className="input" placeholder="Min. 8 characters" />
+              <label className="label">{t('auth.password')}</label>
+              <input {...register('password', { required: true, minLength: 8 })} type="password" className="input" placeholder={t('auth.passwordPlaceholder')} />
               {errors.password && <p className="mt-1 text-xs text-red-600">Min. 8 characters required</p>}
             </div>
             <div>
-              <label className="label">Confirm Password</label>
+              <label className="label">{t('auth.confirmPassword')}</label>
               <input {...register('confirmPassword', { required: true, validate: v => v === watch('password') || 'Passwords do not match' })} type="password" className="input" placeholder="Re-enter password" />
               {errors.confirmPassword && <p className="mt-1 text-xs text-red-600">{errors.confirmPassword.message}</p>}
             </div>
             <button type="submit" disabled={loading} className="btn-primary w-full">
-              {loading ? <Loader2 size={14} className="animate-spin" /> : 'Create Account'}
+              {loading ? <Loader2 size={14} className="animate-spin" /> : t('auth.register')}
             </button>
           </form>
 
           <p className="text-center text-xs text-stone-400 mt-6">
-            Already have an account?{' '}
-            <Link to="/login" className="text-primary-600 font-semibold hover:underline">Sign in</Link>
+            {t('auth.haveAccount')}{' '}
+            <Link to="/login" className="text-primary-600 font-semibold hover:underline">{t('auth.signInLink')}</Link>
           </p>
         </div>
       </div>

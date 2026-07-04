@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Hotel, Plus, X, BedDouble, Users, DollarSign, CheckCircle2, Clock, Trash2, Receipt } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { format, differenceInDays } from 'date-fns';
 
@@ -37,6 +38,7 @@ const STATUS_BADGE: Record<RoomStatus, string> = {
 const fmt = (n: number) => new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
 
 export default function HotelPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [tab, setTab] = useState<'rooms' | 'folios'>('rooms');
   const [showAddRoom, setShowAddRoom] = useState(false);
@@ -101,11 +103,11 @@ export default function HotelPage() {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <Hotel size={20} className="text-primary-600" />
-          <h1 className="text-xl font-bold text-stone-900">Hotel Management</h1>
+          <h1 className="text-xl font-bold text-stone-900">{t('hotel.title')}</h1>
         </div>
         {tab === 'rooms' && (
           <button className="btn-primary flex items-center gap-2" onClick={() => setShowAddRoom(true)}>
-            <Plus size={16} /> Add Room
+            <Plus size={16} /> {t('hotel.addRoom')}
           </button>
         )}
       </div>
@@ -145,7 +147,7 @@ export default function HotelPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {rooms.length === 0 && (
             <div className="col-span-full card p-8 text-center text-stone-400 text-sm">
-              No rooms added yet. Add your first room to get started.
+              {t('hotel.noRooms')}
             </div>
           )}
           {rooms.map(room => {
@@ -205,12 +207,12 @@ export default function HotelPage() {
           <table className="w-full text-sm">
             <thead className="bg-stone-50 text-xs text-stone-500 uppercase">
               <tr>
-                <th className="px-4 py-3 text-left">Guest</th>
-                <th className="px-4 py-3 text-left">Room</th>
-                <th className="px-4 py-3 text-left">Check In</th>
-                <th className="px-4 py-3 text-left">Check Out</th>
+                <th className="px-4 py-3 text-left">{t('hotel.guest')}</th>
+                <th className="px-4 py-3 text-left">{t('hotel.roomNumber')}</th>
+                <th className="px-4 py-3 text-left">{t('hotel.checkIn')}</th>
+                <th className="px-4 py-3 text-left">{t('hotel.checkOut')}</th>
                 <th className="px-4 py-3 text-right">Total</th>
-                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">{t('hotel.status')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
@@ -241,16 +243,16 @@ export default function HotelPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-stone-900">Add Room</h3>
+              <h3 className="font-bold text-stone-900">{t('hotel.addRoom')}</h3>
               <button onClick={() => { setShowAddRoom(false); resetRoom(); }} className="text-stone-400"><X size={18} /></button>
             </div>
             <form onSubmit={hsRoom(d => createRoom(d))} className="space-y-3">
               <div>
-                <label className="label">Room Number *</label>
+                <label className="label">{t('hotel.roomNumber')} *</label>
                 <input {...rRoom('roomNo', { required: true })} className="input w-full" placeholder="e.g. 101" />
               </div>
               <div>
-                <label className="label">Room Type *</label>
+                <label className="label">{t('hotel.type')} *</label>
                 <select {...rRoom('roomType', { required: true })} className="input w-full">
                   <option value="">Select type…</option>
                   {['Standard', 'Deluxe', 'Suite', 'Executive', 'Family', 'Single', 'Twin'].map(t => <option key={t} value={t}>{t}</option>)}
@@ -262,13 +264,13 @@ export default function HotelPage() {
                   <input {...rRoom('floor')} type="number" className="input w-full" placeholder="1" />
                 </div>
                 <div>
-                  <label className="label">Rate/Night (TZS) *</label>
+                  <label className="label">{t('hotel.pricePerNight')} (TZS) *</label>
                   <input {...rRoom('ratePerNight', { required: true })} type="number" className="input w-full" placeholder="0" />
                 </div>
               </div>
               <div className="flex gap-3 pt-1">
-                <button type="button" className="btn-secondary flex-1" onClick={() => { setShowAddRoom(false); resetRoom(); }}>Cancel</button>
-                <button type="submit" className="btn-primary flex-1" disabled={creatingRoom}>{creatingRoom ? 'Adding…' : 'Add Room'}</button>
+                <button type="button" className="btn-secondary flex-1" onClick={() => { setShowAddRoom(false); resetRoom(); }}>{t('common.cancel')}</button>
+                <button type="submit" className="btn-primary flex-1" disabled={creatingRoom}>{creatingRoom ? t('common.saving') : t('common.save')}</button>
               </div>
             </form>
           </div>
@@ -280,13 +282,13 @@ export default function HotelPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-stone-900">Check In — Room #{showCheckIn.roomNo}</h3>
+              <h3 className="font-bold text-stone-900">{t('hotel.checkIn')} — Room #{showCheckIn.roomNo}</h3>
               <button onClick={() => { setShowCheckIn(null); resetCI(); }} className="text-stone-400"><X size={18} /></button>
             </div>
             <p className="text-xs text-stone-500 mb-4">{showCheckIn.roomType} · {fmt(showCheckIn.ratePerNight)}/night</p>
             <form onSubmit={hsCI(d => doCheckIn({ roomId: showCheckIn.id, guestName: d.guestName, guestEmail: d.guestEmail || undefined, nights: Number(d.nights) || 1 }))} className="space-y-3">
               <div>
-                <label className="label">Guest Name *</label>
+                <label className="label">{t('hotel.guest')} *</label>
                 <input {...rCI('guestName', { required: true })} className="input w-full" placeholder="Full name" />
               </div>
               <div>
@@ -298,8 +300,8 @@ export default function HotelPage() {
                 <input {...rCI('nights')} type="number" min="1" className="input w-full" defaultValue="1" />
               </div>
               <div className="flex gap-3 pt-1">
-                <button type="button" className="btn-secondary flex-1" onClick={() => { setShowCheckIn(null); resetCI(); }}>Cancel</button>
-                <button type="submit" className="btn-primary flex-1" disabled={checkingIn}>{checkingIn ? 'Checking in…' : 'Check In'}</button>
+                <button type="button" className="btn-secondary flex-1" onClick={() => { setShowCheckIn(null); resetCI(); }}>{t('common.cancel')}</button>
+                <button type="submit" className="btn-primary flex-1" disabled={checkingIn}>{checkingIn ? t('common.saving') : t('hotel.checkIn')}</button>
               </div>
             </form>
           </div>
@@ -320,12 +322,12 @@ export default function HotelPage() {
 
             <div className="bg-stone-50 rounded-lg p-3 mb-4 text-xs">
               <div className="flex justify-between mb-1">
-                <span className="text-stone-500">Check In</span>
+                <span className="text-stone-500">{t('hotel.checkIn')}</span>
                 <span>{format(new Date(showFolio.checkIn), 'MMM d, yyyy h:mm a')}</span>
               </div>
               {showFolio.checkOut && (
                 <div className="flex justify-between">
-                  <span className="text-stone-500">Check Out</span>
+                  <span className="text-stone-500">{t('hotel.checkOut')}</span>
                   <span>{format(new Date(showFolio.checkOut), 'MMM d, yyyy h:mm a')}</span>
                 </div>
               )}
@@ -371,9 +373,9 @@ export default function HotelPage() {
                     </select>
                   </div>
                   <div className="flex gap-2">
-                    <button className="btn-secondary flex-1 text-xs py-1" onClick={() => setShowAddCharge(false)}>Cancel</button>
+                    <button className="btn-secondary flex-1 text-xs py-1" onClick={() => setShowAddCharge(false)}>{t('common.cancel')}</button>
                     <button className="btn-primary flex-1 text-xs py-1" disabled={addingCharge} onClick={() => addCharge({ id: showFolio.id, ...chargeForm })}>
-                      {addingCharge ? 'Adding…' : 'Add'}
+                      {addingCharge ? t('common.saving') : t('common.add')}
                     </button>
                   </div>
                 </div>

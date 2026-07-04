@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, X, Shield, Store, ArrowRightLeft, Pencil, Trash2, AlertTriangle, KeyRound } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -25,6 +26,7 @@ const ROLE_BADGE: Record<string, string> = {
 
 export default function UsersPage() {
   const { shopId, user } = useAuthStore();
+  const { t } = useTranslation();
   const assignableRoles = ROLES_BY_CALLER[user?.role ?? ''] ?? [];
   const qc = useQueryClient();
 
@@ -147,12 +149,12 @@ export default function UsersPage() {
     <div className="space-y-4">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Users & Staff</h1>
-          <p className="page-subtitle">{users.length} members</p>
+          <h1 className="page-title">{t('users.title')}</h1>
+          <p className="page-subtitle">{t('users.subtitle', { count: users.length })}</p>
         </div>
         {isOwnerUser && (
           <button className="btn-primary" onClick={() => { setInviteError(''); setShowInvite(true); }}>
-            <Plus size={14} className="mr-1.5" /> Invite Staff
+            <Plus size={14} className="mr-1.5" /> {t('users.addUser')}
           </button>
         )}
       </div>
@@ -167,16 +169,16 @@ export default function UsersPage() {
 
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">Loading…</div>
+          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : (
           <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Role</th>
-                  <th>Assigned Shop</th>
-                  <th>Status</th>
+                  <th>{t('users.name')}</th>
+                  <th>{t('users.role')}</th>
+                  <th>{t('users.shop')}</th>
+                  <th>{t('users.status')}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -208,14 +210,14 @@ export default function UsersPage() {
                       </td>
                       <td>
                         {isOwner ? (
-                          <span className="text-xs text-stone-400">All shops</span>
+                          <span className="text-xs text-stone-400">{t('users.allShops')}</span>
                         ) : assignedShop ? (
                           <div className="flex items-center gap-1 text-xs text-stone-700">
                             <Store size={11} className="text-primary-500 flex-shrink-0" />
                             {assignedShop.shop.tradingName}
                           </div>
                         ) : (
-                          <span className="text-xs text-amber-600 font-medium">No shop assigned</span>
+                          <span className="text-xs text-amber-600 font-medium">{t('common.noShopAssigned')}</span>
                         )}
                       </td>
                       <td>
@@ -228,7 +230,7 @@ export default function UsersPage() {
                               : 'bg-stone-100 text-stone-500 border-stone-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
                           }`}
                         >
-                          {u.isActive ? 'Active' : 'Inactive'}
+                          {u.isActive ? t('common.active') : t('common.inactive')}
                         </button>
                       </td>
                       <td>
@@ -275,7 +277,7 @@ export default function UsersPage() {
                   );
                 })}
                 {users.length === 0 && (
-                  <tr><td colSpan={5} className="text-center text-stone-400 py-8">No staff yet</td></tr>
+                  <tr><td colSpan={5} className="text-center text-stone-400 py-8">{t('users.noUsers')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -288,17 +290,17 @@ export default function UsersPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-6 w-full max-w-sm">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-stone-900">Invite Staff Member</h3>
+              <h3 className="text-base font-bold text-stone-900">{t('users.addUser')}</h3>
               <button onClick={() => setShowInvite(false)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
             {inviteError && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{inviteError}</div>}
             <form onSubmit={inviteForm.handleSubmit(d => invite(d))} className="space-y-4">
               <div>
-                <label className="label">Full Name</label>
+                <label className="label">{t('users.fullName')}</label>
                 <input {...inviteForm.register('fullName', { required: true })} className="input" placeholder="Staff member's name" />
               </div>
               <div>
-                <label className="label">Email</label>
+                <label className="label">{t('users.email')}</label>
                 <input {...inviteForm.register('email', { required: true })} type="email" className="input" placeholder="staff@yourbusiness.com" />
               </div>
               <div>
@@ -306,21 +308,21 @@ export default function UsersPage() {
                 <input {...inviteForm.register('password', { required: true, minLength: 8 })} type="password" className="input" placeholder="Min. 8 characters" />
               </div>
               <div>
-                <label className="label">Role</label>
+                <label className="label">{t('users.roleLabel')}</label>
                 <select {...inviteForm.register('role')} className="select">
                   {assignableRoles.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
                 </select>
               </div>
               <div>
-                <label className="label">Assign to Shop <span className="text-red-500">*</span></label>
+                <label className="label">{t('users.assignShop')} <span className="text-red-500">*</span></label>
                 <select {...inviteForm.register('shopId', { required: true })} className="select">
                   <option value="">— Select shop —</option>
                   {shops.map(s => <option key={s.id} value={s.id}>{s.tradingName}</option>)}
                 </select>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" className="btn-secondary flex-1" onClick={() => setShowInvite(false)}>Cancel</button>
-                <button type="submit" disabled={inviting} className="btn-primary flex-1">{inviting ? 'Inviting…' : 'Invite'}</button>
+                <button type="button" className="btn-secondary flex-1" onClick={() => setShowInvite(false)}>{t('common.cancel')}</button>
+                <button type="submit" disabled={inviting} className="btn-primary flex-1">{inviting ? t('common.saving') : t('common.submit')}</button>
               </div>
             </form>
           </div>
@@ -332,30 +334,30 @@ export default function UsersPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-6 w-full max-w-sm">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-stone-900">Edit Staff Member</h3>
+              <h3 className="text-base font-bold text-stone-900">{t('users.editUser')}</h3>
               <button onClick={() => setEditUser(null)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
             {editError && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{editError}</div>}
             <form onSubmit={editForm.handleSubmit(d => saveEdit(d))} className="space-y-4">
               <div>
-                <label className="label">Full Name</label>
+                <label className="label">{t('users.fullName')}</label>
                 <input {...editForm.register('fullName', { required: true })} className="input" />
               </div>
               <div>
-                <label className="label">Email</label>
+                <label className="label">{t('users.email')}</label>
                 <input {...editForm.register('email', { required: true })} type="email" className="input" />
               </div>
               {editUser.role !== 'ACCOUNT_OWNER' && (
                 <div>
-                  <label className="label">Role</label>
+                  <label className="label">{t('users.roleLabel')}</label>
                   <select {...editForm.register('role')} className="select">
                     {assignableRoles.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
                   </select>
                 </div>
               )}
               <div className="flex gap-3 pt-2">
-                <button type="button" className="btn-secondary flex-1" onClick={() => setEditUser(null)}>Cancel</button>
-                <button type="submit" disabled={saving} className="btn-primary flex-1">{saving ? 'Saving…' : 'Save Changes'}</button>
+                <button type="button" className="btn-secondary flex-1" onClick={() => setEditUser(null)}>{t('common.cancel')}</button>
+                <button type="submit" disabled={saving} className="btn-primary flex-1">{saving ? t('common.saving') : t('common.update')}</button>
               </div>
             </form>
           </div>
@@ -371,7 +373,7 @@ export default function UsersPage() {
                 <AlertTriangle size={16} className="text-red-600" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-stone-900">Delete Staff Member</h3>
+                <h3 className="text-base font-bold text-stone-900">{t('users.deleteUser')}</h3>
                 <p className="text-sm text-stone-500 mt-1">
                   This will permanently remove <span className="font-semibold text-stone-800">{deleteUser.fullName}</span>, revoke their access, and cannot be undone.
                 </p>
@@ -389,13 +391,13 @@ export default function UsersPage() {
               {deleteError && <p className="mt-1 text-xs text-red-600">{deleteError}</p>}
             </div>
             <div className="flex gap-3">
-              <button className="btn-secondary flex-1" onClick={() => { setDeleteUser(null); setConfirmName(''); }}>Cancel</button>
+              <button className="btn-secondary flex-1" onClick={() => { setDeleteUser(null); setConfirmName(''); }}>{t('common.cancel')}</button>
               <button
                 disabled={deleting || confirmName !== deleteUser.fullName}
                 onClick={handleDelete}
                 className="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-40 transition-colors"
               >
-                {deleting ? 'Deleting…' : 'Delete'}
+                {deleting ? t('common.saving') : t('common.delete')}
               </button>
             </div>
           </div>
@@ -407,7 +409,7 @@ export default function UsersPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-6 w-full max-w-sm">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-base font-bold text-stone-900">Reset Password</h3>
+              <h3 className="text-base font-bold text-stone-900">{t('users.resetPassword')}</h3>
               <button onClick={() => setResetTarget(null)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
             <p className="text-sm text-stone-500 mb-5">
@@ -416,22 +418,22 @@ export default function UsersPage() {
             {resetDone ? (
               <div className="space-y-4">
                 <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700 font-medium text-center">
-                  Password updated successfully.
+                  {t('users.resetSuccess')}
                 </div>
-                <button className="btn-primary w-full" onClick={() => setResetTarget(null)}>Done</button>
+                <button className="btn-primary w-full" onClick={() => setResetTarget(null)}>{t('common.done')}</button>
               </div>
             ) : (
               <div className="space-y-4">
                 {resetError && <div className="px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{resetError}</div>}
                 <div>
-                  <label className="label">New Password</label>
+                  <label className="label">{t('users.newPassword')}</label>
                   <div className="relative">
                     <input
                       type={showPw ? 'text' : 'password'}
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
                       className="input pr-16"
-                      placeholder="Min. 8 characters"
+                      placeholder={t('users.newPasswordPlaceholder')}
                       autoFocus
                     />
                     <button
@@ -439,7 +441,7 @@ export default function UsersPage() {
                       onClick={() => setShowPw(v => !v)}
                       className="absolute right-3 top-2.5 text-xs text-stone-400 hover:text-stone-700"
                     >
-                      {showPw ? 'Hide' : 'Show'}
+                      {showPw ? t('users.showPassword') : t('users.showPassword')}
                     </button>
                   </div>
                   {newPassword.length > 0 && newPassword.length < 8 && (
@@ -447,13 +449,13 @@ export default function UsersPage() {
                   )}
                 </div>
                 <div className="flex gap-3 pt-1">
-                  <button className="btn-secondary flex-1" onClick={() => setResetTarget(null)}>Cancel</button>
+                  <button className="btn-secondary flex-1" onClick={() => setResetTarget(null)}>{t('common.cancel')}</button>
                   <button
                     className="btn-primary flex-1"
                     disabled={resetting || newPassword.length < 8}
                     onClick={() => resetPassword({ id: resetTarget.id, password: newPassword })}
                   >
-                    {resetting ? 'Saving…' : 'Reset Password'}
+                    {resetting ? t('common.saving') : t('users.resetPassword')}
                   </button>
                 </div>
               </div>
@@ -499,13 +501,13 @@ export default function UsersPage() {
               )}
             </div>
             <div className="flex gap-3">
-              <button className="btn-secondary flex-1" onClick={() => setReassignUser(null)}>Cancel</button>
+              <button className="btn-secondary flex-1" onClick={() => setReassignUser(null)}>{t('common.cancel')}</button>
               <button
                 disabled={!selectedShopId || reassigning}
                 onClick={() => reassign({ userId: reassignUser.id, shopId: selectedShopId })}
                 className="btn-primary flex-1"
               >
-                {reassigning ? 'Saving…' : 'Assign Shop'}
+                {reassigning ? t('common.saving') : 'Assign Shop'}
               </button>
             </div>
           </div>

@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 
 export default function SubscriptionExpiredPage() {
   const { logout, user } = useAuthStore();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6">
@@ -29,12 +31,12 @@ export default function SubscriptionExpiredPage() {
             </svg>
           </div>
 
-          <h1 className="text-xl font-bold text-stone-900 mb-2">Subscription Expired</h1>
+          <h1 className="text-xl font-bold text-stone-900 mb-2">{t('auth.subscriptionExpired')}</h1>
           <p className="text-sm text-stone-500 mb-1">
             {user?.fullName ? `Hi ${user.fullName.split(' ')[0]}, your` : 'Your'} MauzoSmart subscription has ended.
           </p>
           <p className="text-sm text-stone-500 mb-8">
-            Contact us to reactivate your account and regain full access to your data.
+            {t('auth.expiredMessage')}
           </p>
 
           {/* Contact options */}
@@ -47,7 +49,7 @@ export default function SubscriptionExpiredPage() {
                 <rect width="20" height="16" x="2" y="4" rx="2"/>
                 <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
               </svg>
-              Email Support
+              {t('auth.contactSupport')}
             </a>
             <a
               href="https://wa.me/255700000000"
@@ -67,7 +69,7 @@ export default function SubscriptionExpiredPage() {
             onClick={() => logout()}
             className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
           >
-            Sign out
+            {t('sidebar.signOut')}
           </button>
         </div>
 

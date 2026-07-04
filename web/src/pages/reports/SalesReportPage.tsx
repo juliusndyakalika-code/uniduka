@@ -7,6 +7,7 @@ import { downloadCsv } from '../../utils/exportCsv';
 import { printReceipt } from '../../utils/printReceipt';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useTranslation } from 'react-i18next';
 
 const REPORT_TABS = [
   { to: '/reports/sales',     label: 'Sales',      icon: TrendingUp },
@@ -62,6 +63,7 @@ function dateRangeForPeriod(date: string, period: 'day' | 'week' | 'month'): { f
 }
 
 function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded]         = useState(false);
   const [loadingPrint, setLoadingPrint] = useState<string | null>(null);
   const [txSearch, setTxSearch]         = useState('');
@@ -160,9 +162,9 @@ function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
           <td colSpan={4} className="p-0">
             <div className="bg-stone-50 border-t border-b border-stone-200 px-6 py-3">
               {isLoading ? (
-                <p className="text-xs text-stone-400 py-2">Loading…</p>
+                <p className="text-xs text-stone-400 py-2">{t('common.loading')}</p>
               ) : txns.length === 0 ? (
-                <p className="text-xs text-stone-400 py-2">No transactions on this date</p>
+                <p className="text-xs text-stone-400 py-2">{t('reports.noSales')}</p>
               ) : (
                 <>
                 {/* Search bar */}
@@ -185,14 +187,14 @@ function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="text-stone-500 border-b border-stone-200">
-                      <th className="text-left py-1.5 pr-3 font-semibold">Receipt</th>
-                      <th className="text-left py-1.5 pr-3 font-semibold">Time</th>
-                      <th className="text-left py-1.5 pr-3 font-semibold">Customer</th>
-                      <th className="text-left py-1.5 pr-3 font-semibold">Cashier</th>
+                      <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.receipt')}</th>
+                      <th className="text-left py-1.5 pr-3 font-semibold">{t('common.time')}</th>
+                      <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.customer')}</th>
+                      <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.cashier')}</th>
                       <th className="text-left py-1.5 pr-3 font-semibold">Items</th>
-                      <th className="text-right py-1.5 pr-3 font-semibold">Total</th>
-                      <th className="text-right py-1.5 font-semibold">Payment</th>
-                      <th className="w-16 text-right py-1.5 font-semibold">Actions</th>
+                      <th className="text-right py-1.5 pr-3 font-semibold">{t('common.total')}</th>
+                      <th className="text-right py-1.5 font-semibold">{t('reports.payment')}</th>
+                      <th className="w-16 text-right py-1.5 font-semibold">{t('common.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -287,20 +289,20 @@ function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
                     onClick={e => e.stopPropagation()}>
                     <div className="card p-5 w-full max-w-xs">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-bold text-stone-900">Void Transaction</h3>
+                        <h3 className="text-sm font-bold text-stone-900">{t('reports.voidConfirm')}</h3>
                         <button onClick={() => setVoidingId(null)} className="text-stone-400 hover:text-stone-700"><X size={16} /></button>
                       </div>
                       <p className="text-xs text-stone-500 mb-4">
                         Stock will be restored and the sale excluded from revenue. Cannot be undone.
                       </p>
                       <div className="mb-3">
-                        <label className="label">Reason</label>
+                        <label className="label">{t('reports.voidReason')}</label>
                         <input className="input text-xs" placeholder="e.g. Wrong item, entry error"
                           value={voidReason} onChange={e => setVoidReason(e.target.value)} autoFocus />
                       </div>
                       {voidErr && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5 mb-3">{voidErr}</p>}
                       <div className="flex gap-2">
-                        <button className="btn-secondary flex-1 text-xs" onClick={() => setVoidingId(null)}>Cancel</button>
+                        <button className="btn-secondary flex-1 text-xs" onClick={() => setVoidingId(null)}>{t('common.cancel')}</button>
                         <button
                           className="flex-1 text-xs py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold disabled:opacity-50"
                           disabled={voiding}
@@ -323,6 +325,7 @@ function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
 
 // ── Main page ──────────────────────────────────────────────────────────────
 export default function SalesReportPage() {
+  const { t } = useTranslation();
   const { shopId } = useAuthStore();
   const location = useLocation();
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
@@ -347,7 +350,7 @@ export default function SalesReportPage() {
     <div className="space-y-6">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Reports</h1>
+          <h1 className="page-title">{t('reports.salesTitle')}</h1>
           <p className="page-subtitle">Revenue & transaction analytics</p>
         </div>
         <div className="flex gap-2">
@@ -362,7 +365,7 @@ export default function SalesReportPage() {
               );
             }}
           >
-            <Download size={13} className="mr-1" /> Summary CSV
+            <Download size={13} className="mr-1" /> {t('reports.exportCsv')}
           </button>
           <button
             className="btn-secondary text-xs"
@@ -396,7 +399,7 @@ export default function SalesReportPage() {
               );
             }}
           >
-            <Download size={13} className="mr-1" /> Transactions CSV
+            <Download size={13} className="mr-1" /> {t('reports.exportCsv')}
           </button>
         </div>
       </div>
@@ -422,16 +425,18 @@ export default function SalesReportPage() {
               className={`px-3 py-1.5 text-xs rounded-md transition-colors capitalize ${
                 period === p ? 'bg-white shadow-sm text-stone-900 font-medium' : 'text-stone-500 hover:text-stone-700'
               }`}
-            >{p}</button>
+            >
+              {p === 'day' ? t('reports.day') : p === 'week' ? t('reports.week') : t('reports.month')}
+            </button>
           ))}
         </div>
         <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto text-xs" />
         <span className="text-stone-400 text-xs">to</span>
         <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto text-xs" />
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-stone-400 shrink-0">Payment:</span>
+          <span className="text-xs text-stone-400 shrink-0">{t('reports.paymentMethod')}:</span>
           {[
-            { value: '',            label: 'All' },
+            { value: '',            label: t('reports.allMethods') },
             { value: 'CASH',        label: 'Cash' },
             { value: 'MOBILE_MONEY',label: 'Mobile' },
             { value: 'CARD',        label: 'Card' },
@@ -467,10 +472,10 @@ export default function SalesReportPage() {
           {/* Summary stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Revenue',       value: fmt(data?.summary.revenue ?? 0) },
-              { label: 'Transactions',  value: String(data?.summary.transactions ?? 0) },
-              { label: 'Avg. Ticket',   value: fmt(data?.summary.avgTicket ?? 0) },
-              { label: 'Gross Profit',  value: fmt(data?.summary.grossProfit ?? 0) },
+              { label: t('reports.totalRevenue'),  value: fmt(data?.summary.revenue ?? 0) },
+              { label: t('reports.transactions'),  value: String(data?.summary.transactions ?? 0) },
+              { label: t('reports.avgTicket'),     value: fmt(data?.summary.avgTicket ?? 0) },
+              { label: t('reports.grossProfit'),   value: fmt(data?.summary.grossProfit ?? 0) },
             ].map(s => (
               <div key={s.label} className="card p-5">
                 <p className="stat-value">{s.value}</p>
@@ -482,7 +487,9 @@ export default function SalesReportPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Revenue chart */}
             <div className="card p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold text-stone-700 mb-4">Revenue by {period}</h3>
+              <h3 className="text-sm font-semibold text-stone-700 mb-4">
+                {`${t('reports.revenue')} — ${period}`}
+              </h3>
               {(data?.byDay ?? []).length === 0 ? (
                 <div className="flex items-center justify-center h-[200px] text-stone-400 text-sm">No transactions in this period</div>
               ) : (
@@ -501,7 +508,7 @@ export default function SalesReportPage() {
 
             {/* Payment methods */}
             <div className="card p-5">
-              <h3 className="text-sm font-semibold text-stone-700 mb-4">Payment methods</h3>
+              <h3 className="text-sm font-semibold text-stone-700 mb-4">{t('reports.byPaymentMethod')}</h3>
               {(() => {
                 // Filter out zero-amount entries (e.g. unsettled DEBIT)
                 const pmData = (data?.byPaymentMethod ?? []).filter(p => p.total > 0);
@@ -562,10 +569,10 @@ export default function SalesReportPage() {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Transactions</th>
-                      <th>Revenue</th>
-                      <th>Avg. Ticket</th>
+                      <th>{t('reports.date')}</th>
+                      <th>{t('reports.transactions')}</th>
+                      <th>{t('reports.revenue')}</th>
+                      <th>{t('reports.avgTicket')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -575,7 +582,7 @@ export default function SalesReportPage() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-stone-200 bg-stone-50">
-                      <td className="font-semibold text-stone-700 py-2 px-3">Total</td>
+                      <td className="font-semibold text-stone-700 py-2 px-3">{t('common.total')}</td>
                       <td className="font-bold">{data?.summary.transactions ?? 0}</td>
                       <td className="font-bold">{fmt(data?.summary.revenue ?? 0)}</td>
                       <td className="font-bold">{fmt(data?.summary.avgTicket ?? 0)}</td>
@@ -589,11 +596,11 @@ export default function SalesReportPage() {
           {/* Top products */}
           <div className="card">
             <div className="px-5 py-4 border-b border-stone-100">
-              <h3 className="text-sm font-semibold text-stone-700">Top products</h3>
+              <h3 className="text-sm font-semibold text-stone-700">{t('reports.topProducts')}</h3>
             </div>
             <div className="table-wrapper">
               <table className="table">
-                <thead><tr><th>#</th><th>Product</th><th>Revenue</th><th>Units sold</th></tr></thead>
+                <thead><tr><th>#</th><th>{t('reports.product')}</th><th>{t('reports.revenue')}</th><th>{t('reports.totalQty')}</th></tr></thead>
                 <tbody>
                   {(data?.topProducts ?? []).map((p, i) => (
                     <tr key={i}>
@@ -603,7 +610,7 @@ export default function SalesReportPage() {
                       <td>{p.qty}</td>
                     </tr>
                   ))}
-                  {!data?.topProducts?.length && <tr><td colSpan={4} className="text-center text-stone-400 py-6">No data</td></tr>}
+                  {!data?.topProducts?.length && <tr><td colSpan={4} className="text-center text-stone-400 py-6">{t('common.noData')}</td></tr>}
                 </tbody>
               </table>
             </div>

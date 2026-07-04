@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChefHat, Check, Clock } from 'lucide-react';
 import { io } from 'socket.io-client';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -18,6 +19,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function KdsPage() {
+  const { t } = useTranslation();
   const { shopId, token } = useAuthStore();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<'active' | 'all'>('active');
@@ -54,7 +56,7 @@ export default function KdsPage() {
         <div className="flex items-center gap-2">
           <ChefHat size={20} className="text-primary-600" />
           <div>
-            <h1 className="page-title">Kitchen Display</h1>
+            <h1 className="page-title">{t('kds.title')}</h1>
             <p className="page-subtitle">Live order queue</p>
           </div>
         </div>
@@ -89,7 +91,12 @@ export default function KdsPage() {
                 order.status === 'IN_PROGRESS' ? 'bg-blue-200 text-blue-800' :
                 order.status === 'READY' ? 'bg-green-200 text-green-800' :
                 'bg-stone-200 text-stone-600'
-              }`}>{order.status.replace('_', ' ')}</span>
+              }`}>
+                {order.status === 'PENDING' ? t('kds.newOrder') :
+                 order.status === 'IN_PROGRESS' ? t('kds.preparing') :
+                 order.status === 'READY' ? t('kds.ready') :
+                 order.status.replace('_', ' ')}
+              </span>
             </div>
 
             <div className="space-y-1.5 mb-4">
@@ -120,7 +127,7 @@ export default function KdsPage() {
                   onClick={() => updateStatus({ id: order.id, status: 'READY' })}
                   className="flex-1 text-xs py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
                 >
-                  <Check size={12} className="inline mr-1" />Ready
+                  <Check size={12} className="inline mr-1" />{t('kds.markReady')}
                 </button>
               )}
               {order.status === 'READY' && (
@@ -137,7 +144,7 @@ export default function KdsPage() {
         {orders.length === 0 && (
           <div className="col-span-full card p-12 text-center">
             <ChefHat size={40} className="mx-auto text-stone-300 mb-3" />
-            <p className="text-stone-400">No active orders in the queue</p>
+            <p className="text-stone-400">{t('kds.noOrders')}</p>
           </div>
         )}
       </div>

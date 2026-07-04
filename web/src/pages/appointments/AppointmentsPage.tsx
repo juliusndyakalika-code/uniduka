@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Calendar, Clock, User, X, Check, XCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -18,6 +19,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export default function AppointmentsPage() {
+  const { t } = useTranslation();
   const { shopId } = useAuthStore();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -53,11 +55,11 @@ export default function AppointmentsPage() {
     <div className="space-y-4">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Appointments</h1>
+          <h1 className="page-title">{t('appointments.title')}</h1>
           <p className="page-subtitle">Schedule & manage bookings</p>
         </div>
         <button className="btn-primary" onClick={() => { setError(''); setShowForm(true); }}>
-          <Plus size={14} className="mr-1.5" /> New Appointment
+          <Plus size={14} className="mr-1.5" /> {t('appointments.addAppointment')}
         </button>
       </div>
 
@@ -73,7 +75,7 @@ export default function AppointmentsPage() {
       </div>
 
       {isLoading ? (
-        <div className="card p-8 text-center text-stone-400">Loading…</div>
+        <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>
       ) : (
         <div className="space-y-3">
           {appointments.map(a => (
@@ -122,7 +124,7 @@ export default function AppointmentsPage() {
           {appointments.length === 0 && (
             <div className="card p-10 text-center">
               <Calendar size={32} className="mx-auto text-stone-300 mb-3" />
-              <p className="text-sm text-stone-400">No appointments for this date</p>
+              <p className="text-sm text-stone-400">{t('appointments.noAppointments')}</p>
             </div>
           )}
         </div>
@@ -132,20 +134,20 @@ export default function AppointmentsPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-6 w-full max-w-sm">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-stone-900">New Appointment</h3>
+              <h3 className="text-base font-bold text-stone-900">{t('appointments.addAppointment')}</h3>
               <button onClick={() => setShowForm(false)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
             {error && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{error}</div>}
             <form onSubmit={handleSubmit(d => create(d))} className="space-y-4">
               <div>
-                <label className="label">Customer</label>
+                <label className="label">{t('appointments.customer')}</label>
                 <select {...register('customerId')} className="select">
                   <option value="">Walk-in / No customer</option>
                   {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="label">Date & Time</label>
+                <label className="label">{t('appointments.dateTime')}</label>
                 <input {...register('scheduledAt', { required: true })} type="datetime-local" className="input" />
               </div>
               <div>
@@ -153,12 +155,12 @@ export default function AppointmentsPage() {
                 <input {...register('duration', { required: true, valueAsNumber: true })} type="number" min={15} step={15} className="input" placeholder="60" />
               </div>
               <div>
-                <label className="label">Notes</label>
+                <label className="label">{t('appointments.notes')}</label>
                 <textarea {...register('notes')} className="input" rows={2} placeholder="Service details, preferences…" />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>Cancel</button>
-                <button type="submit" disabled={isPending} className="btn-primary flex-1">{isPending ? 'Booking…' : 'Book Appointment'}</button>
+                <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>{t('common.cancel')}</button>
+                <button type="submit" disabled={isPending} className="btn-primary flex-1">{isPending ? t('common.saving') : t('common.save')}</button>
               </div>
             </form>
           </div>

@@ -4,6 +4,7 @@ import { AlertTriangle, Package, TrendingDown, TrendingUp, Users, Download } fro
 import { downloadCsv } from '../../utils/exportCsv';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useTranslation } from 'react-i18next';
 
 const REPORT_TABS = [
   { to: '/reports/sales',     label: 'Sales',     icon: TrendingUp },
@@ -23,6 +24,7 @@ function fmt(n: number) {
 }
 
 export default function InventoryReportPage() {
+  const { t } = useTranslation();
   const { shopId } = useAuthStore();
   const location = useLocation();
 
@@ -35,7 +37,7 @@ export default function InventoryReportPage() {
   return (
     <div className="space-y-6">
       <div className="page-header">
-        <h1 className="page-title">Reports</h1>
+        <h1 className="page-title">{t('reports.inventoryTitle')}</h1>
         <div className="flex gap-2">
           <button
             className="btn-secondary text-xs"
@@ -50,7 +52,7 @@ export default function InventoryReportPage() {
               );
             }}
           >
-            <Download size={13} className="mr-1" /> Valuation CSV
+            <Download size={13} className="mr-1" /> {t('reports.exportCsv')}
           </button>
           <button
             className="btn-secondary text-xs"
@@ -65,7 +67,7 @@ export default function InventoryReportPage() {
               );
             }}
           >
-            <Download size={13} className="mr-1" /> Low Stock CSV
+            <Download size={13} className="mr-1" /> {t('reports.exportCsv')}
           </button>
         </div>
       </div>
@@ -83,9 +85,9 @@ export default function InventoryReportPage() {
       </div>
 
       {isLoading ? (
-        <div className="card p-8 text-center text-stone-400">Loading…</div>
+        <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>
       ) : isError ? (
-        <div className="card p-8 text-center text-red-500 text-sm">Failed to load inventory report</div>
+        <div className="card p-8 text-center text-red-500 text-sm">{t('common.error')}</div>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -113,7 +115,7 @@ export default function InventoryReportPage() {
               </div>
               <div className="table-wrapper">
                 <table className="table">
-                  <thead><tr><th>Product</th><th>Stock</th><th>Reorder at</th></tr></thead>
+                  <thead><tr><th>{t('reports.product')}</th><th>{t('stock.quantity')}</th><th>Reorder at</th></tr></thead>
                   <tbody>
                     {(data?.lowStock ?? []).map(p => (
                       <tr key={p.id}>
@@ -140,7 +142,7 @@ export default function InventoryReportPage() {
               </div>
               <div className="table-wrapper">
                 <table className="table">
-                  <thead><tr><th>Product</th><th>Stock</th><th>Value</th></tr></thead>
+                  <thead><tr><th>{t('reports.product')}</th><th>{t('stock.quantity')}</th><th>{t('common.amount')}</th></tr></thead>
                   <tbody>
                     {(data?.valuation ?? []).slice(0, 10).map((p, i) => (
                       <tr key={i}>
@@ -149,7 +151,7 @@ export default function InventoryReportPage() {
                         <td className="font-medium">{fmt(p.value)}</td>
                       </tr>
                     ))}
-                    {!data?.valuation?.length && <tr><td colSpan={3} className="text-center text-stone-400 py-6">No data</td></tr>}
+                    {!data?.valuation?.length && <tr><td colSpan={3} className="text-center text-stone-400 py-6">{t('common.noData')}</td></tr>}
                   </tbody>
                 </table>
               </div>

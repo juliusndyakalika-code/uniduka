@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Store, MapPin, Layers, Receipt, Package, Check, Plus, Trash2, ShieldCheck, Smartphone, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -31,6 +32,7 @@ const TIMEZONES  = [
 
 export default function ShopSettingsPage() {
   const { shopId } = useAuthStore();
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [saved, setSaved]       = useState(false);
   const [error, setError]       = useState('');
@@ -104,13 +106,13 @@ export default function ShopSettingsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['shop-config', shopId] }),
   });
 
-  if (isLoading) return <div className="card p-8 text-center text-stone-400">Loading…</div>;
+  if (isLoading) return <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>;
   if (!config)   return <div className="card p-8 text-center text-stone-400">No shop selected</div>;
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="page-header">
-        <h1 className="page-title">Shop Settings</h1>
+        <h1 className="page-title">{t('settings.shopTitle')}</h1>
         <p className="page-subtitle">{config.tradingName}</p>
       </div>
 
@@ -120,33 +122,33 @@ export default function ShopSettingsPage() {
           <Store size={16} className="text-primary-600" />
           <h3 className="text-sm font-bold text-stone-900">Shop Identity</h3>
         </div>
-        {error && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{error}</div>}
-        {saved && <div className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">Saved!</div>}
+        {error && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{t('settings.saveFailed')}</div>}
+        {saved && <div className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">{t('settings.saved')}</div>}
         <form onSubmit={handleSubmit(d => save(d))} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Trading Name *</label>
+              <label className="label">{t('settings.tradingName')} *</label>
               <input {...reg('tradingName', { required: true })} className="input" />
             </div>
             <div>
-              <label className="label">Legal Name</label>
+              <label className="label">{t('settings.legalName')}</label>
               <input {...reg('legalName')} className="input" />
             </div>
             <div>
-              <label className="label">Contact Email</label>
+              <label className="label">{t('settings.email')}</label>
               <input {...reg('contactEmail')} type="email" className="input" />
             </div>
             <div>
-              <label className="label">Phone</label>
+              <label className="label">{t('settings.phone')}</label>
               <input {...reg('phone')} className="input" />
             </div>
             <div className="col-span-2">
-              <label className="label">Address</label>
+              <label className="label">{t('settings.address')}</label>
               <input {...reg('addressLine1')} className="input" placeholder="e.g. Samora Avenue, Kariakoo" />
             </div>
           </div>
           <button type="submit" disabled={isPending} className="btn-primary">
-            {isPending ? 'Saving…' : 'Save Changes'}
+            {isPending ? t('common.loading') : t('settings.saveChanges')}
           </button>
         </form>
       </div>
@@ -172,7 +174,7 @@ export default function ShopSettingsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">
-                TIN <span className="text-red-500">*</span>
+                {t('settings.tin')} <span className="text-red-500">*</span>
                 <span className="text-stone-400 font-normal text-[10px] ml-1">(Taxpayer ID)</span>
               </label>
               <input
@@ -183,7 +185,7 @@ export default function ShopSettingsPage() {
             </div>
             <div>
               <label className="label">
-                VRN
+                {t('settings.vrn')}
                 <span className="text-stone-400 font-normal text-[10px] ml-1">(VAT Reg. No. — optional)</span>
               </label>
               <input
@@ -195,9 +197,9 @@ export default function ShopSettingsPage() {
           </div>
           <div className="flex items-center gap-3">
             <button type="submit" disabled={savingTra} className="btn-primary">
-              {savingTra ? 'Saving…' : 'Save Tax Details'}
+              {savingTra ? t('common.loading') : t('settings.saveChanges')}
             </button>
-            {saved && <span className="text-xs text-emerald-600 font-medium">Saved ✓</span>}
+            {saved && <span className="text-xs text-emerald-600 font-medium">{t('settings.saved')} ✓</span>}
           </div>
         </form>
       </div>
@@ -206,7 +208,7 @@ export default function ShopSettingsPage() {
       <div className="card p-6">
         <div className="flex items-center gap-2 mb-1">
           <Smartphone size={16} className="text-primary-600" />
-          <h3 className="text-sm font-bold text-stone-900">Mobile Money Providers</h3>
+          <h3 className="text-sm font-bold text-stone-900">{t('settings.mobileMoneyProviders')}</h3>
         </div>
         <p className="text-xs text-stone-400 mb-5">
           These appear as payment options at the POS. Add the providers your shop accepts.
@@ -261,7 +263,7 @@ export default function ShopSettingsPage() {
               setMmSaving(false);
             }}
           >
-            {mmSaving ? 'Saving…' : 'Save'}
+            {mmSaving ? t('common.loading') : t('settings.saveChanges')}
           </button>
         </div>
       </div>
@@ -275,7 +277,7 @@ export default function ShopSettingsPage() {
         <form onSubmit={handleSubmit(d => save(d))} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">City</label>
+              <label className="label">{t('settings.city')}</label>
               <input {...reg('city')} className="input" />
             </div>
             <div>
@@ -283,20 +285,20 @@ export default function ShopSettingsPage() {
               <input {...reg('country')} className="input" placeholder="TZ" />
             </div>
             <div>
-              <label className="label">Currency</label>
+              <label className="label">{t('settings.currency')}</label>
               <select {...reg('currency')} className="select">
                 {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="label">Timezone</label>
+              <label className="label">{t('settings.timezone')}</label>
               <select {...reg('timezone')} className="select">
-                {TIMEZONES.map(t => <option key={t} value={t}>{t}</option>)}
+                {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
               </select>
             </div>
           </div>
           <button type="submit" disabled={isPending} className="btn-primary">
-            {isPending ? 'Saving…' : 'Save Changes'}
+            {isPending ? t('common.loading') : t('settings.saveChanges')}
           </button>
         </form>
       </div>
@@ -310,10 +312,10 @@ export default function ShopSettingsPage() {
         </div>
         <div className="grid grid-cols-2 gap-4 text-sm">
           {[
-            ['Business Type',    config.businessType.replace(/_/g, ' ')],
-            ['Inventory Model',  config.inventoryModel.replace(/_/g, ' ')],
-            ['Pricing Mode',     config.pricingMode.replace(/_/g, ' ')],
-            ['Tax Mode',         config.taxMode.replace(/_/g, ' ')],
+            [t('settings.businessType'), config.businessType.replace(/_/g, ' ')],
+            ['Inventory Model',          config.inventoryModel.replace(/_/g, ' ')],
+            ['Pricing Mode',             config.pricingMode.replace(/_/g, ' ')],
+            [t('settings.taxMode'),      config.taxMode.replace(/_/g, ' ')],
           ].map(([label, value]) => (
             <div key={label} className="p-3 bg-stone-50 rounded-lg">
               <p className="text-xs text-stone-400 mb-0.5">{label}</p>
@@ -365,11 +367,11 @@ export default function ShopSettingsPage() {
           <form onSubmit={handleTax(d => addTax(d))} className="mb-4 p-4 bg-stone-50 border border-stone-200 rounded-lg space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Name</label>
+                <label className="label">{t('settings.taxName')}</label>
                 <input {...regTax('name', { required: true })} className="input" placeholder="VAT 18%" />
               </div>
               <div>
-                <label className="label">Rate (%)</label>
+                <label className="label">{t('settings.taxRate')}</label>
                 <input {...regTax('rate', { required: true, min: 0, max: 100 })} type="number" step="0.01" className="input" />
               </div>
             </div>
@@ -379,25 +381,25 @@ export default function ShopSettingsPage() {
             </label>
             <div className="flex gap-2">
               <button type="submit" className="btn-primary text-xs">Add</button>
-              <button type="button" onClick={() => setTaxForm(false)} className="btn-secondary text-xs">Cancel</button>
+              <button type="button" onClick={() => setTaxForm(false)} className="btn-secondary text-xs">{t('common.cancel')}</button>
             </div>
           </form>
         )}
 
         <div className="space-y-2">
-          {config.taxRules.map(t => (
-            <div key={t.id} className="flex items-center justify-between p-3 border border-stone-200 rounded-lg">
+          {config.taxRules.map(tr => (
+            <div key={tr.id} className="flex items-center justify-between p-3 border border-stone-200 rounded-lg">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-stone-900">{t.name}</span>
-                <span className="text-sm text-stone-500">{t.rate}%</span>
-                {t.isDefault && (
+                <span className="text-sm font-medium text-stone-900">{tr.name}</span>
+                <span className="text-sm text-stone-500">{tr.rate}%</span>
+                {tr.isDefault && (
                   <span className="flex items-center gap-0.5 text-[10px] text-emerald-600 font-semibold">
                     <Check size={10} /> Default
                   </span>
                 )}
               </div>
-              {!t.isDefault && (
-                <button onClick={() => deleteTax(t.id)} className="text-stone-300 hover:text-red-500 transition-colors">
+              {!tr.isDefault && (
+                <button onClick={() => deleteTax(tr.id)} className="text-stone-300 hover:text-red-500 transition-colors">
                   <Trash2 size={14} />
                 </button>
               )}

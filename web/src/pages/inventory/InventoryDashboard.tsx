@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -71,6 +72,7 @@ function SectionHeader({ title, to, label }: { title: string; to?: string; label
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function InventoryDashboard() {
+  const { t } = useTranslation();
   const { shopId } = useAuthStore();
 
   const { data, isLoading } = useQuery<DashData>({
@@ -83,7 +85,7 @@ export default function InventoryDashboard() {
   if (isLoading || !data) {
     return (
       <div className="space-y-4">
-        <div className="page-header"><h1 className="page-title">Inventory Dashboard</h1></div>
+        <div className="page-header"><h1 className="page-title">{t('stock.inventoryTitle')}</h1></div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1,2,3,4].map(i => <div key={i} className="card p-5 h-24 animate-pulse bg-stone-100" />)}
         </div>
@@ -101,7 +103,7 @@ export default function InventoryDashboard() {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Inventory Dashboard</h1>
+          <h1 className="page-title">{t('stock.inventoryTitle')}</h1>
           <p className="page-subtitle">Live snapshot of your stock</p>
         </div>
       </div>
@@ -109,21 +111,21 @@ export default function InventoryDashboard() {
       {/* ── KPI row ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          label="Total Products"
+          label={t('stock.totalProducts')}
           value={kpis.totalProducts}
           sub={`${kpis.outOfStock} out of stock`}
           icon={<Package size={18} className="text-primary-600" />}
           color="bg-primary-50"
         />
         <KpiCard
-          label="Low Stock Alerts"
+          label={t('stock.lowStockItems')}
           value={kpis.lowStock}
           sub="below reorder point"
           icon={<AlertTriangle size={18} className="text-amber-600" />}
           color="bg-amber-50"
         />
         <KpiCard
-          label="Stock Cost Value"
+          label={t('stock.inventoryValue')}
           value={`TZS ${fmtK(kpis.totalStockValue)}`}
           sub={`Retail: TZS ${fmtK(kpis.totalRetailValue)}`}
           icon={<DollarSign size={18} className="text-emerald-600" />}
@@ -191,7 +193,7 @@ export default function InventoryDashboard() {
         {/* Low stock */}
         <div className="card">
           <div className="p-4 border-b border-stone-100">
-            <SectionHeader title={`Low Stock (${kpis.lowStock})`} to="/inventory/products?active=true" label="Manage" />
+            <SectionHeader title={`${t('stock.lowStockItems')} (${kpis.lowStock})`} to="/inventory/products?active=true" label={t('stock.viewProducts')} />
           </div>
           {lowStockList.length === 0 ? (
             <p className="text-sm text-stone-400 text-center py-8">All products are well-stocked</p>
@@ -217,7 +219,7 @@ export default function InventoryDashboard() {
         {/* Out of stock */}
         <div className="card">
           <div className="p-4 border-b border-stone-100">
-            <SectionHeader title={`Out of Stock (${kpis.outOfStock})`} to="/inventory/products?active=false" label="Manage" />
+            <SectionHeader title={`${t('stock.outOfStockItems')} (${kpis.outOfStock})`} to="/inventory/products?active=false" label={t('stock.viewProducts')} />
           </div>
           {outOfStockList.length === 0 ? (
             <p className="text-sm text-stone-400 text-center py-8">No products out of stock</p>
@@ -271,7 +273,7 @@ export default function InventoryDashboard() {
         {/* Recent movements */}
         <div className="card">
           <div className="p-4 border-b border-stone-100">
-            <SectionHeader title="Recent Stock Movements" to="/inventory/stock" label="Stock page" />
+            <SectionHeader title="Recent Stock Movements" to="/inventory/stock" label={t('stock.viewMovements')} />
           </div>
           {recentMovements.length === 0 ? (
             <p className="text-sm text-stone-400 text-center py-8">No movements recorded</p>

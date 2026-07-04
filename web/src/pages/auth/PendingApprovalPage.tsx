@@ -2,12 +2,14 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, LogOut, RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
 export default function PendingApprovalPage() {
   const { user, account, setAuth, token, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Poll account status every 30 s — navigate away once approved
   const { data } = useQuery({
@@ -47,10 +49,9 @@ export default function PendingApprovalPage() {
             <Clock size={28} className="text-amber-600" />
           </div>
 
-          <h2 className="text-xl font-bold text-stone-900 mb-2">Awaiting Approval</h2>
+          <h2 className="text-xl font-bold text-stone-900 mb-2">{t('auth.pendingApproval')}</h2>
           <p className="text-sm text-stone-500 mb-6 leading-relaxed">
-            Your account <span className="font-semibold text-stone-700">{account?.legalName}</span> has been
-            registered and is pending activation by our platform administrators.
+            {t('auth.pendingMessage')}
           </p>
 
           <div className="bg-stone-50 rounded-xl p-4 mb-6 text-left space-y-2">
@@ -83,7 +84,7 @@ export default function PendingApprovalPage() {
               onClick={handleLogout}
               className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 border border-stone-200 text-sm text-red-500 rounded-lg hover:bg-red-50 transition-colors"
             >
-              <LogOut size={13} /> Sign out
+              <LogOut size={13} /> {t('sidebar.signOut')}
             </button>
           </div>
         </div>

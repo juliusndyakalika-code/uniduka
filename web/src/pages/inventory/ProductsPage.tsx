@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Edit2, Trash2, Package, AlertTriangle, X, Upload, Download, CheckCircle2, FileWarning, ChevronUp, ChevronDown, ChevronsUpDown, Lock, PackagePlus, ArrowUpDown, ScanLine, Camera, Ship } from 'lucide-react';
 import ShipmentImportModal from './ShipmentImportModal';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import CameraScanner from '../../components/CameraScanner';
@@ -343,6 +344,7 @@ function AddStockModal({ product, error, saving, form, onSubmit, onClose }: AddS
 }
 
 export default function ProductsPage() {
+  const { t } = useTranslation();
   const { shopId, shops, user } = useAuthStore();
   const isOwner = user?.role === 'ACCOUNT_OWNER';
   const qc = useQueryClient();
@@ -538,18 +540,18 @@ export default function ProductsPage() {
     <div className="space-y-4">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Products</h1>
-          <p className="page-subtitle">{data?.total ?? 0} products</p>
+          <h1 className="page-title">{t('products.title')}</h1>
+          <p className="page-subtitle">{t('products.subtitle', { count: data?.total ?? 0 })}</p>
         </div>
         <div className="flex items-center gap-2">
           <button className="btn-secondary" onClick={openImport}>
-            <Upload size={14} className="mr-1.5" /> Import CSV
+            <Upload size={14} className="mr-1.5" /> {t('products.importCsv')}
           </button>
           <button className="btn-secondary" onClick={() => setShowShipmentImport(true)}>
             <Ship size={14} className="mr-1.5" /> Import Shipment
           </button>
           <button className="btn-primary" onClick={openNew}>
-            <Plus size={14} className="mr-1.5" /> Add Product
+            <Plus size={14} className="mr-1.5" /> {t('products.addProduct')}
           </button>
         </div>
       </div>
@@ -557,7 +559,7 @@ export default function ProductsPage() {
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-3 text-stone-400" />
-          <input className="input pl-8" placeholder="Search products…" value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="input pl-8" placeholder={t('products.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1">
           {(['all', 'active', 'inactive'] as const).map(f => (
@@ -576,18 +578,18 @@ export default function ProductsPage() {
 
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">Loading…</div>
+          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : (
           <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
-                  <Th col="name">Product</Th>
-                  <th className="hidden sm:table-cell"><button onClick={() => toggleSort('sku')} className="flex items-center gap-0 hover:text-stone-900">SKU<SortIcon col="sku" /></button></th>
-                  <Th col="sellingPrice">Price</Th>
-                  <th className="hidden sm:table-cell"><button onClick={() => toggleSort('costPrice')} className="flex items-center gap-0 hover:text-stone-900">Cost<SortIcon col="costPrice" /></button></th>
-                  <Th col="stock">Stock</Th>
-                  <th>Status</th>
+                  <Th col="name">{t('products.name')}</Th>
+                  <th className="hidden sm:table-cell"><button onClick={() => toggleSort('sku')} className="flex items-center gap-0 hover:text-stone-900">{t('products.sku')}<SortIcon col="sku" /></button></th>
+                  <Th col="sellingPrice">{t('products.sellingPrice')}</Th>
+                  <th className="hidden sm:table-cell"><button onClick={() => toggleSort('costPrice')} className="flex items-center gap-0 hover:text-stone-900">{t('products.costPrice')}<SortIcon col="costPrice" /></button></th>
+                  <Th col="stock">{t('products.stock')}</Th>
+                  <th>{t('products.status')}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -622,7 +624,7 @@ export default function ProductsPage() {
                             : 'bg-stone-100 text-stone-500 border-stone-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
                         }`}
                       >
-                        {p.isActive ? 'Active' : 'Inactive'}
+                        {p.isActive ? t('products.active') : t('products.inactive')}
                       </button>
                     </td>
                     <td>
@@ -667,7 +669,7 @@ export default function ProductsPage() {
                   </tr>
                 ))}
                 {products.length === 0 && (
-                  <tr><td colSpan={7} className="text-center text-stone-400 py-8">No products found</td></tr>
+                  <tr><td colSpan={7} className="text-center text-stone-400 py-8">{t('products.noProducts')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -680,7 +682,7 @@ export default function ProductsPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-base font-bold text-stone-900">{editing ? 'Edit Product' : 'New Product'}</h3>
+              <h3 className="text-base font-bold text-stone-900">{t(editing ? 'products.editProduct' : 'products.addProduct')}</h3>
               <button onClick={closeForm} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
             <p className="text-xs text-stone-400 mb-5">{businessType.replace(/_/g, ' ')}</p>
@@ -692,14 +694,14 @@ export default function ProductsPage() {
               {/* Product type selector */}
               {showTypeSelector && (
                 <div>
-                  <label className="label">Type</label>
+                  <label className="label">{t('products.productType')}</label>
                   <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${allowedTypes.length}, 1fr)` }}>
-                    {allowedTypes.map(t => (
-                      <label key={t} className={`flex items-center justify-center gap-1.5 px-3 py-2 border-2 rounded-lg cursor-pointer text-xs font-medium transition-colors ${
-                        watchedType === t ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-stone-200 text-stone-500 hover:border-stone-300'
+                    {allowedTypes.map(type => (
+                      <label key={type} className={`flex items-center justify-center gap-1.5 px-3 py-2 border-2 rounded-lg cursor-pointer text-xs font-medium transition-colors ${
+                        watchedType === type ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-stone-200 text-stone-500 hover:border-stone-300'
                       }`}>
-                        <input type="radio" {...register('type')} value={t} className="sr-only" />
-                        {t.replace(/_/g, ' ')}
+                        <input type="radio" {...register('type')} value={type} className="sr-only" />
+                        {type.replace(/_/g, ' ')}
                       </label>
                     ))}
                   </div>
@@ -716,7 +718,7 @@ export default function ProductsPage() {
                 <input {...register('name', { required: true })} className="input" placeholder={
                   isPharmacy ? 'e.g. Amoxicillin 500mg' : isService ? 'e.g. Haircut, Oil Change' : 'Product name'
                 } />
-                {errors.name && <p className="mt-1 text-xs text-red-600">Required</p>}
+                {errors.name && <p className="mt-1 text-xs text-red-600">{t('common.required')}</p>}
               </div>
 
               {/* SKU + Barcode */}
@@ -751,14 +753,14 @@ export default function ProductsPage() {
               {/* Prices */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="label">{isService ? 'Charge / Rate' : 'Selling Price'}</label>
+                  <label className="label">{t('products.sellingPrice')}</label>
                   <input {...register('sellingPrice', { required: true, valueAsNumber: true, min: 0.01 })} type="number" step="0.01" min="0.01" className="input" placeholder="0.00" />
-                  {errors.sellingPrice?.type === 'min' && <p className="mt-1 text-xs text-red-600">Selling price must be greater than 0</p>}
-                  {errors.sellingPrice?.type === 'required' && <p className="mt-1 text-xs text-red-600">Selling price is required</p>}
+                  {errors.sellingPrice?.type === 'min' && <p className="mt-1 text-xs text-red-600">{t('products.sellPriceMin')}</p>}
+                  {errors.sellingPrice?.type === 'required' && <p className="mt-1 text-xs text-red-600">{t('products.sellPriceRequired')}</p>}
                 </div>
                 {!isService && (
                   <div>
-                    <label className="label">Cost Price</label>
+                    <label className="label">{t('products.costPrice')}</label>
                     <input {...register('costPrice', { valueAsNumber: true })} type="number" step="0.01" className="input" placeholder="0.00" />
                   </div>
                 )}
@@ -768,7 +770,7 @@ export default function ProductsPage() {
               {!isService && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="label">Unit</label>
+                    <label className="label">{t('products.unit')}</label>
                     <input {...register('unit')} className="input" placeholder={
                       isPharmacy ? 'tab / cap / syrup / ml' :
                       businessType === 'RESTAURANT' || businessType === 'CAFE_QSR' ? 'pcs / serving' :
@@ -776,7 +778,7 @@ export default function ProductsPage() {
                     } />
                   </div>
                   <div>
-                    <label className="label">Reorder Point</label>
+                    <label className="label">{t('products.reorderPoint')}</label>
                     <input {...register('reorderPoint', { valueAsNumber: true })} type="number" className="input" placeholder="5" />
                   </div>
                 </div>
@@ -784,7 +786,7 @@ export default function ProductsPage() {
 
               {/* Category */}
               <div>
-                <label className="label">Category</label>
+                <label className="label">{t('products.category')}</label>
                 <input {...register('category')} className="input" placeholder={
                   isPharmacy ? 'e.g. Antibiotics, Analgesics, OTC' :
                   isService ? 'e.g. Hair, Nails, Repair' : 'Optional'
@@ -830,7 +832,7 @@ export default function ProductsPage() {
               {/* Description */}
               {showDescription && (
                 <div>
-                  <label className="label">Description <span className="text-stone-400 font-normal">(optional)</span></label>
+                  <label className="label">{t('products.description')} <span className="text-stone-400 font-normal">(optional)</span></label>
                   <input {...register('description')} className="input" placeholder={
                     isPharmacy ? 'Dosage, instructions, notes…' : 'Brief description or notes'
                   } />
@@ -841,7 +843,7 @@ export default function ProductsPage() {
               {!editing && !isService && (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="label mb-0">Opening Stock</label>
+                    <label className="label mb-0">{t('products.initialStock')}</label>
                     <div className="flex rounded border border-stone-200 overflow-hidden text-[10px] font-medium">
                       <button type="button"
                         onClick={() => setOpenBoxMode(false)}
@@ -866,9 +868,9 @@ export default function ProductsPage() {
               )}
 
               <div className="flex gap-3 pt-2">
-                <button type="button" className="btn-secondary flex-1" onClick={closeForm}>Cancel</button>
+                <button type="button" className="btn-secondary flex-1" onClick={closeForm}>{t('common.cancel')}</button>
                 <button type="submit" disabled={isPending} className="btn-primary flex-1">
-                  {isPending ? 'Saving…' : editing ? 'Save Changes' : isService ? 'Add Service' : 'Add Product'}
+                  {isPending ? t('common.saving') : editing ? t('common.update') : isService ? t('products.addProduct') : t('products.addProduct')}
                 </button>
               </div>
             </form>
@@ -897,7 +899,7 @@ export default function ProductsPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-stone-900">Import Products from CSV</h3>
+              <h3 className="text-base font-bold text-stone-900">{t('products.importTitle')}</h3>
               <button onClick={closeImport} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
 
@@ -948,7 +950,7 @@ export default function ProductsPage() {
                   </div>
                 )}
 
-                <button className="btn-secondary w-full" onClick={closeImport}>Done</button>
+                <button className="btn-secondary w-full" onClick={closeImport}>{t('common.done')}</button>
               </div>
             ) : (
               <>
@@ -1015,7 +1017,7 @@ export default function ProductsPage() {
                 )}
 
                 <div className="flex gap-3 mt-4">
-                  <button className="btn-secondary flex-1" onClick={closeImport}>Cancel</button>
+                  <button className="btn-secondary flex-1" onClick={closeImport}>{t('common.cancel')}</button>
                   <button
                     disabled={!importFile || importing}
                     onClick={() => importFile && runImport(importFile)}
@@ -1047,7 +1049,7 @@ export default function ProductsPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-6 w-full max-w-sm">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-base font-bold text-stone-900">Adjust Stock</h3>
+              <h3 className="text-base font-bold text-stone-900">{t('products.adjustStock')}</h3>
               <button onClick={() => setAdjTarget(null)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
             <p className="text-xs text-stone-500 mb-5 truncate">{adjTarget.name} &nbsp;·&nbsp; current stock: <span className="font-semibold">{adjTarget.stock} {adjTarget.unit}</span></p>
@@ -1056,38 +1058,38 @@ export default function ProductsPage() {
               <div>
                 <label className="label">Direction</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {(['ADJUSTMENT_IN', 'ADJUSTMENT_OUT'] as const).map(t => (
-                    <button key={t} type="button" onClick={() => setAdjType(t)}
+                  {(['ADJUSTMENT_IN', 'ADJUSTMENT_OUT'] as const).map(adjTypeOpt => (
+                    <button key={adjTypeOpt} type="button" onClick={() => setAdjType(adjTypeOpt)}
                       className={`py-2 text-xs rounded-lg border-2 font-semibold transition-colors ${
-                        adjType === t
-                          ? t === 'ADJUSTMENT_IN'
+                        adjType === adjTypeOpt
+                          ? adjTypeOpt === 'ADJUSTMENT_IN'
                             ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                             : 'border-red-400 bg-red-50 text-red-700'
                           : 'border-stone-200 text-stone-500 hover:border-stone-300'
                       }`}>
-                      {t === 'ADJUSTMENT_IN' ? '+ Add stock' : '− Remove stock'}
+                      {adjTypeOpt === 'ADJUSTMENT_IN' ? t('products.addStock') : t('products.removeStock')}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="label">Quantity</label>
+                <label className="label">{t('products.adjustQty')}</label>
                 <input type="number" min="1" value={adjQty} onChange={e => setAdjQty(e.target.value)}
                   className="input" placeholder="1" autoFocus />
               </div>
               <div>
-                <label className="label">Reason</label>
+                <label className="label">{t('products.adjustReason')}</label>
                 <input type="text" value={adjReason} onChange={e => setAdjReason(e.target.value)}
                   className="input" placeholder="Damage, count correction, theft…" />
               </div>
               <div className="flex gap-3 pt-1">
-                <button className="btn-secondary flex-1" onClick={() => setAdjTarget(null)}>Cancel</button>
+                <button className="btn-secondary flex-1" onClick={() => setAdjTarget(null)}>{t('common.cancel')}</button>
                 <button
                   className="btn-primary flex-1"
                   disabled={adjusting || !adjQty || Number(adjQty) < 1 || !adjReason.trim()}
                   onClick={() => doAdjust()}
                 >
-                  {adjusting ? 'Saving…' : 'Adjust'}
+                  {adjusting ? t('common.saving') : 'Adjust'}
                 </button>
               </div>
             </div>

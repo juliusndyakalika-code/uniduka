@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, X, Percent, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -13,6 +14,7 @@ interface Form { name: string; rate: number; taxMode: 'INCLUSIVE' | 'EXCLUSIVE';
 
 export default function TaxRulesPage() {
   const { shopId } = useAuthStore();
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
@@ -42,17 +44,17 @@ export default function TaxRulesPage() {
     <div className="space-y-4 max-w-2xl">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Tax Rules</h1>
+          <h1 className="page-title">{t('settings.taxTitle')}</h1>
           <p className="page-subtitle">VAT and other tax configurations</p>
         </div>
         <button className="btn-primary" onClick={() => { setError(''); setShowForm(true); }}>
-          <Plus size={14} className="mr-1.5" /> Add Rule
+          <Plus size={14} className="mr-1.5" /> {t('settings.addTaxRule')}
         </button>
       </div>
 
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">Loading…</div>
+          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : (
           <div className="divide-y divide-stone-50">
             {rules.map(rule => (
@@ -80,7 +82,7 @@ export default function TaxRulesPage() {
               </div>
             ))}
             {rules.length === 0 && (
-              <div className="px-5 py-8 text-center text-stone-400">No tax rules configured</div>
+              <div className="px-5 py-8 text-center text-stone-400">{t('settings.noTaxRules')}</div>
             )}
           </div>
         )}
@@ -96,15 +98,15 @@ export default function TaxRulesPage() {
             {error && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{error}</div>}
             <form onSubmit={handleSubmit(d => create(d))} className="space-y-4">
               <div>
-                <label className="label">Rule Name</label>
+                <label className="label">{t('settings.taxName')}</label>
                 <input {...register('name', { required: true })} className="input" placeholder="e.g. VAT 16%" />
               </div>
               <div>
-                <label className="label">Rate (%)</label>
+                <label className="label">{t('settings.taxRate')}</label>
                 <input {...register('rate', { required: true, valueAsNumber: true, min: 0, max: 100 })} type="number" step="0.1" className="input" placeholder="16" />
               </div>
               <div>
-                <label className="label">Tax Mode</label>
+                <label className="label">{t('settings.taxMode')}</label>
                 <select {...register('taxMode')} className="select">
                   <option value="EXCLUSIVE">Exclusive (added on top)</option>
                   <option value="INCLUSIVE">Inclusive (included in price)</option>
@@ -117,8 +119,8 @@ export default function TaxRulesPage() {
                 <span className="text-xs text-stone-600">Set as default rule</span>
               </label>
               <div className="flex gap-3 pt-2">
-                <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>Cancel</button>
-                <button type="submit" disabled={isPending} className="btn-primary flex-1">{isPending ? 'Saving…' : 'Add Rule'}</button>
+                <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>{t('common.cancel')}</button>
+                <button type="submit" disabled={isPending} className="btn-primary flex-1">{isPending ? t('common.saving') : t('settings.addTaxRule')}</button>
               </div>
             </form>
           </div>

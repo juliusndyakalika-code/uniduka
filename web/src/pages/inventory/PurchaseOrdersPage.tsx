@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, X, ChevronRight, CheckCircle, Truck } from 'lucide-react';
 import { useForm, useFieldArray } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -18,6 +19,7 @@ function fmt(n: number) {
 }
 
 export default function PurchaseOrdersPage() {
+  const { t } = useTranslation();
   const { shopId } = useAuthStore();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -61,26 +63,26 @@ export default function PurchaseOrdersPage() {
     <div className="space-y-4">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Purchase Orders</h1>
+          <h1 className="page-title">{t('purchaseOrders.title')}</h1>
           <p className="page-subtitle">{orders.length} orders</p>
         </div>
         <button className="btn-primary" onClick={() => { setError(''); setShowForm(true); }}>
-          <Plus size={14} className="mr-1.5" /> New PO
+          <Plus size={14} className="mr-1.5" /> {t('purchaseOrders.addOrder')}
         </button>
       </div>
 
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">Loading…</div>
+          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : (
           <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
                   <th>PO Number</th>
-                  <th>Supplier</th>
-                  <th>Total</th>
-                  <th>Status</th>
+                  <th>{t('purchaseOrders.supplier')}</th>
+                  <th>{t('purchaseOrders.total')}</th>
+                  <th>{t('purchaseOrders.status')}</th>
                   <th>Expected</th>
                   <th></th>
                 </tr>
@@ -108,7 +110,7 @@ export default function PurchaseOrdersPage() {
                   </tr>
                 ))}
                 {orders.length === 0 && (
-                  <tr><td colSpan={6} className="text-center text-stone-400 py-8">No purchase orders yet</td></tr>
+                  <tr><td colSpan={6} className="text-center text-stone-400 py-8">{t('purchaseOrders.noOrders')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -120,13 +122,13 @@ export default function PurchaseOrdersPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-stone-900">New Purchase Order</h3>
+              <h3 className="text-base font-bold text-stone-900">{t('purchaseOrders.addOrder')}</h3>
               <button onClick={() => setShowForm(false)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
             {error && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{error}</div>}
             <form onSubmit={handleSubmit(d => create(d))} className="space-y-4">
               <div>
-                <label className="label">Supplier</label>
+                <label className="label">{t('purchaseOrders.supplier')}</label>
                 <select {...register('supplierId', { required: true })} className="select">
                   <option value="">Select supplier…</option>
                   {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -169,8 +171,8 @@ export default function PurchaseOrdersPage() {
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>Cancel</button>
-                <button type="submit" disabled={isPending} className="btn-primary flex-1">{isPending ? 'Creating…' : 'Create PO'}</button>
+                <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>{t('common.cancel')}</button>
+                <button type="submit" disabled={isPending} className="btn-primary flex-1">{isPending ? t('common.saving') : t('common.save')}</button>
               </div>
             </form>
           </div>

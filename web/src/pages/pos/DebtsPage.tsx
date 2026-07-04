@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Clock, CheckCircle, X, Banknote, Smartphone, CreditCard, User, ChevronDown, ChevronRight, Printer } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -123,6 +124,7 @@ function DebtRow({ debt, onSettle }: { debt: Debt; onSettle: (d: Debt) => void }
 }
 
 export default function DebtsPage() {
+  const { t } = useTranslation();
   const { shopId } = useAuthStore();
   const qc = useQueryClient();
   const [tab, setTab] = useState<'outstanding' | 'settled' | 'all'>('outstanding');
@@ -166,7 +168,7 @@ export default function DebtsPage() {
     <div className="space-y-6">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Debit / Debt Management</h1>
+          <h1 className="page-title">{t('debts.title')}</h1>
           <p className="page-subtitle">Track credit sales and settlements</p>
         </div>
       </div>
@@ -209,12 +211,12 @@ export default function DebtsPage() {
       {/* Table */}
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">Loading…</div>
+          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : displayed.length === 0 ? (
           <div className="p-12 text-center">
             <CheckCircle size={32} className="text-emerald-400 mx-auto mb-3" />
             <p className="text-stone-500 font-medium">
-              {tab === 'outstanding' ? 'No outstanding debts' : tab === 'settled' ? 'No settled debts yet' : 'No debit records'}
+              {tab === 'outstanding' ? t('debts.noDebts') : tab === 'settled' ? 'No settled debts yet' : 'No debit records'}
             </p>
           </div>
         ) : (
@@ -225,13 +227,13 @@ export default function DebtsPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Receipt</th>
-                  <th>Customer</th>
-                  <th className="hidden sm:table-cell">Date</th>
+                  <th>{t('debts.receiptNo')}</th>
+                  <th>{t('debts.customer')}</th>
+                  <th className="hidden sm:table-cell">{t('debts.date')}</th>
                   <th className="hidden sm:table-cell">Sale Total</th>
                   <th className="hidden sm:table-cell">Paid</th>
-                  <th>Outstanding</th>
-                  <th>Action</th>
+                  <th>{t('debts.amount')}</th>
+                  <th>{t('debts.collect')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -269,7 +271,7 @@ export default function DebtsPage() {
 
             <div className="bg-stone-50 rounded-lg p-3 mb-5 flex justify-between items-center">
               <div>
-                <p className="text-xs text-stone-400">Customer</p>
+                <p className="text-xs text-stone-400">{t('debts.customer')}</p>
                 <p className="text-sm font-medium text-stone-900">{settlingDebt.customer?.fullName ?? settlingDebt.customerName ?? 'Unknown'}</p>
               </div>
               <div className="text-right">
@@ -320,13 +322,13 @@ export default function DebtsPage() {
               </div>
               {settleError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5">{settleError}</p>}
               <div className="flex gap-3 pt-1">
-                <button className="btn-secondary flex-1" onClick={() => setSettlingDebt(null)}>Cancel</button>
+                <button className="btn-secondary flex-1" onClick={() => setSettlingDebt(null)}>{t('common.cancel')}</button>
                 <button
                   className="btn-primary flex-1"
                   disabled={settling || !amount || Number(amount) <= 0}
                   onClick={() => settle({ id: settlingDebt.id, amt: Number(amount) })}
                 >
-                  {settling ? 'Saving…' : `Record ${amount ? fmt(Number(amount)) : 'Payment'}`}
+                  {settling ? t('common.saving') : `Record ${amount ? fmt(Number(amount)) : 'Payment'}`}
                 </button>
               </div>
             </div>
@@ -371,7 +373,7 @@ export default function DebtsPage() {
             </div>
 
             <div className="flex gap-2">
-              <button className="btn-secondary flex-1 text-xs" onClick={() => setLastSettlement(null)}>Close</button>
+              <button className="btn-secondary flex-1 text-xs" onClick={() => setLastSettlement(null)}>{t('common.close')}</button>
               <button
                 className="btn-primary flex-1 text-xs"
                 onClick={() => {
@@ -417,7 +419,7 @@ ${s.remaining > 0 ? `<tr><td>Still Outstanding</td><td class="r bold" style="col
                   w.document.close();
                 }}
               >
-                <Printer size={13} className="mr-1.5" /> Print Receipt
+                <Printer size={13} className="mr-1.5" /> {t('common.print')}
               </button>
             </div>
           </div>

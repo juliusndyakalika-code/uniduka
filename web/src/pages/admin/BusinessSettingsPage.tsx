@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Building2, CreditCard, Shield, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -22,13 +23,14 @@ const PLANS = [
 
 export default function BusinessSettingsPage() {
   const { account } = useAuthStore();
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
 
   const { register, handleSubmit, reset } = useForm<Form>();
 
-  const { data: info } = useQuery<AccountInfo>({
+  const { data: info, isLoading } = useQuery<AccountInfo>({
     queryKey: ['account'],
     queryFn: () => api.get('/tenant/').then(r => r.data.data),
   });
@@ -43,11 +45,12 @@ export default function BusinessSettingsPage() {
     onError: (e: unknown) => setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
 
+  if (isLoading) return <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>;
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="page-header">
-        <h1 className="page-title">Business Settings</h1>
+        <h1 className="page-title">{t('settings.businessTitle')}</h1>
       </div>
 
       {/* Business info */}
@@ -56,29 +59,29 @@ export default function BusinessSettingsPage() {
           <Building2 size={16} className="text-primary-600" />
           <h3 className="text-sm font-bold text-stone-900">Business Information</h3>
         </div>
-        {error && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{error}</div>}
-        {saved && <div className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">Changes saved!</div>}
+        {error && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{t('settings.saveFailed')}</div>}
+        {saved && <div className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">{t('settings.saved')}</div>}
         <form onSubmit={handleSubmit(d => update(d))} className="space-y-4">
           <div>
-            <label className="label">Legal Name</label>
+            <label className="label">{t('settings.legalName')}</label>
             <input {...register('legalName', { required: true })} className="input" />
           </div>
           <div>
-            <label className="label">Trading Name</label>
+            <label className="label">{t('settings.tradingName')}</label>
             <input {...register('tradingName')} className="input" placeholder="Optional, shown on receipts" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Email</label>
+              <label className="label">{t('settings.email')}</label>
               <input {...register('email')} type="email" className="input" />
             </div>
             <div>
-              <label className="label">Phone</label>
+              <label className="label">{t('settings.phone')}</label>
               <input {...register('phone')} type="tel" className="input" />
             </div>
           </div>
           <button type="submit" disabled={isPending} className="btn-primary">
-            {isPending ? 'Saving…' : 'Save Changes'}
+            {isPending ? t('common.loading') : t('settings.saveChanges')}
           </button>
         </form>
       </div>
