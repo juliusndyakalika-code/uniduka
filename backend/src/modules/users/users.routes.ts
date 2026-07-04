@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { listUsers, createUser, updateUser, deactivateUser, deleteUser, assignShop, getAuditLog } from './users.controller';
+import { listUsers, createUser, updateUser, deactivateUser, deleteUser, assignShop, getAuditLog, resetStaffPassword } from './users.controller';
 import { authorize } from '../../middleware/auth';
 
 const router = Router();
@@ -11,7 +11,8 @@ router.post('/invite',        authorize('ACCOUNT_OWNER'), createUser);
 router.put('/:id',            authorize('ACCOUNT_OWNER'), updateUser);
 router.patch('/:id',          authorize('ACCOUNT_OWNER'), updateUser);
 router.delete('/:id',         authorize('ACCOUNT_OWNER'), deleteUser);
-router.post('/:id/shops',     authorize('ACCOUNT_OWNER'), assignShop);
+router.post('/:id/shops',          authorize('ACCOUNT_OWNER'), assignShop);
+router.post('/:id/reset-password', authorize('ACCOUNT_OWNER'), resetStaffPassword);
 router.get('/audit',          getAuditLog);
 
 export default router;

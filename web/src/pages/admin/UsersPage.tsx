@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, Shield, Store, ArrowRightLeft, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, X, Shield, Store, ArrowRightLeft, Pencil, Trash2, AlertTriangle, KeyRound } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -39,6 +39,11 @@ export default function UsersPage() {
   const [deleteError, setDeleteError]       = useState('');
   const [deleteNotice, setDeleteNotice]     = useState('');
   const [reassignError, setReassignError]   = useState('');
+  const [resetTarget, setResetTarget]       = useState<StaffUser | null>(null);
+  const [newPassword, setNewPassword]       = useState('');
+  const [showPw, setShowPw]                 = useState(false);
+  const [resetError, setResetError]         = useState('');
+  const [resetDone, setResetDone]           = useState(false);
 
   const inviteForm = useForm<InviteForm>({
     defaultValues: { role: 'CASHIER', shopId: shopId || '' },
@@ -100,6 +105,17 @@ export default function UsersPage() {
     },
     onError: (e: unknown) => setReassignError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
+
+  const { mutate: resetPassword, isPending: resetting } = useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      api.post(`/users/${id}/reset-password`, { newPassword: password }),
+    onSuccess: () => { setResetDone(true); setResetError(''); },
+    onError: (e: unknown) => setResetError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
+  });
+
+  function openResetPassword(u: StaffUser) {
+    setResetTarget(u); setNewPassword(''); setShowPw(false); setResetError(''); setResetDone(false);
+  }
 
   function openEdit(u: StaffUser) {
     setEditUser(u);
@@ -234,6 +250,15 @@ export default function UsersPage() {
                             >
                               <Pencil size={13} />
                             </button>
+                            {!isOwner && (
+                              <button
+                                onClick={() => openResetPassword(u)}
+                                className="p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                title="Reset password"
+                              >
+                                <KeyRound size={13} />
+                              </button>
+                            )}
                             {!isOwner && (
                               <button
                                 onClick={() => openDelete(u)}
@@ -373,6 +398,66 @@ export default function UsersPage() {
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset password modal */}
+      {resetTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="card p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-base font-bold text-stone-900">Reset Password</h3>
+              <button onClick={() => setResetTarget(null)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+            </div>
+            <p className="text-sm text-stone-500 mb-5">
+              Set a new password for <span className="font-semibold text-stone-800">{resetTarget.fullName}</span>. Share it with them securely.
+            </p>
+            {resetDone ? (
+              <div className="space-y-4">
+                <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700 font-medium text-center">
+                  Password updated successfully.
+                </div>
+                <button className="btn-primary w-full" onClick={() => setResetTarget(null)}>Done</button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {resetError && <div className="px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{resetError}</div>}
+                <div>
+                  <label className="label">New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="input pr-16"
+                      placeholder="Min. 8 characters"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPw(v => !v)}
+                      className="absolute right-3 top-2.5 text-xs text-stone-400 hover:text-stone-700"
+                    >
+                      {showPw ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                  {newPassword.length > 0 && newPassword.length < 8 && (
+                    <p className="mt-1 text-xs text-red-500">At least 8 characters required</p>
+                  )}
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <button className="btn-secondary flex-1" onClick={() => setResetTarget(null)}>Cancel</button>
+                  <button
+                    className="btn-primary flex-1"
+                    disabled={resetting || newPassword.length < 8}
+                    onClick={() => resetPassword({ id: resetTarget.id, password: newPassword })}
+                  >
+                    {resetting ? 'Saving…' : 'Reset Password'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

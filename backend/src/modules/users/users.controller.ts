@@ -85,6 +85,23 @@ export async function deleteUser(req: AuthRequest, res: Response) {
   return R.noContent(res);
 }
 
+export async function resetStaffPassword(req: AuthRequest, res: Response) {
+  const { newPassword } = req.body;
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8)
+    return R.badRequest(res, 'New password must be at least 8 characters');
+
+  const target = await prisma.user.findFirst({
+    where: { id: req.params.id, ownerAccountId: req.user!.accountId },
+    select: { id: true, role: true },
+  });
+  if (!target) return R.notFound(res, 'User not found');
+  if (target.role === 'ACCOUNT_OWNER') return R.forbidden(res, 'Cannot reset password of an account owner');
+
+  const hash = await bcrypt.hash(newPassword, 12);
+  await prisma.user.update({ where: { id: req.params.id }, data: { passwordHash: hash } });
+  return R.ok(res, { message: 'Password reset successfully' });
+}
+
 export async function assignShop(req: AuthRequest, res: Response) {
   const { shopId } = req.body;
 
