@@ -37,7 +37,8 @@ type SaleForm = { partnerId: string; productName: string; costPrice: number; sel
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ConsignmentPage() {
-  const { shopId } = useAuthStore();
+  const { shopId, user } = useAuthStore();
+  const isOwner = user?.role === 'ACCOUNT_OWNER';
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>('Sales');
   const [error, setError] = useState('');
@@ -122,7 +123,7 @@ export default function ConsignmentPage() {
           <p className="page-subtitle">Goods sold on behalf — record the profit when sold</p>
         </div>
         <div className="flex gap-2">
-          {tab === 'Partners' && (
+          {tab === 'Partners' && isOwner && (
             <button className="btn-primary" onClick={() => { setError(''); setShowPartnerForm(true); }}>
               <Plus size={14} className="mr-1.5" /> Add Partner
             </button>
@@ -200,7 +201,7 @@ export default function ConsignmentPage() {
                     <th>Profit</th>
                     <th>Sold By</th>
                     <th>Date</th>
-                    <th></th>
+                    {isOwner && <th></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -217,11 +218,13 @@ export default function ConsignmentPage() {
                       <td className="font-semibold text-green-600">{fmt(s.profit)}</td>
                       <td className="text-stone-500">{s.soldBy.fullName}</td>
                       <td className="text-stone-400">{date(s.soldAt)}</td>
-                      <td>
-                        <button className="btn-sm btn-ghost text-red-500" onClick={() => removeSale(s.id)} title="Delete">
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
+                      {isOwner && (
+                        <td>
+                          <button className="btn-sm btn-ghost text-red-500" onClick={() => removeSale(s.id)} title="Delete">
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

@@ -233,12 +233,13 @@ export default function Sidebar({ open, onClose }: Props) {
         <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
           <NavItem to="/dashboard" icon={<LayoutDashboard size={16} />} label="Dashboard" end />
 
-          {/* Cashier sees POS + Customers + Timeclock */}
+          {/* Cashier sees POS + Customers + Timeclock + Consignment */}
           {role === 'CASHIER' && (
             <>
-              <NavItem to="/pos"        icon={<ShoppingCart size={16} />} label="Point of Sale" />
-              <NavItem to="/customers"  icon={<Users size={16} />}        label="Customers" />
-              <NavItem to="/timeclock"  icon={<Clock size={16} />}        label="Timeclock" />
+              <NavItem to="/pos"          icon={<ShoppingCart size={16} />} label="Point of Sale" />
+              <NavItem to="/customers"    icon={<Users size={16} />}        label="Customers" />
+              <NavItem to="/consignment"  icon={<Handshake size={16} />}    label="Consignment" />
+              <NavItem to="/timeclock"    icon={<Clock size={16} />}        label="Timeclock" />
             </>
           )}
 
