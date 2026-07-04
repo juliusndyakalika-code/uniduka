@@ -5,7 +5,7 @@ import {
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
-  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble,
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
@@ -65,6 +65,14 @@ export default function Sidebar({ open, onClose }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const [shopPickerOpen, setShopPickerOpen] = useState(false);
+  const [showChangePw, setShowChangePw]     = useState(false);
+  const [currentPw, setCurrentPw]           = useState('');
+  const [newPw, setNewPw]                   = useState('');
+  const [confirmPw, setConfirmPw]           = useState('');
+  const [showPws, setShowPws]               = useState(false);
+  const [pwError, setPwError]               = useState('');
+  const [pwDone, setPwDone]                 = useState(false);
+  const [pwSaving, setPwSaving]             = useState(false);
 
   // Close sidebar on mobile whenever the route changes
   useEffect(() => { onClose(); }, [location.pathname]);
@@ -83,6 +91,23 @@ export default function Sidebar({ open, onClose }: Props) {
       setShopPickerOpen(false);
       navigate('/dashboard', { replace: true });
     } catch { /* keep current shop */ } finally { setSwitching(false); }
+  }
+
+  async function handleChangePassword() {
+    if (newPw.length < 8) { setPwError('New password must be at least 8 characters'); return; }
+    if (newPw !== confirmPw) { setPwError('Passwords do not match'); return; }
+    setPwSaving(true); setPwError('');
+    try {
+      await api.put('/auth/password', { currentPassword: currentPw, newPassword: newPw });
+      setPwDone(true);
+    } catch (e: unknown) {
+      setPwError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to update password');
+    } finally { setPwSaving(false); }
+  }
+
+  function openChangePw() {
+    setCurrentPw(''); setNewPw(''); setConfirmPw(''); setShowPws(false); setPwError(''); setPwDone(false);
+    setShowChangePw(true);
   }
 
   function handleLogout() {
@@ -297,6 +322,11 @@ export default function Sidebar({ open, onClose }: Props) {
               {isOwner ? `${account?.plan} · ` : ''}{role.replace(/_/g, ' ')}
             </p>
           </div>
+          <button onClick={openChangePw}
+            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors"
+          >
+            <KeyRound size={14} /> Change Password
+          </button>
           <button onClick={handleLogout}
             className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-500 hover:bg-red-50 rounded-sm transition-colors"
           >
@@ -304,6 +334,76 @@ export default function Sidebar({ open, onClose }: Props) {
           </button>
         </div>
       </aside>
+
+      {/* Change Password modal */}
+      {showChangePw && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-bold text-stone-900">Change Password</h3>
+              <button onClick={() => setShowChangePw(false)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+            </div>
+
+            {pwDone ? (
+              <div className="space-y-4">
+                <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700 font-medium text-center">
+                  Password updated successfully!
+                </div>
+                <button className="w-full py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                  onClick={() => setShowChangePw(false)}>Done</button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {pwError && <div className="px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{pwError}</div>}
+
+                <div>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">Current Password</label>
+                  <input type={showPws ? 'text' : 'password'} value={currentPw}
+                    onChange={e => setCurrentPw(e.target.value)}
+                    className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    placeholder="Your current password" autoFocus />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">New Password</label>
+                  <input type={showPws ? 'text' : 'password'} value={newPw}
+                    onChange={e => setNewPw(e.target.value)}
+                    className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    placeholder="Min. 8 characters" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">Confirm New Password</label>
+                  <input type={showPws ? 'text' : 'password'} value={confirmPw}
+                    onChange={e => setConfirmPw(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
+                      confirmPw && confirmPw !== newPw ? 'border-red-300' : 'border-stone-200'
+                    }`}
+                    placeholder="Repeat new password" />
+                  {confirmPw && confirmPw !== newPw && (
+                    <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="show-pws" checked={showPws} onChange={e => setShowPws(e.target.checked)}
+                    className="rounded" />
+                  <label htmlFor="show-pws" className="text-xs text-stone-500 cursor-pointer">Show passwords</label>
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <button className="flex-1 py-2 border border-stone-200 text-stone-600 text-sm font-semibold rounded-lg hover:bg-stone-50 transition-colors"
+                    onClick={() => setShowChangePw(false)}>Cancel</button>
+                  <button
+                    disabled={pwSaving || !currentPw || newPw.length < 8 || newPw !== confirmPw}
+                    onClick={handleChangePassword}
+                    className="flex-1 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40"
+                  >
+                    {pwSaving ? 'Saving…' : 'Update Password'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
