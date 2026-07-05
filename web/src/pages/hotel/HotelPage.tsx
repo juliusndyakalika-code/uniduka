@@ -203,30 +203,30 @@ export default function HotelPage() {
 
       {/* Folios list */}
       {tab === 'folios' && (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-stone-50 text-xs text-stone-500 uppercase">
+        <div className="table-wrapper">
+          <table className="table">
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-left">{t('hotel.guest')}</th>
-                <th className="px-4 py-3 text-left">{t('hotel.roomNumber')}</th>
-                <th className="px-4 py-3 text-left">{t('hotel.checkIn')}</th>
-                <th className="px-4 py-3 text-left">{t('hotel.checkOut')}</th>
-                <th className="px-4 py-3 text-right">Total</th>
-                <th className="px-4 py-3 text-left">{t('hotel.status')}</th>
+                <th>{t('hotel.guest')}</th>
+                <th>{t('hotel.roomNumber')}</th>
+                <th>{t('hotel.checkIn')}</th>
+                <th>{t('hotel.checkOut')}</th>
+                <th className="text-right">Total</th>
+                <th>{t('hotel.status')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-stone-100">
+            <tbody>
               {folios.length === 0 && (
                 <tr><td colSpan={6} className="text-center py-8 text-stone-400">No folios yet</td></tr>
               )}
               {folios.map(f => (
                 <tr key={f.id} className="hover:bg-stone-50 cursor-pointer" onClick={() => loadFolio(f.id)}>
-                  <td className="px-4 py-3 font-medium text-stone-900">{f.guestName}</td>
-                  <td className="px-4 py-3 text-stone-600">#{f.room?.roomNo} {f.room?.roomType}</td>
-                  <td className="px-4 py-3 text-stone-600">{format(new Date(f.checkIn), 'MMM d, yyyy')}</td>
-                  <td className="px-4 py-3 text-stone-600">{f.checkOut ? format(new Date(f.checkOut), 'MMM d, yyyy') : '—'}</td>
-                  <td className="px-4 py-3 text-right font-medium">{fmt(f.grandTotal)}</td>
-                  <td className="px-4 py-3">
+                  <td className="font-medium text-stone-900">{f.guestName}</td>
+                  <td>#{f.room?.roomNo} {f.room?.roomType}</td>
+                  <td>{format(new Date(f.checkIn), 'MMM d, yyyy')}</td>
+                  <td>{f.checkOut ? format(new Date(f.checkOut), 'MMM d, yyyy') : '—'}</td>
+                  <td className="text-right font-medium">{fmt(f.grandTotal)}</td>
+                  <td>
                     {f.checkOut
                       ? <span className={`text-[10px] px-2 py-0.5 rounded-full ${f.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{f.isPaid ? 'Paid' : 'Unpaid'}</span>
                       : <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Active</span>}

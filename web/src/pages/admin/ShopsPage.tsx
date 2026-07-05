@@ -92,7 +92,7 @@ export default function ShopsPage() {
       {isLoading ? (
         <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>
       ) : (
-        <div className="card overflow-hidden">
+        <div className="table-wrapper">
           <table className="table">
             <thead>
               <tr>
