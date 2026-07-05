@@ -1,4 +1,3 @@
-// Selectors that get the water-drop ripple on click
 const RIPPLE_SELECTORS = [
   '.btn-primary',
   '.btn-secondary',
@@ -7,7 +6,6 @@ const RIPPLE_SELECTORS = [
   '.card-hover',
 ].join(', ');
 
-// Light ripple for dark buttons, dark ripple for light surfaces
 function rippleColor(el: Element): string {
   if (
     el.classList.contains('btn-primary') ||
@@ -24,7 +22,6 @@ export function initRipple() {
     const target = (e.target as Element).closest(RIPPLE_SELECTORS) as HTMLElement | null;
     if (!target) return;
 
-    // Ensure the element can clip the ripple
     const computed = getComputedStyle(target);
     if (computed.position === 'static') target.style.position = 'relative';
     if (computed.overflow === 'visible') target.style.overflow = 'hidden';
