@@ -247,7 +247,7 @@ export default function Sidebar({ open, onClose }: Props) {
 
           {role === 'CASHIER' && (
             <>
-              <NavItem to="/pos"          icon={<ShoppingCart size={16} />} label={t('nav.pos')} />
+              <NavItem to="/pos"          icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
               <NavItem to="/customers"    icon={<Users size={16} />}        label={t('nav.customers')} />
               <NavItem to="/consignment"  icon={<Handshake size={16} />}    label={t('nav.consignment')} />
               <NavItem to="/timeclock"    icon={<Clock size={16} />}        label={t('nav.timeclock')} />
@@ -265,7 +265,7 @@ export default function Sidebar({ open, onClose }: Props) {
 
           {isOwner && (
             <>
-              <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label={t('nav.pos')} />
+              <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
               <NavItem to="/pos/debts" icon={<Clock size={16} />}        label={t('nav.debts')} />
               <NavItem to="/pos/voids" icon={<Trash2 size={16} />}       label={t('nav.voidedSales')} />
               {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (

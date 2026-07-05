@@ -544,14 +544,14 @@ export default function ProductsPage() {
           <p className="page-subtitle">{t('products.subtitle', { count: data?.total ?? 0 })}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="btn-secondary" onClick={openImport}>
+          <button className="btn-secondary hidden sm:inline-flex" onClick={openImport}>
             <Upload size={14} className="mr-1.5" /> {t('products.importCsv')}
           </button>
-          <button className="btn-secondary" onClick={() => setShowShipmentImport(true)}>
+          <button className="btn-secondary hidden sm:inline-flex" onClick={() => setShowShipmentImport(true)}>
             <Ship size={14} className="mr-1.5" /> Import Shipment
           </button>
           <button className="btn-primary" onClick={openNew}>
-            <Plus size={14} className="mr-1.5" /> {t('products.addProduct')}
+            <Plus size={14} /> <span className="hidden sm:inline">{t('products.addProduct')}</span>
           </button>
         </div>
       </div>
