@@ -21,7 +21,7 @@ export default function Layout() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F8F5F0]">
+    <div className="flex h-screen overflow-hidden" style={{ background: '#E8EBF0' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />

@@ -131,14 +131,16 @@ export default function Sidebar({ open, onClose }: Props) {
         <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={onClose} />
       )}
 
-      <aside className={`
-        fixed top-0 left-0 bottom-0 z-40 w-64 bg-white border-r border-stone-200 flex flex-col overflow-hidden
+      <aside
+        style={{ background: '#E8EBF0', boxShadow: '4px 0 20px #c5cad3, -2px 0 10px #ffffff' }}
+        className={`
+        fixed top-0 left-0 bottom-0 z-40 w-64 flex flex-col overflow-hidden
         transition-transform duration-200
         ${open ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:z-auto
       `}>
         {/* Logo */}
-        <div className="flex items-center justify-between h-14 px-4 border-b border-stone-200 flex-shrink-0">
+        <div className="flex items-center justify-between h-14 px-4 flex-shrink-0" style={{ borderBottom: '1px solid rgba(163,177,198,0.3)' }}>
           <div className="flex items-center gap-2.5">
             <svg width="26" height="26" viewBox="0 0 40 40" fill="none" aria-hidden="true">
               <rect width="40" height="40" rx="9" fill="#a66624"/>
@@ -157,12 +159,15 @@ export default function Sidebar({ open, onClose }: Props) {
         </div>
 
         {/* Shop display */}
-        <div className="px-3 py-3 border-b border-stone-100 flex-shrink-0 relative">
+        <div className="px-3 py-3 flex-shrink-0 relative" style={{ borderBottom: '1px solid rgba(163,177,198,0.2)' }}>
           {isOwner ? (
             <>
               <button
                 onClick={() => setShopPickerOpen(o => !o)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-sm hover:bg-stone-50 text-left group"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left group transition-all"
+                style={{ background: 'transparent' }}
+                onMouseEnter={e => (e.currentTarget.style.boxShadow = 'inset 2px 2px 5px #c5cad3, inset -2px -2px 5px #ffffff')}
+                onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Store size={16} className="text-primary-500 flex-shrink-0" />

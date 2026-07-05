@@ -77,7 +77,7 @@ export default function Topbar({ onMenuClick }: Props) {
   }
 
   return (
-    <header className="h-14 bg-white border-b border-stone-200 flex items-center gap-4 px-4 flex-shrink-0">
+    <header className="h-14 flex items-center gap-4 px-4 flex-shrink-0" style={{ background: '#E8EBF0', borderBottom: '1px solid rgba(163,177,198,0.25)', boxShadow: '0 3px 12px rgba(197,202,211,0.5)' }}>
       <button onClick={onMenuClick} className="lg:hidden p-1.5 text-stone-500 hover:text-stone-900">
         <Menu size={20} />
       </button>
