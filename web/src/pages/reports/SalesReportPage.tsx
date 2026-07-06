@@ -17,7 +17,7 @@ const REPORT_TABS = [
 
 interface SalesReport {
   summary: { revenue: number; transactions: number; avgTicket: number; grossProfit: number };
-  byDay: { date: string; revenue: number; txCount: number }[];
+  byDay: { date: string; revenue: number; txCount: number; grossProfit: number }[];
   byPaymentMethod: { method: string; label: string; total: number; count: number }[];
   topProducts: { name: string; revenue: number; qty: number }[];
 }
@@ -46,7 +46,7 @@ function txProfit(tx: Tx): number {
 
 // ── Expandable day row ─────────────────────────────────────────────────────
 interface DayRowProps {
-  day: { date: string; revenue: number; txCount: number };
+  day: { date: string; revenue: number; txCount: number; grossProfit: number };
   shopId: string | null;
   pmFilter?: string;
   period: 'day' | 'week' | 'month';
@@ -161,6 +161,7 @@ function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
         </td>
         <td className="font-medium">{day.txCount}</td>
         <td className="font-bold text-primary-700">{fmt(day.revenue)}</td>
+        <td className="font-semibold text-emerald-600">{fmt(day.grossProfit)}</td>
         <td className="text-stone-400 text-xs">{day.txCount > 0 ? fmt(day.revenue / day.txCount) : '—'}</td>
       </tr>
 
@@ -592,6 +593,7 @@ export default function SalesReportPage() {
                       <th>{t('reports.date')}</th>
                       <th>{t('reports.transactions')}</th>
                       <th>{t('reports.revenue')}</th>
+                      <th className="text-emerald-700">{t('reports.grossProfit')}</th>
                       <th>{t('reports.avgTicket')}</th>
                     </tr>
                   </thead>
@@ -605,6 +607,7 @@ export default function SalesReportPage() {
                       <td className="font-semibold text-stone-700 py-2 px-3">{t('common.total')}</td>
                       <td className="font-bold">{data?.summary.transactions ?? 0}</td>
                       <td className="font-bold">{fmt(data?.summary.revenue ?? 0)}</td>
+                      <td className="font-bold text-emerald-600">{fmt(data?.summary.grossProfit ?? 0)}</td>
                       <td className="font-bold">{fmt(data?.summary.avgTicket ?? 0)}</td>
                     </tr>
                   </tfoot>

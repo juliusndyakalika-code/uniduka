@@ -70,7 +70,7 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
     }, 0);
 
     // Group by period → byDay
-    const grouped: Record<string, { date: string; revenue: number; txCount: number }> = {};
+    const grouped: Record<string, { date: string; revenue: number; txCount: number; grossProfit: number }> = {};
     for (const tx of transactions) {
       const d = tx.createdAt;
       let key: string;
@@ -81,10 +81,13 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
       } else {
         key = d.toISOString().slice(0, 10);
       }
-      if (!grouped[key]) grouped[key] = { date: key, revenue: 0, txCount: 0 };
+      if (!grouped[key]) grouped[key] = { date: key, revenue: 0, txCount: 0, grossProfit: 0 };
       const txHasDebit   = tx.payments.some(p => p.method === 'DEBIT');
       const txReceived   = tx.payments.filter(p => p.method !== 'DEBIT').reduce((s, p) => s + p.amount, 0);
-      grouped[key].revenue += txHasDebit ? txReceived : tx.total;
+      const txRevenue    = txHasDebit ? txReceived : tx.total;
+      const txCost       = tx.items.reduce((cs, i) => cs + (i.product?.costPrice ?? 0) * i.quantity, 0);
+      grouped[key].revenue     += txRevenue;
+      grouped[key].grossProfit += txRevenue - txCost;
       grouped[key].txCount++;
     }
 
