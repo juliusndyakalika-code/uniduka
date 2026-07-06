@@ -10,9 +10,9 @@ import { useTranslation } from 'react-i18next';
 
 interface StaffStat {
   userId: string; fullName: string; role: string;
-  transactionCount: number; revenue: number; avgTicket: number;
+  transactionCount: number; revenue: number; avgTicket: number; grossProfit: number;
 }
-interface TxItem { name: string; quantity: number; unitPrice: number; unitLabel: string; discountPct: number; lineTotal: number; }
+interface TxItem { name: string; quantity: number; unitPrice: number; unitLabel: string; discountPct: number; lineTotal: number; costPrice: number; }
 interface Tx {
   id: string; receiptNo: string; total: number; subtotal: number; discountAmount: number;
   createdAt: string; status: string;
@@ -24,6 +24,12 @@ interface Tx {
 
 function fmt(n: number) {
   return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+}
+function txProfit(tx: Tx): number {
+  return tx.items.reduce((s, i) => {
+    const rev = i.unitPrice * (1 - i.discountPct / 100) * i.quantity;
+    return s + (rev - (i.costPrice ?? 0) * i.quantity);
+  }, 0);
 }
 
 const REPORT_TABS = [
@@ -117,6 +123,7 @@ function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
         <td><span className="badge badge-stone text-xs">{stat.role.replace(/_/g, ' ')}</span></td>
         <td className="font-medium">{stat.transactionCount}</td>
         <td className="font-medium">{fmt(stat.revenue)}</td>
+        <td className="font-semibold text-emerald-600">{fmt(stat.grossProfit)}</td>
         <td>{fmt(stat.avgTicket)}</td>
         <td>
           <div className="flex items-center gap-2">
@@ -131,7 +138,7 @@ function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
       {/* Expanded transactions */}
       {expanded && (
         <tr>
-          <td colSpan={7} className="p-0">
+          <td colSpan={8} className="p-0">
             <div className="bg-stone-50 border-t border-b border-stone-200 px-6 py-3">
               {loadingTx ? (
                 <p className="text-xs text-stone-400 py-2">{t('common.loading')}</p>
@@ -146,6 +153,7 @@ function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
                       <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.customer')}</th>
                       <th className="text-left py-1.5 pr-3 font-semibold">Items sold</th>
                       <th className="text-right py-1.5 pr-3 font-semibold">{t('common.total')}</th>
+                      <th className="text-right py-1.5 pr-3 font-semibold text-emerald-700">{t('reports.grossProfit')}</th>
                       <th className="text-right py-1.5 font-semibold">{t('reports.payment')}</th>
                       <th className="w-8"></th>
                     </tr>
@@ -187,6 +195,9 @@ function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
                         <td className="py-2 pr-3 text-right font-semibold text-stone-900">
                           {fmt(tx.total)}
                         </td>
+                        <td className="py-2 pr-3 text-right font-semibold text-emerald-600">
+                          {tx.status === 'VOIDED' ? <span className="text-stone-300">—</span> : fmt(txProfit(tx))}
+                        </td>
                         <td className="py-2 pr-3 text-right">
                           <span className="badge badge-stone">
                             {(tx.payments?.[0]?.method ?? 'CASH').replace('_', ' ')}
@@ -211,7 +222,10 @@ function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
                         {txns.length} transaction{txns.length !== 1 ? 's' : ''}
                       </td>
                       <td className="py-1.5 text-right font-bold text-stone-900">
-                        {fmt(txns.reduce((s, t) => s + (t.status !== 'VOIDED' ? t.total : 0), 0))}
+                        {fmt(txns.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + t.total, 0))}
+                      </td>
+                      <td className="py-1.5 text-right font-bold text-emerald-600">
+                        {fmt(txns.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + txProfit(t), 0))}
                       </td>
                       <td colSpan={2}></td>
                     </tr>
@@ -242,7 +256,7 @@ export default function StaffReportPage() {
   });
 
   const sorted = [...data].sort((a, b) => b.revenue - a.revenue);
-  const total  = data.reduce((s, r) => ({ tx: s.tx + r.transactionCount, rev: s.rev + r.revenue }), { tx: 0, rev: 0 });
+  const total  = data.reduce((s, r) => ({ tx: s.tx + r.transactionCount, rev: s.rev + r.revenue, profit: s.profit + r.grossProfit }), { tx: 0, rev: 0, profit: 0 });
 
   return (
     <div className="space-y-6">
@@ -277,8 +291,8 @@ export default function StaffReportPage() {
             disabled={data.length === 0}
             onClick={() => downloadCsv(
               `seller-summary-${from}-to-${to}.csv`,
-              sorted.map(s => [s.fullName, s.role.replace(/_/g, ' '), s.transactionCount, s.revenue, s.avgTicket.toFixed(0)]),
-              ['Seller', 'Role', 'Transactions', 'Revenue (TZS)', 'Avg Sale (TZS)']
+              sorted.map(s => [s.fullName, s.role.replace(/_/g, ' '), s.transactionCount, s.revenue, s.grossProfit.toFixed(0), s.avgTicket.toFixed(0)]),
+              ['Seller', 'Role', 'Transactions', 'Revenue (TZS)', 'Gross Profit (TZS)', 'Avg Sale (TZS)']
             )}
           >
             <Download size={13} className="mr-1" /> {t('reports.exportCsv')}
@@ -317,10 +331,11 @@ export default function StaffReportPage() {
 
       {/* Summary cards */}
       {!isLoading && data.length > 0 && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="card p-4"><p className="stat-value">{data.length}</p><p className="stat-label">Active sellers</p></div>
           <div className="card p-4"><p className="stat-value">{total.tx}</p><p className="stat-label">Total transactions</p></div>
           <div className="card p-4"><p className="stat-value">{fmt(total.rev)}</p><p className="stat-label">Total revenue</p></div>
+          <div className="card p-4"><p className="stat-value text-emerald-600">{fmt(total.profit)}</p><p className="stat-label">Total profit</p></div>
         </div>
       )}
 
@@ -343,6 +358,7 @@ export default function StaffReportPage() {
                   <th>Role</th>
                   <th>{t('reports.transactions')}</th>
                   <th>{t('reports.revenue')}</th>
+                  <th className="text-emerald-700">{t('reports.grossProfit')}</th>
                   <th>{t('reports.avgTicket')}</th>
                   <th>Share %</th>
                 </tr>
@@ -360,7 +376,7 @@ export default function StaffReportPage() {
                   />
                 ))}
                 {data.length === 0 && (
-                  <tr><td colSpan={7} className="text-center text-stone-400 py-10">{t('reports.noSales')}</td></tr>
+                  <tr><td colSpan={8} className="text-center text-stone-400 py-10">{t('reports.noSales')}</td></tr>
                 )}
               </tbody>
               {sorted.length > 1 && (
@@ -369,6 +385,7 @@ export default function StaffReportPage() {
                     <td colSpan={3} className="font-semibold text-stone-700 py-2 px-3">{t('common.total')}</td>
                     <td className="font-bold">{total.tx}</td>
                     <td className="font-bold">{fmt(total.rev)}</td>
+                    <td className="font-bold text-emerald-600">{fmt(total.profit)}</td>
                     <td className="font-bold">{total.tx > 0 ? fmt(total.rev / total.tx) : '—'}</td>
                     <td className="font-bold">100%</td>
                   </tr>

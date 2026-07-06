@@ -178,25 +178,37 @@ export async function inventoryReport(req: AuthRequest, res: Response) {
 
 export async function staffReport(req: AuthRequest, res: Response) {
   const range = dateRange(req);
-  const byStaff = await prisma.transaction.groupBy({
-    by: ['cashierId'],
+  const transactions = await prisma.transaction.findMany({
     where: { shopId: shop(req), status: 'COMPLETED', createdAt: range },
-    _sum: { total: true },
-    _count: { id: true },
+    include: {
+      items: { include: { product: { select: { costPrice: true } } } },
+      cashier: { select: { id: true, fullName: true, role: true } },
+    },
   });
-  const staffIds = byStaff.map(s => s.cashierId);
-  const users = await prisma.user.findMany({ where: { id: { in: staffIds } }, select: { id: true, fullName: true, role: true } });
-  const result = byStaff.map(s => {
-    const u = users.find(u => u.id === s.cashierId);
-    return {
-      userId: s.cashierId,
-      fullName: u?.fullName || 'Unknown',
-      role: u?.role || 'CASHIER',
-      transactionCount: s._count.id,
-      revenue: s._sum.total ?? 0,
-      avgTicket: s._count.id > 0 ? (s._sum.total ?? 0) / s._count.id : 0,
-    };
-  });
+
+  const map: Record<string, { userId: string; fullName: string; role: string; transactionCount: number; revenue: number; grossProfit: number }> = {};
+  for (const tx of transactions) {
+    const id = tx.cashierId;
+    if (!map[id]) {
+      map[id] = {
+        userId: id,
+        fullName: tx.cashier?.fullName ?? 'Unknown',
+        role: (tx.cashier?.role as string) ?? 'CASHIER',
+        transactionCount: 0,
+        revenue: 0,
+        grossProfit: 0,
+      };
+    }
+    const cost = tx.items.reduce((s, i) => s + (i.product?.costPrice ?? 0) * i.quantity, 0);
+    map[id].transactionCount++;
+    map[id].revenue      += tx.total;
+    map[id].grossProfit  += tx.total - cost;
+  }
+
+  const result = Object.values(map).map(s => ({
+    ...s,
+    avgTicket: s.transactionCount > 0 ? s.revenue / s.transactionCount : 0,
+  }));
   return R.ok(res, result);
 }
 
