@@ -78,11 +78,26 @@ export async function listTransactions(req: AuthRequest, res: Response) {
       ...(search        && { receiptNo: { contains: search, mode: 'insensitive' as never } }),
       ...(paymentMethod && { payments: { some: { method: paymentMethod as never } } }),
     },
-    include: { items: true, payments: true, customer: { select: { fullName: true } } },
+    include: {
+      items: { include: { product: { select: { costPrice: true } } } },
+      payments: true,
+      customer: { select: { fullName: true } },
+      cashier: { select: { fullName: true } },
+    },
     orderBy: { createdAt: 'desc' },
     skip, take: Number(limit),
   });
-  return R.ok(res, transactions);
+  const result = transactions.map(tx => ({
+    ...tx,
+    cashierName: tx.cashier?.fullName ?? null,
+    items: tx.items.map(i => ({
+      ...i,
+      costPrice: i.product?.costPrice ?? 0,
+      product: undefined,
+    })),
+    cashier: undefined,
+  }));
+  return R.ok(res, result);
 }
 
 export async function getTransaction(req: AuthRequest, res: Response) {

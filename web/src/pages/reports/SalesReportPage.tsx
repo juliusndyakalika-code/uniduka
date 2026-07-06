@@ -21,7 +21,7 @@ interface SalesReport {
   byPaymentMethod: { method: string; label: string; total: number; count: number }[];
   topProducts: { name: string; revenue: number; qty: number }[];
 }
-interface TxItem { name: string; quantity: number; unitPrice: number; unitLabel: string; discountPct: number; lineTotal: number; }
+interface TxItem { name: string; quantity: number; unitPrice: number; unitLabel: string; discountPct: number; lineTotal: number; costPrice: number; }
 interface Tx {
   id: string; receiptNo: string; total: number; subtotal: number; discountAmount: number;
   createdAt: string; status: string;
@@ -35,6 +35,13 @@ interface Tx {
 const PIE_COLORS = ['#a66624', '#14b8a6', '#3b82f6', '#f59e0b', '#6b7280'];
 function fmt(n: number) {
   return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+}
+function txProfit(tx: Tx): number {
+  return tx.items.reduce((s, i) => {
+    const revenue = i.unitPrice * (1 - i.discountPct / 100) * i.quantity;
+    const cost    = (i.costPrice ?? 0) * i.quantity;
+    return s + (revenue - cost);
+  }, 0);
 }
 
 // ── Expandable day row ─────────────────────────────────────────────────────
@@ -193,6 +200,7 @@ function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
                       <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.cashier')}</th>
                       <th className="text-left py-1.5 pr-3 font-semibold">Items</th>
                       <th className="text-right py-1.5 pr-3 font-semibold">{t('common.total')}</th>
+                      <th className="text-right py-1.5 pr-3 font-semibold text-emerald-700">{t('reports.grossProfit')}</th>
                       <th className="text-right py-1.5 font-semibold">{t('reports.payment')}</th>
                       <th className="w-16 text-right py-1.5 font-semibold">{t('common.actions')}</th>
                     </tr>
@@ -235,6 +243,9 @@ function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
                             </div>
                           </td>
                           <td className="py-2 pr-3 text-right font-semibold text-stone-900">{fmt(tx.total)}</td>
+                          <td className="py-2 pr-3 text-right font-semibold text-emerald-600">
+                            {tx.status === 'VOIDED' ? <span className="text-stone-300">—</span> : fmt(txProfit(tx))}
+                          </td>
                           <td className="py-2 pr-3 text-right">
                             <span className="badge badge-stone">
                               {(tx.payments?.[0]?.method ?? 'CASH').replace('_', ' ')}
@@ -277,6 +288,9 @@ function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
                       </td>
                       <td className="py-1.5 text-right font-bold text-stone-900">
                         {fmt(txns.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + t.total, 0))}
+                      </td>
+                      <td className="py-1.5 text-right font-bold text-emerald-600">
+                        {fmt(txns.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + txProfit(t), 0))}
                       </td>
                       <td colSpan={2}></td>
                     </tr>
@@ -377,6 +391,8 @@ export default function SalesReportPage() {
               const rows: (string | number | null)[][] = [];
               for (const tx of txns) {
                 for (const it of tx.items) {
+                  const itemCost  = (it.costPrice ?? 0) * it.quantity;
+                  const itemRevenue = it.unitPrice * (1 - it.discountPct / 100) * it.quantity;
                   rows.push([
                     tx.receiptNo,
                     new Date(tx.createdAt).toLocaleString('en-TZ'),
@@ -388,14 +404,18 @@ export default function SalesReportPage() {
                     it.unitPrice,
                     it.discountPct,
                     it.lineTotal,
+                    it.costPrice ?? 0,
+                    itemCost,
+                    (itemRevenue - itemCost).toFixed(0),
                     tx.total,
+                    txProfit(tx).toFixed(0),
                     tx.payments?.[0]?.method ?? '',
                     tx.status,
                   ]);
                 }
               }
               downloadCsv(`sales-transactions-${from}-to-${to}.csv`, rows,
-                ['Receipt No', 'Date & Time', 'Customer', 'Cashier', 'Product', 'Qty', 'Unit', 'Unit Price', 'Discount %', 'Line Total', 'Tx Total', 'Payment', 'Status']
+                ['Receipt No', 'Date & Time', 'Customer', 'Cashier', 'Product', 'Qty', 'Unit', 'Unit Price', 'Discount %', 'Line Total', 'Cost Price', 'Total Cost', 'Line Profit', 'Tx Total', 'Tx Profit', 'Payment', 'Status']
               );
             }}
           >
