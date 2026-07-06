@@ -62,11 +62,8 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
     const txCount   = transactions.length;
     const avgTicket = txCount > 0 ? revenue / txCount : 0;
     const grossProfit = transactions.reduce((s, t) => {
-      const hasDebit  = t.payments.some(p => p.method === 'DEBIT');
-      const received  = t.payments.filter(p => p.method !== 'DEBIT').reduce((ps, p) => ps + p.amount, 0);
-      const txRevenue = hasDebit ? received : t.total;
-      const cost      = t.items.reduce((cs, i) => cs + (i.product?.costPrice ?? 0) * i.quantity, 0);
-      return s + txRevenue - cost;
+      const cost = t.items.reduce((cs, i) => cs + (i.product?.costPrice ?? 0) * i.quantity, 0);
+      return s + t.total - cost; // use full sale total — debt means payment is pending, not that goods weren't sold
     }, 0);
 
     // Group by period → byDay
@@ -82,12 +79,11 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
         key = d.toISOString().slice(0, 10);
       }
       if (!grouped[key]) grouped[key] = { date: key, revenue: 0, txCount: 0, grossProfit: 0 };
-      const txHasDebit   = tx.payments.some(p => p.method === 'DEBIT');
-      const txReceived   = tx.payments.filter(p => p.method !== 'DEBIT').reduce((s, p) => s + p.amount, 0);
-      const txRevenue    = txHasDebit ? txReceived : tx.total;
-      const txCost       = tx.items.reduce((cs, i) => cs + (i.product?.costPrice ?? 0) * i.quantity, 0);
-      grouped[key].revenue     += txRevenue;
-      grouped[key].grossProfit += txRevenue - txCost;
+      const txHasDebit = tx.payments.some(p => p.method === 'DEBIT');
+      const txReceived = tx.payments.filter(p => p.method !== 'DEBIT').reduce((s, p) => s + p.amount, 0);
+      const txCost     = tx.items.reduce((cs, i) => cs + (i.product?.costPrice ?? 0) * i.quantity, 0);
+      grouped[key].revenue     += txHasDebit ? txReceived : tx.total; // cash received
+      grouped[key].grossProfit += tx.total - txCost;                  // profit on all goods sold
       grouped[key].txCount++;
     }
 
