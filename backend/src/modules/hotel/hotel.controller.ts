@@ -82,9 +82,27 @@ export async function listFolios(req: AuthRequest, res: Response) {
 
 export async function checkIn(req: AuthRequest, res: Response) {
   const { roomId, guestName, guestEmail, guestId, guestPhone, nights } = req.body;
-  const room = await prisma.room.findFirst({ where: { id: roomId, shopId: shop(req) } });
+  const room = await prisma.room.findFirst({ where: { id: roomId, shopId: shop(req) }, include: { reservation: true } });
   if (!room) return R.notFound(res, 'Room not found');
   if (room.status !== 'AVAILABLE') return R.badRequest(res, 'Room is not available');
+
+  const n = Number(nights) || 1;
+
+  // Guard against check-in that overlaps an existing reservation
+  if (room.reservation) {
+    const todayUTC = new Date(); todayUTC.setUTCHours(0, 0, 0, 0);
+    const reservedUTC = new Date(room.reservation.checkInDate); reservedUTC.setUTCHours(0, 0, 0, 0);
+    const checkOutUTC = new Date(todayUTC); checkOutUTC.setUTCDate(checkOutUTC.getUTCDate() + n);
+    if (checkOutUTC > reservedUTC) {
+      const maxNights = Math.round((reservedUTC.getTime() - todayUTC.getTime()) / 86_400_000);
+      const reservedStr = reservedUTC.toISOString().split('T')[0];
+      return R.badRequest(res,
+        maxNights > 0
+          ? `Room is reserved from ${reservedStr}. Max ${maxNights} night${maxNights !== 1 ? 's' : ''} available.`
+          : `Room is reserved starting today (${reservedStr}) and cannot be checked in.`
+      );
+    }
+  }
 
   // Create or find guest as a Customer record so they appear in the Guests page
   let customerId: string | undefined;
@@ -123,7 +141,6 @@ export async function checkIn(req: AuthRequest, res: Response) {
   const receptionist = await prisma.user.findUnique({ where: { id: req.user!.sub }, select: { fullName: true } }).catch(() => null);
   const checkedInByName = receptionist?.fullName ?? 'Unknown';
 
-  const n = Number(nights) || 1;
   const roomTotal = room.ratePerNight * n;
   const folio = await prisma.roomFolio.create({
     data: {

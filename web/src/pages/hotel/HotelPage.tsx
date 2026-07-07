@@ -537,45 +537,67 @@ export default function HotelPage() {
       )}
 
       {/* Check-in modal */}
-      {showCheckIn && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card w-full max-w-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-stone-900">{t('hotel.checkIn')} — Room #{showCheckIn.roomNo}</h3>
-              <button onClick={() => { setShowCheckIn(null); resetCI(); }} className="text-stone-400"><X size={18} /></button>
+      {showCheckIn && (() => {
+        const todayMs = new Date().setHours(0, 0, 0, 0);
+        const resDate = showCheckIn.reservation ? new Date(showCheckIn.reservation.checkInDate) : null;
+        if (resDate) resDate.setHours(0, 0, 0, 0);
+        const maxNights = resDate ? Math.round((resDate.getTime() - todayMs) / 86_400_000) : undefined;
+        return (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="card w-full max-w-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-stone-900">{t('hotel.checkIn')} — Room #{showCheckIn.roomNo}</h3>
+                <button onClick={() => { setShowCheckIn(null); resetCI(); }} className="text-stone-400"><X size={18} /></button>
+              </div>
+              <p className="text-xs text-stone-500 mb-3">{showCheckIn.roomType} · {fmt(showCheckIn.ratePerNight)}/night</p>
+              {maxNights !== undefined && (
+                <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                  Reserved for <strong>{showCheckIn.reservation!.guestName}</strong> from <strong>{format(resDate!, 'MMM d')}</strong>.
+                  {maxNights > 0
+                    ? ` Max ${maxNights} night${maxNights !== 1 ? 's' : ''} for a walk-in today.`
+                    : ' Room is reserved starting today — walk-in check-in not available.'}
+                </div>
+              )}
+              {(maxNights === undefined || maxNights > 0) && (
+                <form onSubmit={hsCI(d => doCheckIn({ roomId: showCheckIn.id, guestName: d.guestName, guestEmail: d.guestEmail || undefined, guestId: d.guestId || undefined, guestPhone: d.guestPhone || undefined, nights: Number(d.nights) || 1 }))} className="space-y-3">
+                  <div>
+                    <label className="label">{t('hotel.guest')} *</label>
+                    <input {...rCI('guestName', { required: true })} className="input w-full" placeholder="Full name" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">ID Number</label>
+                      <input {...rCI('guestId')} className="input w-full" placeholder="National ID / Passport" />
+                    </div>
+                    <div>
+                      <label className="label">Phone</label>
+                      <input {...rCI('guestPhone')} type="tel" className="input w-full" placeholder="+255…" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Email</label>
+                    <input {...rCI('guestEmail')} type="email" className="input w-full" placeholder="Optional" />
+                  </div>
+                  <div>
+                    <label className="label">
+                      Number of Nights
+                      {maxNights !== undefined && <span className="ml-1 text-amber-600">(max {maxNights})</span>}
+                    </label>
+                    <input {...rCI('nights')} type="number" min="1" max={maxNights} className="input w-full" defaultValue="1" />
+                  </div>
+                  <div className="flex gap-3 pt-1">
+                    <button type="button" className="btn-secondary flex-1" onClick={() => { setShowCheckIn(null); resetCI(); }}>{t('common.cancel')}</button>
+                    <button type="submit" className="btn-primary flex-1" disabled={checkingIn}>{checkingIn ? t('common.saving') : t('hotel.checkIn')}</button>
+                  </div>
+                </form>
+              )}
+              {maxNights === 0 && (
+                <button className="btn-secondary w-full mt-2" onClick={() => { setShowCheckIn(null); resetCI(); }}>Close</button>
+              )}
             </div>
-            <p className="text-xs text-stone-500 mb-4">{showCheckIn.roomType} · {fmt(showCheckIn.ratePerNight)}/night</p>
-            <form onSubmit={hsCI(d => doCheckIn({ roomId: showCheckIn.id, guestName: d.guestName, guestEmail: d.guestEmail || undefined, guestId: d.guestId || undefined, guestPhone: d.guestPhone || undefined, nights: Number(d.nights) || 1 }))} className="space-y-3">
-              <div>
-                <label className="label">{t('hotel.guest')} *</label>
-                <input {...rCI('guestName', { required: true })} className="input w-full" placeholder="Full name" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">ID Number</label>
-                  <input {...rCI('guestId')} className="input w-full" placeholder="National ID / Passport" />
-                </div>
-                <div>
-                  <label className="label">Phone</label>
-                  <input {...rCI('guestPhone')} type="tel" className="input w-full" placeholder="+255…" />
-                </div>
-              </div>
-              <div>
-                <label className="label">Email</label>
-                <input {...rCI('guestEmail')} type="email" className="input w-full" placeholder="Optional" />
-              </div>
-              <div>
-                <label className="label">Number of Nights</label>
-                <input {...rCI('nights')} type="number" min="1" className="input w-full" defaultValue="1" />
-              </div>
-              <div className="flex gap-3 pt-1">
-                <button type="button" className="btn-secondary flex-1" onClick={() => { setShowCheckIn(null); resetCI(); }}>{t('common.cancel')}</button>
-                <button type="submit" className="btn-primary flex-1" disabled={checkingIn}>{checkingIn ? t('common.saving') : t('hotel.checkIn')}</button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Folio detail modal */}
       {showFolio && (
