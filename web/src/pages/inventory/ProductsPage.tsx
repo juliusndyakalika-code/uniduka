@@ -647,13 +647,13 @@ export default function ProductsPage() {
                           <ArrowUpDown size={13} />
                         </button>
 
-                        {/* Edit — locked if product has been sold */}
-                        {p.inUse ? (
+                        {/* Edit — owners can always edit; others locked once product has sales */}
+                        {p.inUse && !isOwner ? (
                           <span className="p-1.5 text-stone-300 cursor-not-allowed" title="Cannot edit — product has sales history">
                             <Lock size={13} />
                           </span>
                         ) : (
-                          <button onClick={() => openEdit(p)} className="p-1.5 rounded hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors" title="Edit">
+                          <button onClick={() => openEdit(p)} className="p-1.5 rounded hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors" title={p.inUse ? 'Edit product (owner override)' : 'Edit'}>
                             <Edit2 size={13} />
                           </button>
                         )}
