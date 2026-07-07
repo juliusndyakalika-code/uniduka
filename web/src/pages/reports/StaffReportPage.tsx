@@ -21,6 +21,12 @@ interface Tx {
   customer?: { fullName: string } | null;
   customerName?: string;
 }
+interface HotelFolio {
+  id: string; guestName: string; guestPhone?: string;
+  checkIn: string; checkOut?: string; nights: number;
+  grandTotal: number; isPaid: boolean; paymentMethod?: string;
+  room?: { roomNo: string; roomType: string };
+}
 
 function fmt(n: number) {
   return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
@@ -45,21 +51,35 @@ interface SellerRowProps {
   from: string;
   to: string;
   shopId: string | null;
+  isHotel: boolean;
 }
 
-function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
+function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [loadingPrint, setLoadingPrint] = useState<string | null>(null);
 
+  // POS: transactions per cashier
   const { data: txns = [], isLoading: loadingTx } = useQuery<Tx[]>({
     queryKey: ['seller-txns', shopId, stat.userId, from, to],
     queryFn: () =>
       api.get('/pos/transactions', { params: { cashierId: stat.userId, from, to, limit: 100 } })
          .then(r => r.data.data as Tx[]),
-    enabled: expanded && !!shopId,
+    enabled: expanded && !!shopId && !isHotel,
     staleTime: 60_000,
   });
+
+  // Hotel: folios per receptionist
+  const { data: folios = [], isLoading: loadingFolios } = useQuery<HotelFolio[]>({
+    queryKey: ['receptionist-folios', shopId, stat.userId, from, to],
+    queryFn: () =>
+      api.get('/hotel/folios', { params: { checkedInBy: stat.userId, from, to } })
+         .then(r => r.data.data as HotelFolio[]),
+    enabled: expanded && !!shopId && isHotel,
+    staleTime: 60_000,
+  });
+
+  const isLoading = isHotel ? loadingFolios : loadingTx;
 
   const handlePrint = async (txId: string) => {
     setLoadingPrint(txId);
@@ -103,11 +123,7 @@ function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
 
   return (
     <>
-      {/* Summary row */}
-      <tr
-        className="cursor-pointer hover:bg-stone-50 transition-colors"
-        onClick={() => setExpanded(v => !v)}
-      >
+      <tr className="cursor-pointer hover:bg-stone-50 transition-colors" onClick={() => setExpanded(v => !v)}>
         <td className="text-stone-400 text-xs">{rank}</td>
         <td>
           <div className="flex items-center gap-2">
@@ -120,10 +136,10 @@ function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
             <span className="font-medium text-stone-900">{stat.fullName}</span>
           </div>
         </td>
-        <td><span className="badge badge-stone text-xs">{stat.role.replace(/_/g, ' ')}</span></td>
+        {!isHotel && <td><span className="badge badge-stone text-xs">{stat.role.replace(/_/g, ' ')}</span></td>}
         <td className="font-medium">{stat.transactionCount}</td>
         <td className="font-medium">{fmt(stat.revenue)}</td>
-        <td className="font-semibold text-emerald-600">{fmt(stat.grossProfit)}</td>
+        {!isHotel && <td className="font-semibold text-emerald-600">{fmt(stat.grossProfit)}</td>}
         <td>{fmt(stat.avgTicket)}</td>
         <td>
           <div className="flex items-center gap-2">
@@ -135,102 +151,131 @@ function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
         </td>
       </tr>
 
-      {/* Expanded transactions */}
       {expanded && (
         <tr>
-          <td colSpan={8} className="p-0">
+          <td colSpan={isHotel ? 6 : 8} className="p-0">
             <div className="bg-stone-50 border-t border-b border-stone-200 px-6 py-3">
-              {loadingTx ? (
+              {isLoading ? (
                 <p className="text-xs text-stone-400 py-2">{t('common.loading')}</p>
-              ) : txns.length === 0 ? (
-                <p className="text-xs text-stone-400 py-2">{t('reports.noSales')}</p>
-              ) : (
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="text-stone-500 border-b border-stone-200">
-                      <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.receipt')}</th>
-                      <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.date')}</th>
-                      <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.customer')}</th>
-                      <th className="text-left py-1.5 pr-3 font-semibold">Items sold</th>
-                      <th className="text-right py-1.5 pr-3 font-semibold">{t('common.total')}</th>
-                      <th className="text-right py-1.5 pr-3 font-semibold text-emerald-700">{t('reports.grossProfit')}</th>
-                      <th className="text-right py-1.5 font-semibold">{t('reports.payment')}</th>
-                      <th className="w-8"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {txns.map(tx => (
-                      <tr key={tx.id} className={`border-b border-stone-100 last:border-0 ${tx.status === 'VOIDED' ? 'opacity-50' : ''}`}>
-                        <td className="py-2 pr-3 font-mono text-stone-700">
-                          {tx.receiptNo}
-                          {tx.status === 'VOIDED' && (
-                            <span className="ml-1 text-[10px] bg-red-100 text-red-600 rounded px-1">VOID</span>
-                          )}
-                        </td>
-                        <td className="py-2 pr-3 text-stone-500 whitespace-nowrap">
-                          {new Date(tx.createdAt).toLocaleString('en-TZ', {
-                            day: '2-digit', month: 'short',
-                            hour: '2-digit', minute: '2-digit',
-                          })}
-                        </td>
-                        <td className="py-2 pr-3 text-stone-600">
-                          {tx.customer?.fullName ?? tx.customerName ?? <span className="text-stone-300">Walk-in</span>}
-                        </td>
-                        <td className="py-2 pr-3">
-                          <div className="space-y-0.5">
-                            {tx.items.slice(0, 3).map((it, i) => (
-                              <div key={i} className="text-stone-600">
-                                {it.name}
-                                <span className="text-stone-400 ml-1">×{it.quantity} {it.unitLabel}</span>
-                                {it.discountPct > 0 && (
-                                  <span className="text-amber-600 ml-1">(-{it.discountPct}%)</span>
-                                )}
-                              </div>
-                            ))}
-                            {tx.items.length > 3 && (
-                              <span className="text-stone-400">+{tx.items.length - 3} more</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-2 pr-3 text-right font-semibold text-stone-900">
-                          {fmt(tx.total)}
-                        </td>
-                        <td className="py-2 pr-3 text-right font-semibold text-emerald-600">
-                          {tx.status === 'VOIDED' ? <span className="text-stone-300">—</span> : fmt(txProfit(tx))}
-                        </td>
-                        <td className="py-2 pr-3 text-right">
-                          <span className="badge badge-stone">
-                            {(tx.payments?.[0]?.method ?? 'CASH').replace('_', ' ')}
-                          </span>
-                        </td>
-                        <td className="py-2 text-right">
-                          <button
-                            onClick={e => { e.stopPropagation(); handlePrint(tx.id); }}
-                            disabled={loadingPrint === tx.id}
-                            className="p-1 rounded text-stone-400 hover:text-primary-600 hover:bg-primary-50"
-                            title="Reprint receipt"
-                          >
-                            {loadingPrint === tx.id ? '…' : <Printer size={12} />}
-                          </button>
-                        </td>
+              ) : isHotel ? (
+                /* ── Hotel: folio list ── */
+                folios.length === 0 ? (
+                  <p className="text-xs text-stone-400 py-2">No check-ins found for this period</p>
+                ) : (
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="text-stone-500 border-b border-stone-200">
+                        <th className="text-left py-1.5 pr-3 font-semibold">Guest</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold">Room</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold">Check-in</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold">Nights</th>
+                        <th className="text-right py-1.5 pr-3 font-semibold">Total</th>
+                        <th className="text-left py-1.5 font-semibold">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t border-stone-200 bg-white">
-                      <td colSpan={4} className="py-1.5 text-stone-500 font-semibold">
-                        {txns.length} transaction{txns.length !== 1 ? 's' : ''}
-                      </td>
-                      <td className="py-1.5 text-right font-bold text-stone-900">
-                        {fmt(txns.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + t.total, 0))}
-                      </td>
-                      <td className="py-1.5 text-right font-bold text-emerald-600">
-                        {fmt(txns.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + txProfit(t), 0))}
-                      </td>
-                      <td colSpan={2}></td>
-                    </tr>
-                  </tfoot>
-                </table>
+                    </thead>
+                    <tbody>
+                      {folios.map(f => (
+                        <tr key={f.id} className="border-b border-stone-100 last:border-0">
+                          <td className="py-1.5 pr-3 font-medium text-stone-800">{f.guestName}</td>
+                          <td className="py-1.5 pr-3 text-stone-600">#{f.room?.roomNo} {f.room?.roomType}</td>
+                          <td className="py-1.5 pr-3 text-stone-500 whitespace-nowrap">
+                            {new Date(f.checkIn).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short' })}
+                          </td>
+                          <td className="py-1.5 pr-3 text-stone-600">{f.nights}</td>
+                          <td className="py-1.5 pr-3 text-right font-semibold text-stone-900">{fmt(f.grandTotal)}</td>
+                          <td className="py-1.5">
+                            {f.checkOut
+                              ? <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${f.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{f.isPaid ? 'Paid' : 'Debt'}</span>
+                              : <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">Active</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-stone-300">
+                        <td colSpan={4} className="py-1.5 font-semibold text-stone-600">
+                          {folios.length} check-in{folios.length !== 1 ? 's' : ''}
+                        </td>
+                        <td className="py-1.5 text-right font-bold text-stone-900">{fmt(folios.reduce((s, f) => s + f.grandTotal, 0))}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                )
+              ) : (
+                /* ── POS: transaction list ── */
+                txns.length === 0 ? (
+                  <p className="text-xs text-stone-400 py-2">{t('reports.noSales')}</p>
+                ) : (
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="text-stone-500 border-b border-stone-200">
+                        <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.receipt')}</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.date')}</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.customer')}</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold">Items sold</th>
+                        <th className="text-right py-1.5 pr-3 font-semibold">{t('common.total')}</th>
+                        <th className="text-right py-1.5 pr-3 font-semibold text-emerald-700">{t('reports.grossProfit')}</th>
+                        <th className="text-right py-1.5 font-semibold">{t('reports.payment')}</th>
+                        <th className="w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {txns.map(tx => (
+                        <tr key={tx.id} className={`border-b border-stone-100 last:border-0 ${tx.status === 'VOIDED' ? 'opacity-50' : ''}`}>
+                          <td className="py-2 pr-3 font-mono text-stone-700">
+                            {tx.receiptNo}
+                            {tx.status === 'VOIDED' && <span className="ml-1 text-[10px] bg-red-100 text-red-600 rounded px-1">VOID</span>}
+                          </td>
+                          <td className="py-2 pr-3 text-stone-500 whitespace-nowrap">
+                            {new Date(tx.createdAt).toLocaleString('en-TZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td className="py-2 pr-3 text-stone-600">
+                            {tx.customer?.fullName ?? tx.customerName ?? <span className="text-stone-300">Walk-in</span>}
+                          </td>
+                          <td className="py-2 pr-3">
+                            <div className="space-y-0.5">
+                              {tx.items.slice(0, 3).map((it, i) => (
+                                <div key={i} className="text-stone-600">
+                                  {it.name}<span className="text-stone-400 ml-1">×{it.quantity} {it.unitLabel}</span>
+                                  {it.discountPct > 0 && <span className="text-amber-600 ml-1">(-{it.discountPct}%)</span>}
+                                </div>
+                              ))}
+                              {tx.items.length > 3 && <span className="text-stone-400">+{tx.items.length - 3} more</span>}
+                            </div>
+                          </td>
+                          <td className="py-2 pr-3 text-right font-semibold text-stone-900">{fmt(tx.total)}</td>
+                          <td className="py-2 pr-3 text-right font-semibold text-emerald-600">
+                            {tx.status === 'VOIDED' ? <span className="text-stone-300">—</span> : fmt(txProfit(tx))}
+                          </td>
+                          <td className="py-2 pr-3 text-right">
+                            <span className="badge badge-stone">{(tx.payments?.[0]?.method ?? 'CASH').replace('_', ' ')}</span>
+                          </td>
+                          <td className="py-2 text-right">
+                            <button onClick={e => { e.stopPropagation(); handlePrint(tx.id); }} disabled={loadingPrint === tx.id}
+                              className="p-1 rounded text-stone-400 hover:text-primary-600 hover:bg-primary-50" title="Reprint receipt">
+                              {loadingPrint === tx.id ? '…' : <Printer size={12} />}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-stone-200 bg-white">
+                        <td colSpan={4} className="py-1.5 text-stone-500 font-semibold">
+                          {txns.length} transaction{txns.length !== 1 ? 's' : ''}
+                        </td>
+                        <td className="py-1.5 text-right font-bold text-stone-900">
+                          {fmt(txns.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + t.total, 0))}
+                        </td>
+                        <td className="py-1.5 text-right font-bold text-emerald-600">
+                          {fmt(txns.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + txProfit(t), 0))}
+                        </td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                )
               )}
             </div>
           </td>
@@ -277,7 +322,8 @@ export default function StaffReportPage() {
               location.pathname === tabTo ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'
             }`}
           >
-            <Icon size={13} />{label}
+            <Icon size={13} />
+            {isHotel && label === 'By Seller' ? 'By Receptionist' : label}
           </Link>
         ))}
       </div>
@@ -344,7 +390,7 @@ export default function StaffReportPage() {
       {/* Table */}
       <div className="card">
         <div className="px-5 py-3 border-b border-stone-100">
-          <p className="text-xs text-stone-400">Click a row to expand and see individual sales</p>
+          <p className="text-xs text-stone-400">Click a row to expand and see {isHotel ? 'individual check-ins' : 'individual sales'}</p>
         </div>
         {isLoading ? (
           <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
@@ -356,12 +402,12 @@ export default function StaffReportPage() {
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>{t('reports.staffName')}</th>
-                  <th>Role</th>
-                  <th>{t('reports.transactions')}</th>
+                  <th>{isHotel ? 'Receptionist' : t('reports.staffName')}</th>
+                  {!isHotel && <th>Role</th>}
+                  <th>{isHotel ? 'Check-ins' : t('reports.transactions')}</th>
                   <th>{t('reports.revenue')}</th>
-                  <th className="text-emerald-700">{t('reports.grossProfit')}</th>
-                  <th>{t('reports.avgTicket')}</th>
+                  {!isHotel && <th className="text-emerald-700">{t('reports.grossProfit')}</th>}
+                  <th>{isHotel ? 'Avg Stay' : t('reports.avgTicket')}</th>
                   <th>Share %</th>
                 </tr>
               </thead>
@@ -375,19 +421,20 @@ export default function StaffReportPage() {
                     from={from}
                     to={to}
                     shopId={shopId}
+                    isHotel={isHotel}
                   />
                 ))}
                 {data.length === 0 && (
-                  <tr><td colSpan={8} className="text-center text-stone-400 py-10">{t('reports.noSales')}</td></tr>
+                  <tr><td colSpan={isHotel ? 6 : 8} className="text-center text-stone-400 py-10">{t('reports.noSales')}</td></tr>
                 )}
               </tbody>
               {sorted.length > 1 && (
                 <tfoot>
                   <tr className="border-t-2 border-stone-200 bg-stone-50">
-                    <td colSpan={3} className="font-semibold text-stone-700 py-2 px-3">{t('common.total')}</td>
+                    <td colSpan={isHotel ? 2 : 3} className="font-semibold text-stone-700 py-2 px-3">{t('common.total')}</td>
                     <td className="font-bold">{total.tx}</td>
                     <td className="font-bold">{fmt(total.rev)}</td>
-                    <td className="font-bold text-emerald-600">{fmt(total.profit)}</td>
+                    {!isHotel && <td className="font-bold text-emerald-600">{fmt(total.profit)}</td>}
                     <td className="font-bold">{total.tx > 0 ? fmt(total.rev / total.tx) : '—'}</td>
                     <td className="font-bold">100%</td>
                   </tr>

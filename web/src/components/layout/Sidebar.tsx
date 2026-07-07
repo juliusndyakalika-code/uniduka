@@ -247,8 +247,10 @@ export default function Sidebar({ open, onClose }: Props) {
 
           {role === 'CASHIER' && (
             <>
-              <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
-              <NavItem to="/customers" icon={<Users size={16} />}        label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'Guests' : t('nav.customers')} />
+              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
+                <NavItem to="/pos" icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
+              )}
+              <NavItem to="/customers" icon={<Users size={16} />} label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'Guests' : t('nav.customers')} />
               {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
                 <NavItem to="/consignment" icon={<Handshake size={16} />} label={t('nav.consignment')} />
               )}
@@ -267,9 +269,13 @@ export default function Sidebar({ open, onClose }: Props) {
 
           {isOwner && (
             <>
-              <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
-              <NavItem to="/pos/debts" icon={<Clock size={16} />}        label={t('nav.debts')} />
-              <NavItem to="/pos/voids" icon={<Trash2 size={16} />}       label={t('nav.voidedSales')} />
+              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
+                <>
+                  <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
+                  <NavItem to="/pos/debts" icon={<Clock size={16} />}        label={t('nav.debts')} />
+                  <NavItem to="/pos/voids" icon={<Trash2 size={16} />}       label={t('nav.voidedSales')} />
+                </>
+              )}
               {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
                 <NavItem to="/kds" icon={<ChefHat size={16} />} label={t('nav.kitchenDisplay')} />
               )}
@@ -298,9 +304,11 @@ export default function Sidebar({ open, onClose }: Props) {
                 <NavItem to="/appointments" icon={<Calendar size={16} />}  label={t('nav.appointments')} />
               )}
               <NavGroup icon={<TrendingUp size={16} />} label={t('nav.reports')} prefix="/reports">
-                <NavItem to="/reports/sales"     icon={<TrendingUp size={14} />} label={t('nav.sales')} />
-                <NavItem to="/reports/staff"     icon={<Users size={14} />}      label={t('nav.bySeller')} />
-                <NavItem to="/reports/inventory" icon={<Package size={14} />}    label={t('nav.stock')} />
+                <NavItem to="/reports/sales"  icon={<TrendingUp size={14} />} label={t('nav.sales')} />
+                <NavItem to="/reports/staff"  icon={<Users size={14} />}      label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'By Receptionist' : t('nav.bySeller')} />
+                {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
+                  <NavItem to="/reports/inventory" icon={<Package size={14} />} label={t('nav.stock')} />
+                )}
               </NavGroup>
 
               <div className="pt-3 pb-1">

@@ -51,7 +51,7 @@ export async function deleteRoom(req: AuthRequest, res: Response) {
 // ── FOLIOS (check-in / check-out) ─────────────────────────────────────────
 
 export async function listFolios(req: AuthRequest, res: Response) {
-  const { active, from, to } = req.query as Record<string, string>;
+  const { active, from, to, checkedInBy } = req.query as Record<string, string>;
   const dateFilter = from && to
     ? { gte: new Date(`${from}T00:00:00.000Z`), lte: new Date(`${to}T23:59:59.999Z`) }
     : from
@@ -63,6 +63,7 @@ export async function listFolios(req: AuthRequest, res: Response) {
       room: { shopId: shop(req) },
       ...(active === 'true' && { checkOut: null }),
       ...(dateFilter && { createdAt: dateFilter }),
+      ...(checkedInBy && { checkedInBy }),
     },
     include: { room: { select: { roomNo: true, roomType: true } }, charges: true },
     orderBy: { checkIn: 'desc' },
