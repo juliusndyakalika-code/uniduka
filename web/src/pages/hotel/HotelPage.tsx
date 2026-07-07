@@ -360,12 +360,20 @@ export default function HotelPage() {
                 <div className="flex flex-col gap-1">
                   {room.status === 'AVAILABLE' && (
                     <>
+                      {room.reservation && (
+                        <div className="text-[10px] bg-blue-50 border border-blue-100 rounded px-2 py-1 mb-1 flex items-center justify-between">
+                          <span className="text-blue-700 font-medium truncate">📅 {room.reservation.guestName}</span>
+                          <button className="text-blue-500 hover:text-blue-700 ml-1 shrink-0" onClick={() => setShowReservation({ res: room.reservation!, room })}>Edit</button>
+                        </div>
+                      )}
                       <button className="btn-primary py-1 text-xs w-full" onClick={() => setShowCheckIn(room)}>
                         Check In Guest
                       </button>
-                      <button className="btn-secondary py-1 text-xs w-full" onClick={() => { setReserveError(''); setShowReserveRoom(room); }}>
-                        Reserve Room
-                      </button>
+                      {!room.reservation && (
+                        <button className="btn-secondary py-1 text-xs w-full" onClick={() => { setReserveError(''); setShowReserveRoom(room); }}>
+                          Reserve Room
+                        </button>
+                      )}
                     </>
                   )}
                   {room.status === 'OCCUPIED' && activeFolio && (

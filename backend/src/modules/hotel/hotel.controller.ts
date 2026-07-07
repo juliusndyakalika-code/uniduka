@@ -11,16 +11,23 @@ export async function listRooms(req: AuthRequest, res: Response) {
   const rooms = await prisma.room.findMany({
     where: { shopId: shop(req) },
     include: {
-      folios: {
-        where: { checkOut: null },
-        orderBy: { checkIn: 'desc' },
-        take: 1,
-      },
+      folios: { where: { checkOut: null }, orderBy: { checkIn: 'desc' }, take: 1 },
       reservation: true,
     },
     orderBy: [{ floor: 'asc' }, { roomNo: 'asc' }],
   });
-  return R.ok(res, rooms);
+
+  // Compute effective status from reservation date — no cron job needed
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const result = rooms.map(r => {
+    if (r.reservation && r.status === 'AVAILABLE') {
+      const checkInDay = new Date(r.reservation.checkInDate); checkInDay.setHours(0, 0, 0, 0);
+      if (checkInDay <= today) return { ...r, status: 'RESERVED' as const };
+    }
+    return r;
+  });
+
+  return R.ok(res, result);
 }
 
 export async function createRoom(req: AuthRequest, res: Response) {
@@ -200,7 +207,7 @@ export async function createReservation(req: AuthRequest, res: Response) {
   const reservation = await prisma.roomReservation.create({
     data: { roomId, guestName, guestPhone, guestEmail, guestId, notes, checkInDate: new Date(checkInDate), nights: Number(nights) || 1 },
   });
-  await prisma.room.update({ where: { id: roomId }, data: { status: 'RESERVED' } });
+  // Room status stays as-is; listRooms derives RESERVED from checkInDate at query time
   return R.created(res, reservation);
 }
 
@@ -231,7 +238,7 @@ export async function cancelReservation(req: AuthRequest, res: Response) {
   });
   if (!reservation) return R.notFound(res, 'Reservation not found');
   await prisma.roomReservation.delete({ where: { id: req.params.id } });
-  await prisma.room.update({ where: { id: reservation.roomId }, data: { status: 'AVAILABLE' } });
+  // Room was never changed to RESERVED in DB — nothing to reset
   return R.noContent(res);
 }
 
