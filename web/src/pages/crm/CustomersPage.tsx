@@ -7,7 +7,7 @@ import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
 interface Customer {
-  id: string; name: string; phone?: string; email?: string;
+  id: string; fullName: string; phone?: string; email?: string;
   totalSpend: number; visitCount: number; loyaltyPoints: number;
   createdAt: string;
 }
@@ -80,9 +80,9 @@ export default function CustomersPage() {
                     <td>
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center shrink-0">
-                          {c.name.charAt(0).toUpperCase()}
+                          {c.fullName.charAt(0).toUpperCase()}
                         </div>
-                        <span className="font-medium text-stone-900">{c.name}</span>
+                        <span className="font-medium text-stone-900">{c.fullName}</span>
                       </div>
                     </td>
                     <td className="hidden sm:table-cell">

@@ -36,6 +36,7 @@ enum UserRole {
   ACCOUNT_OWNER    // Business owner — full access, billing, shop setup, reports
   CASHIER          // POS and sales only
   INVENTORY_STAFF  // Stock, purchase orders, stocktake only
+  RECEPTIONIST     // Hotel/Guesthouse front desk — check-in/out, guests
 }
 
 enum BranchMode {

@@ -267,6 +267,14 @@ export default function Sidebar({ open, onClose }: Props) {
             </>
           )}
 
+          {role === 'RECEPTIONIST' && (
+            <>
+              <NavItem to="/hotel"     icon={<BedDouble size={16} />} label={t('nav.hotelRooms')} />
+              <NavItem to="/customers" icon={<Users size={16} />}     label="Guests" />
+              <NavItem to="/timeclock" icon={<Clock size={16} />}     label={t('nav.timeclock')} />
+            </>
+          )}
+
           {isOwner && (
             <>
               {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (

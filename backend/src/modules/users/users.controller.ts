@@ -20,7 +20,7 @@ export async function listUsers(req: AuthRequest, res: Response) {
 }
 
 const ASSIGNABLE_ROLES: Record<string, string[]> = {
-  ACCOUNT_OWNER: ['CASHIER', 'INVENTORY_STAFF'],
+  ACCOUNT_OWNER: ['CASHIER', 'INVENTORY_STAFF', 'RECEPTIONIST'],
 };
 
 export async function createUser(req: AuthRequest, res: Response) {

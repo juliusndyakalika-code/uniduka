@@ -10,24 +10,23 @@ interface StaffUser {
   id: string; fullName: string; email: string; role: string; isActive: boolean;
   shopAccess: { shopId: string; shop: { tradingName: string } }[];
 }
-interface ShopOption { id: string; tradingName: string; }
+interface ShopOption { id: string; tradingName: string; businessType: string; }
 interface InviteForm { fullName: string; email: string; password: string; role: string; shopId: string; }
 interface EditForm  { fullName: string; email: string; role: string; }
 
-const ROLES_BY_CALLER: Record<string, string[]> = {
-  ACCOUNT_OWNER: ['CASHIER', 'INVENTORY_STAFF'],
-};
+const BASE_ROLES = ['CASHIER', 'INVENTORY_STAFF'];
+const HOTEL_ROLES = ['RECEPTIONIST', 'CASHIER'];
 
 const ROLE_BADGE: Record<string, string> = {
   ACCOUNT_OWNER:   'badge-amber',
   CASHIER:         'badge-green',
   INVENTORY_STAFF: 'badge-blue',
+  RECEPTIONIST:    'badge-purple',
 };
 
 export default function UsersPage() {
   const { shopId, user } = useAuthStore();
   const { t } = useTranslation();
-  const assignableRoles = ROLES_BY_CALLER[user?.role ?? ''] ?? [];
   const qc = useQueryClient();
 
   const [showInvite, setShowInvite]         = useState(false);
@@ -62,6 +61,13 @@ export default function UsersPage() {
     queryKey: ['shops-list'],
     queryFn: () => api.get('/shops').then(r => r.data.data),
   });
+
+  const watchedShopId = inviteForm.watch('shopId');
+  const selectedShop = shops.find(s => s.id === watchedShopId);
+  const isHotelShop = selectedShop?.businessType === 'HOTEL_GUESTHOUSE';
+  const assignableRoles = user?.role === 'ACCOUNT_OWNER'
+    ? (isHotelShop ? HOTEL_ROLES : BASE_ROLES)
+    : [];
 
   const { mutate: invite, isPending: inviting } = useMutation({
     mutationFn: (d: InviteForm) => api.post('/users/invite', d),
@@ -351,7 +357,11 @@ export default function UsersPage() {
                 <div>
                   <label className="label">{t('users.roleLabel')}</label>
                   <select {...editForm.register('role')} className="select">
-                    {assignableRoles.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+                    {(() => {
+                      const editShop = shops.find(s => s.id === editUser.shopAccess[0]?.shopId);
+                      const roles = editShop?.businessType === 'HOTEL_GUESTHOUSE' ? HOTEL_ROLES : BASE_ROLES;
+                      return roles.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>);
+                    })()}
                   </select>
                 </div>
               )}

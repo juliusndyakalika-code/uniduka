@@ -125,6 +125,7 @@
   .badge-blue   { @apply badge bg-blue-100 text-blue-700; }
   .badge-stone  { @apply badge bg-stone-200 text-stone-600; }
   .badge-duka   { @apply badge bg-duka-100 text-duka-700; }
+  .badge-purple { @apply badge bg-purple-100 text-purple-700; }
 
   /* ── Sidebar nav ──────────────────────────────────────────────────────────── */
   .nav-item {
