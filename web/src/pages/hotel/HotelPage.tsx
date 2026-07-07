@@ -16,6 +16,7 @@ interface Room {
 interface Charge { id: string; description: string; amount: number; chargeType: string; chargedAt: string }
 interface Folio {
   id: string; roomId: string; guestName: string; guestEmail?: string;
+  guestId?: string; guestPhone?: string;
   checkIn: string; checkOut?: string; nights: number;
   roomTotal: number; fbTotal: number; grandTotal: number; isPaid: boolean;
   room?: { roomNo: string; roomType: string };
@@ -58,7 +59,7 @@ export default function HotelPage() {
   });
 
   const { register: rRoom, handleSubmit: hsRoom, reset: resetRoom } = useForm<{ roomNo: string; roomType: string; floor: string; ratePerNight: string }>();
-  const { register: rCI, handleSubmit: hsCI, reset: resetCI } = useForm<{ guestName: string; guestEmail: string; nights: string }>();
+  const { register: rCI, handleSubmit: hsCI, reset: resetCI } = useForm<{ guestName: string; guestEmail: string; guestId: string; guestPhone: string; nights: string }>();
 
   const { mutate: createRoom, isPending: creatingRoom } = useMutation({
     mutationFn: (d: { roomNo: string; roomType: string; floor: string; ratePerNight: string }) => api.post('/hotel/rooms', d),
@@ -76,7 +77,7 @@ export default function HotelPage() {
   });
 
   const { mutate: doCheckIn, isPending: checkingIn } = useMutation({
-    mutationFn: (d: { roomId: string; guestName: string; guestEmail?: string; nights: number }) => api.post('/hotel/check-in', d),
+    mutationFn: (d: { roomId: string; guestName: string; guestEmail?: string; guestId?: string; guestPhone?: string; nights: number }) => api.post('/hotel/check-in', d),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['hotel-rooms'] }); qc.invalidateQueries({ queryKey: ['hotel-folios'] }); setShowCheckIn(null); resetCI(); },
   });
 
@@ -286,13 +287,23 @@ export default function HotelPage() {
               <button onClick={() => { setShowCheckIn(null); resetCI(); }} className="text-stone-400"><X size={18} /></button>
             </div>
             <p className="text-xs text-stone-500 mb-4">{showCheckIn.roomType} · {fmt(showCheckIn.ratePerNight)}/night</p>
-            <form onSubmit={hsCI(d => doCheckIn({ roomId: showCheckIn.id, guestName: d.guestName, guestEmail: d.guestEmail || undefined, nights: Number(d.nights) || 1 }))} className="space-y-3">
+            <form onSubmit={hsCI(d => doCheckIn({ roomId: showCheckIn.id, guestName: d.guestName, guestEmail: d.guestEmail || undefined, guestId: d.guestId || undefined, guestPhone: d.guestPhone || undefined, nights: Number(d.nights) || 1 }))} className="space-y-3">
               <div>
                 <label className="label">{t('hotel.guest')} *</label>
                 <input {...rCI('guestName', { required: true })} className="input w-full" placeholder="Full name" />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">ID Number</label>
+                  <input {...rCI('guestId')} className="input w-full" placeholder="National ID / Passport" />
+                </div>
+                <div>
+                  <label className="label">Phone</label>
+                  <input {...rCI('guestPhone')} type="tel" className="input w-full" placeholder="+255…" />
+                </div>
+              </div>
               <div>
-                <label className="label">Guest Email</label>
+                <label className="label">Email</label>
                 <input {...rCI('guestEmail')} type="email" className="input w-full" placeholder="Optional" />
               </div>
               <div>
@@ -321,6 +332,16 @@ export default function HotelPage() {
             </div>
 
             <div className="bg-stone-50 rounded-lg p-3 mb-4 text-xs">
+              {(showFolio.guestId || showFolio.guestPhone) && (
+                <div className="flex gap-4 mb-2 pb-2 border-b border-stone-200">
+                  {showFolio.guestId && (
+                    <div><span className="text-stone-500">ID: </span><span className="font-medium">{showFolio.guestId}</span></div>
+                  )}
+                  {showFolio.guestPhone && (
+                    <div><span className="text-stone-500">Phone: </span><span className="font-medium">{showFolio.guestPhone}</span></div>
+                  )}
+                </div>
+              )}
               <div className="flex justify-between mb-1">
                 <span className="text-stone-500">{t('hotel.checkIn')}</span>
                 <span>{format(new Date(showFolio.checkIn), 'MMM d, yyyy h:mm a')}</span>

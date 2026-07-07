@@ -65,7 +65,7 @@ export async function listFolios(req: AuthRequest, res: Response) {
 }
 
 export async function checkIn(req: AuthRequest, res: Response) {
-  const { roomId, guestName, guestEmail, nights } = req.body;
+  const { roomId, guestName, guestEmail, guestId, guestPhone, nights } = req.body;
   const room = await prisma.room.findFirst({ where: { id: roomId, shopId: shop(req) } });
   if (!room) return R.notFound(res, 'Room not found');
   if (room.status !== 'AVAILABLE') return R.badRequest(res, 'Room is not available');
@@ -74,7 +74,8 @@ export async function checkIn(req: AuthRequest, res: Response) {
   const roomTotal = room.ratePerNight * n;
   const folio = await prisma.roomFolio.create({
     data: {
-      roomId, guestName, guestEmail, checkIn: new Date(), nights: n, roomTotal, grandTotal: roomTotal,
+      roomId, guestName, guestEmail, guestId, guestPhone,
+      checkIn: new Date(), nights: n, roomTotal, grandTotal: roomTotal,
       charges: { create: { description: `Room rate × ${n} night${n > 1 ? 's' : ''}`, amount: roomTotal, chargeType: 'room_rate' } },
     },
     include: { room: true, charges: true },
