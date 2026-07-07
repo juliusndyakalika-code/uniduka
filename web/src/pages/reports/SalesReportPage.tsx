@@ -426,6 +426,14 @@ export default function SalesReportPage() {
     retry: false,
   });
 
+  const { data: activeFolios = [] } = useQuery<{ grandTotal: number }[]>({
+    queryKey: ['hotel-active-folios-report', shopId],
+    queryFn: () => api.get('/hotel/folios', { params: { active: 'true' } }).then(r => r.data.data ?? []),
+    enabled: !!shopId && isHotel,
+    refetchInterval: 60_000,
+  });
+  const outstandingTotal = activeFolios.reduce((s, f) => s + f.grandTotal, 0);
+
   return (
     <div className="space-y-6">
       <div className="page-header">
@@ -558,14 +566,18 @@ export default function SalesReportPage() {
           {/* Summary stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: t('reports.totalRevenue'),  value: fmt(data?.summary.revenue ?? 0) },
-              { label: t('reports.transactions'),  value: String(data?.summary.transactions ?? 0) },
-              { label: t('reports.avgTicket'),     value: fmt(data?.summary.avgTicket ?? 0) },
-              { label: t('reports.grossProfit'),   value: fmt(data?.summary.grossProfit ?? 0) },
+              { label: t('reports.totalRevenue'), value: fmt(data?.summary.revenue ?? 0) },
+              { label: isHotel ? 'Check-ins' : t('reports.transactions'), value: String(data?.summary.transactions ?? 0) },
+              { label: isHotel ? 'Avg Stay Revenue' : t('reports.avgTicket'), value: fmt(data?.summary.avgTicket ?? 0) },
+              { label: isHotel ? 'Outstanding (Active)' : t('reports.grossProfit'),
+                value: isHotel ? fmt(outstandingTotal) : fmt(data?.summary.grossProfit ?? 0) },
             ].map(s => (
               <div key={s.label} className="card p-5">
                 <p className="stat-value">{s.value}</p>
                 <p className="stat-label">{s.label}</p>
+                {s.label === 'Outstanding (Active)' && activeFolios.length > 0 && (
+                  <p className="text-[10px] text-amber-600 mt-1">{activeFolios.length} active guest{activeFolios.length !== 1 ? 's' : ''} not yet settled</p>
+                )}
               </div>
             ))}
           </div>

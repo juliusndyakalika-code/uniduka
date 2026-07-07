@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Hotel, Plus, X, BedDouble, Users, DollarSign, CheckCircle2, Clock, Trash2, AlertTriangle } from 'lucide-react';
+import { Hotel, Plus, X, BedDouble, Users, DollarSign, CheckCircle2, Clock, Trash2, AlertTriangle, XCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -118,6 +118,7 @@ export default function HotelPage() {
 
   // Payment modal state
   const [paymentTarget, setPaymentTarget] = useState<{ folio: Folio; mode: 'checkout' | 'settle' } | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<Folio | null>(null);
 
   const { data: rooms = [] } = useQuery<Room[]>({
     queryKey: ['hotel-rooms'],
@@ -189,6 +190,22 @@ export default function HotelPage() {
       qc.invalidateQueries({ queryKey: ['hotel-folios'] });
       setPaymentTarget(null);
       printFolioReceipt(updatedFolio, vars.paymentMethod);
+    },
+  });
+
+  const { mutate: doDeleteCharge, isPending: deletingCharge } = useMutation({
+    mutationFn: ({ folioId, chargeId }: { folioId: string; chargeId: string }) =>
+      api.delete(`/hotel/folios/${folioId}/charges/${chargeId}`),
+    onSuccess: (_, vars) => { loadFolio(vars.folioId); qc.invalidateQueries({ queryKey: ['hotel-folios'] }); },
+  });
+
+  const { mutate: doCancelCheckIn, isPending: cancelling } = useMutation({
+    mutationFn: (id: string) => api.post(`/hotel/folios/${id}/cancel`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hotel-rooms'] });
+      qc.invalidateQueries({ queryKey: ['hotel-folios'] });
+      setShowFolio(null);
+      setConfirmCancel(null);
     },
   });
 
@@ -543,9 +560,19 @@ export default function HotelPage() {
               </div>
               <div className="space-y-1">
                 {(showFolio.charges ?? []).map(c => (
-                  <div key={c.id} className="flex justify-between text-xs px-3 py-2 bg-stone-50 rounded">
-                    <span className="text-stone-700">{c.description}</span>
-                    <span className="font-medium">{fmt(c.amount)}</span>
+                  <div key={c.id} className="flex justify-between items-center text-xs px-3 py-2 bg-stone-50 rounded group">
+                    <span className="text-stone-700 flex-1">{c.description}</span>
+                    <span className="font-medium mr-2">{fmt(c.amount)}</span>
+                    {!showFolio.isPaid && (
+                      <button
+                        className="opacity-0 group-hover:opacity-100 text-stone-300 hover:text-red-500 transition-all"
+                        disabled={deletingCharge}
+                        onClick={() => doDeleteCharge({ folioId: showFolio.id, chargeId: c.id })}
+                        title="Remove charge"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -581,17 +608,26 @@ export default function HotelPage() {
             </div>
 
             {!showFolio.checkOut && (
-              <div className="flex gap-3">
-                <button className="btn-secondary flex-1"
-                  onClick={() => doCheckOut({ id: showFolio.id, isPaid: false })}
-                  disabled={checkingOut}>
-                  <AlertTriangle size={14} className="mr-1 text-amber-500" />
-                  Check Out (Debt)
-                </button>
-                <button className="btn-primary flex-1"
-                  onClick={() => setPaymentTarget({ folio: showFolio, mode: 'checkout' })}
-                  disabled={checkingOut}>
-                  Check Out &amp; Pay
+              <div className="space-y-2">
+                <div className="flex gap-3">
+                  <button className="btn-secondary flex-1"
+                    onClick={() => doCheckOut({ id: showFolio.id, isPaid: false })}
+                    disabled={checkingOut}>
+                    <AlertTriangle size={14} className="mr-1 text-amber-500" />
+                    Check Out (Debt)
+                  </button>
+                  <button className="btn-primary flex-1"
+                    onClick={() => setPaymentTarget({ folio: showFolio, mode: 'checkout' })}
+                    disabled={checkingOut}>
+                    Check Out &amp; Pay
+                  </button>
+                </div>
+                <button
+                  className="w-full py-2 text-xs border border-red-200 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium flex items-center justify-center gap-1.5"
+                  onClick={() => setConfirmCancel(showFolio)}
+                  disabled={checkingOut || cancelling}
+                >
+                  <XCircle size={13} /> Cancel Check-in
                 </button>
               </div>
             )}
@@ -600,6 +636,32 @@ export default function HotelPage() {
                 {showFolio.isPaid ? `Checked out · Paid via ${PM_LABELS[showFolio.paymentMethod ?? ''] ?? showFolio.paymentMethod}` : 'Checked out — Payment pending (Debt)'}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Cancel check-in confirmation */}
+      {confirmCancel && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <XCircle size={20} className="text-red-500 shrink-0" />
+              <h3 className="font-bold text-stone-900">Cancel Check-in?</h3>
+            </div>
+            <p className="text-sm text-stone-600 mb-1">
+              This will cancel the check-in for <strong>{confirmCancel.guestName}</strong> in room #{confirmCancel.room?.roomNo}.
+            </p>
+            <p className="text-xs text-stone-400 mb-5">The room will be set back to Available. This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button className="btn-secondary flex-1" onClick={() => setConfirmCancel(null)}>Keep</button>
+              <button
+                className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                disabled={cancelling}
+                onClick={() => doCancelCheckIn(confirmCancel.id)}
+              >
+                {cancelling ? 'Cancelling…' : 'Yes, Cancel'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -185,6 +185,31 @@ export async function checkOut(req: AuthRequest, res: Response) {
   return R.ok(res, updated);
 }
 
+export async function deleteCharge(req: AuthRequest, res: Response) {
+  const { folioId, chargeId } = req.params;
+  const folio = await prisma.roomFolio.findFirst({
+    where: { id: folioId, room: { shopId: shop(req) }, isPaid: false },
+  });
+  if (!folio) return R.notFound(res, 'Folio not found or already paid');
+  const charge = await prisma.roomCharge.findFirst({ where: { id: chargeId, folioId } });
+  if (!charge) return R.notFound(res, 'Charge not found');
+  await prisma.roomCharge.delete({ where: { id: chargeId } });
+  const remaining = await prisma.roomCharge.findMany({ where: { folioId } });
+  const grandTotal = remaining.reduce((s, c) => s + c.amount, 0);
+  await prisma.roomFolio.update({ where: { id: folioId }, data: { grandTotal } });
+  return R.noContent(res);
+}
+
+export async function cancelFolio(req: AuthRequest, res: Response) {
+  const folio = await prisma.roomFolio.findFirst({
+    where: { id: req.params.id, room: { shopId: shop(req) }, checkOut: null },
+  });
+  if (!folio) return R.notFound(res, 'Active check-in not found');
+  await prisma.room.update({ where: { id: folio.roomId }, data: { status: 'AVAILABLE' } });
+  await prisma.roomFolio.delete({ where: { id: folio.id } });
+  return R.noContent(res);
+}
+
 // Settle a debt folio (already checked out but unpaid)
 export async function settleFolio(req: AuthRequest, res: Response) {
   const folio = await prisma.roomFolio.findFirst({
