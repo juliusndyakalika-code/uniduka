@@ -237,6 +237,24 @@ export async function inventoryReport(req: AuthRequest, res: Response) {
 
 export async function staffReport(req: AuthRequest, res: Response) {
   const range = dateRange(req);
+
+  // Hotel: group folios by receptionist (checkedInBy) instead of POS cashier
+  const shopData = await prisma.shop.findUnique({ where: { id: shop(req) }, select: { businessType: true } });
+  if (shopData?.businessType === 'HOTEL_GUESTHOUSE') {
+    const folios = await prisma.roomFolio.findMany({
+      where: { room: { shopId: shop(req) }, createdAt: range },
+    });
+    const map: Record<string, { userId: string; fullName: string; role: string; transactionCount: number; revenue: number; grossProfit: number }> = {};
+    for (const f of folios) {
+      const id = f.checkedInBy ?? 'unknown';
+      if (!map[id]) map[id] = { userId: id, fullName: f.checkedInByName ?? 'Unknown', role: 'CASHIER', transactionCount: 0, revenue: 0, grossProfit: 0 };
+      map[id].transactionCount++;
+      map[id].revenue     += f.grandTotal;
+      map[id].grossProfit += f.grandTotal;
+    }
+    return R.ok(res, Object.values(map).map(s => ({ ...s, avgTicket: s.transactionCount > 0 ? s.revenue / s.transactionCount : 0 })));
+  }
+
   const transactions = await prisma.transaction.findMany({
     where: { shopId: shop(req), status: 'COMPLETED', createdAt: range },
     include: {

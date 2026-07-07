@@ -111,12 +111,78 @@ export async function getDashboard(req: AuthRequest, res: Response) {
   const shopId = req.user!.shopId;
   if (!shopId) return R.ok(res, { revenue: { today: 0, week: 0, month: 0 }, transactions: { today: 0, week: 0 }, customers: { total: 0, new: 0 }, lowStock: 0, topProducts: [], recentTransactions: [], salesChart: [] });
 
+  const shopData = await prisma.shop.findUnique({ where: { id: shopId }, select: { businessType: true } });
+
   const now = new Date();
   const startOfDay   = new Date(now); startOfDay.setHours(0,0,0,0);
   const startOfWeek  = new Date(now); startOfWeek.setDate(now.getDate() - 7);
   const startOfMonth = new Date(now); startOfMonth.setDate(now.getDate() - 30);
   const startOf14d   = new Date(now); startOf14d.setDate(now.getDate() - 14);
 
+  // ── Hotel/Guesthouse: all stats from RoomFolio ──────────────────────────
+  if (shopData?.businessType === 'HOTEL_GUESTHOUSE') {
+    const [todayF, weekF, monthF, totalGuests, newGuests, rooms, monthFoliosWithRoom, recentFolios, dailyFolios] = await Promise.all([
+      prisma.roomFolio.findMany({ where: { room: { shopId }, createdAt: { gte: startOfDay } }, select: { grandTotal: true } }),
+      prisma.roomFolio.findMany({ where: { room: { shopId }, createdAt: { gte: startOfWeek } }, select: { grandTotal: true } }),
+      prisma.roomFolio.findMany({ where: { room: { shopId }, createdAt: { gte: startOfMonth } }, select: { grandTotal: true } }),
+      prisma.customer.count({ where: { shopId } }),
+      prisma.customer.count({ where: { shopId, createdAt: { gte: startOfMonth } } }),
+      prisma.room.findMany({ where: { shopId }, select: { status: true } }),
+      prisma.roomFolio.findMany({
+        where: { room: { shopId }, createdAt: { gte: startOfMonth } },
+        include: { room: { select: { roomType: true } } },
+      }),
+      prisma.roomFolio.findMany({
+        where: { room: { shopId } },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        include: { room: { select: { roomNo: true } } },
+      }),
+      prisma.roomFolio.findMany({
+        where: { room: { shopId }, createdAt: { gte: startOf14d } },
+        select: { grandTotal: true, createdAt: true },
+      }),
+    ]);
+
+    const roomTypeMap: Record<string, { name: string; qty: number; revenue: number }> = {};
+    for (const f of monthFoliosWithRoom) {
+      const type = f.room.roomType;
+      if (!roomTypeMap[type]) roomTypeMap[type] = { name: type, qty: 0, revenue: 0 };
+      roomTypeMap[type].qty     += f.nights;
+      roomTypeMap[type].revenue += f.grandTotal;
+    }
+
+    const chartMap: Record<string, number> = {};
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now); d.setDate(now.getDate() - i);
+      chartMap[d.toISOString().split('T')[0]] = 0;
+    }
+    dailyFolios.forEach(f => { const k = f.createdAt.toISOString().split('T')[0]; if (chartMap[k] !== undefined) chartMap[k] += f.grandTotal; });
+
+    return R.ok(res, {
+      revenue: {
+        today: todayF.reduce((s, f) => s + f.grandTotal, 0),
+        week:  weekF.reduce((s, f) => s + f.grandTotal, 0),
+        month: monthF.reduce((s, f) => s + f.grandTotal, 0),
+      },
+      transactions: { today: todayF.length, week: weekF.length },
+      customers:    { total: totalGuests, new: newGuests },
+      lowStock:     rooms.filter(r => r.status === 'AVAILABLE').length, // repurposed: available rooms
+      topProducts:  Object.values(roomTypeMap).sort((a, b) => b.revenue - a.revenue).slice(0, 6),
+      recentTransactions: recentFolios.map(f => ({
+        id:            f.id,
+        receiptNo:     f.guestName,
+        total:         f.grandTotal,
+        paymentMethod: f.paymentMethod ?? (f.checkOut ? (f.isPaid ? 'PAID' : 'DEBT') : 'ACTIVE'),
+        createdAt:     f.createdAt,
+        status:        f.checkOut ? (f.isPaid ? 'COMPLETED' : 'UNPAID') : 'ACTIVE',
+        cashierName:   `Room #${f.room?.roomNo ?? '?'}`,
+      })),
+      salesChart: Object.entries(chartMap).map(([date, revenue]) => ({ label: date.slice(5), revenue })),
+    });
+  }
+
+  // ── Standard POS dashboard ───────────────────────────────────────────────
   const [todayAgg, weekAgg, monthAgg, todayTx, weekTx, totalCustomers, newCustomers, products] = await Promise.all([
     prisma.transaction.aggregate({ where: { shopId, status: 'COMPLETED', createdAt: { gte: startOfDay } }, _sum: { total: true } }),
     prisma.transaction.aggregate({ where: { shopId, status: 'COMPLETED', createdAt: { gte: startOfWeek } }, _sum: { total: true }, _count: { id: true } }),
@@ -150,7 +216,6 @@ export async function getDashboard(req: AuthRequest, res: Response) {
   const productNames = await prisma.product.findMany({ where: { id: { in: topItems.map(i => i.productId).filter(Boolean) as string[] } }, select: { id: true, name: true } });
   const nameMap = Object.fromEntries(productNames.map(p => [p.id, p.name]));
 
-  // Sales chart: last 14 days
   const dailyTx = await prisma.transaction.findMany({
     where: { shopId, status: 'COMPLETED', createdAt: { gte: startOf14d } },
     select: { total: true, createdAt: true },

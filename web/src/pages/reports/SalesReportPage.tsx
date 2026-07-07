@@ -21,6 +21,13 @@ interface SalesReport {
   byPaymentMethod: { method: string; label: string; total: number; count: number }[];
   topProducts: { name: string; revenue: number; qty: number }[];
 }
+interface HotelFolio {
+  id: string; guestName: string; guestPhone?: string;
+  checkIn: string; checkOut?: string; nights: number;
+  grandTotal: number; isPaid: boolean; paymentMethod?: string;
+  checkedInByName?: string;
+  room?: { roomNo: string; roomType: string };
+}
 interface TxItem { name: string; quantity: number; unitPrice: number; unitLabel: string; discountPct: number; lineTotal: number; costPrice: number; }
 interface Tx {
   id: string; receiptNo: string; total: number; subtotal: number; discountAmount: number;
@@ -95,15 +102,26 @@ function DayRow({ day, shopId, pmFilter, period, isHotel }: DayRowProps) {
 
   const { from: rangeFrom, to: rangeTo } = dateRangeForPeriod(day.date, period);
 
-  const { data: txns = [], isLoading } = useQuery<Tx[]>({
+  const { data: txns = [], isLoading: loadingTxns } = useQuery<Tx[]>({
     queryKey: ['day-txns', shopId, day.date, period, pmFilter],
     queryFn: () =>
       api.get('/pos/transactions', {
         params: { from: rangeFrom, to: rangeTo, limit: 200, ...(pmFilter && { paymentMethod: pmFilter }) },
       }).then(r => (r.data.data ?? []) as Tx[]),
-    enabled: expanded && !!shopId,
+    enabled: expanded && !!shopId && !isHotel,
     staleTime: 60_000,
   });
+
+  const { data: folios = [], isLoading: loadingFolios } = useQuery<HotelFolio[]>({
+    queryKey: ['hotel-day-folios', shopId, day.date, period],
+    queryFn: () =>
+      api.get('/hotel/folios', { params: { from: rangeFrom, to: rangeTo } })
+         .then(r => (r.data.data ?? []) as HotelFolio[]),
+    enabled: expanded && !!shopId && !!isHotel,
+    staleTime: 60_000,
+  });
+
+  const isLoading = isHotel ? loadingFolios : loadingTxns;
 
   const handlePrint = async (txId: string) => {
     setLoadingPrint(txId);
@@ -149,14 +167,14 @@ function DayRow({ day, shopId, pmFilter, period, isHotel }: DayRowProps) {
   return (
     <>
       <tr
-        className={isHotel ? '' : 'cursor-pointer hover:bg-stone-50 transition-colors'}
-        onClick={isHotel ? undefined : () => setExpanded(v => !v)}
+        className="cursor-pointer hover:bg-stone-50 transition-colors"
+        onClick={() => setExpanded(v => !v)}
       >
         <td>
           <div className="flex items-center gap-2">
-            {!isHotel && (expanded
+            {expanded
               ? <ChevronDown size={14} className="text-primary-500 shrink-0" />
-              : <ChevronRight size={14} className="text-stone-400 shrink-0" />)}
+              : <ChevronRight size={14} className="text-stone-400 shrink-0" />}
             <span className="font-medium text-stone-800">{label}</span>
           </div>
         </td>
@@ -168,10 +186,54 @@ function DayRow({ day, shopId, pmFilter, period, isHotel }: DayRowProps) {
 
       {expanded && (
         <tr>
-          <td colSpan={4} className="p-0">
+          <td colSpan={5} className="p-0">
             <div className="bg-stone-50 border-t border-b border-stone-200 px-6 py-3">
               {isLoading ? (
                 <p className="text-xs text-stone-400 py-2">{t('common.loading')}</p>
+              ) : isHotel ? (
+                folios.length === 0 ? (
+                  <p className="text-xs text-stone-400 py-2">No check-ins for this period</p>
+                ) : (
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-stone-200">
+                        <th className="text-left py-1.5 pr-3 font-semibold text-stone-600">Guest</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-stone-600">Room</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-stone-600">Nights</th>
+                        <th className="text-left py-1.5 pr-3 font-semibold text-stone-600">Receptionist</th>
+                        <th className="text-right py-1.5 pr-3 font-semibold text-stone-600">Total</th>
+                        <th className="text-left py-1.5 font-semibold text-stone-600">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {folios.map(f => (
+                        <tr key={f.id} className="border-b border-stone-100">
+                          <td className="py-1.5 pr-3 font-medium text-stone-800">{f.guestName}</td>
+                          <td className="py-1.5 pr-3 text-stone-600">#{f.room?.roomNo} {f.room?.roomType}</td>
+                          <td className="py-1.5 pr-3 text-stone-600">{f.nights}</td>
+                          <td className="py-1.5 pr-3 text-stone-500">{f.checkedInByName ?? '—'}</td>
+                          <td className="py-1.5 pr-3 text-right font-semibold text-stone-900">
+                            {new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(f.grandTotal)}
+                          </td>
+                          <td className="py-1.5">
+                            {f.checkOut
+                              ? <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${f.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{f.isPaid ? 'Paid' : 'Debt'}</span>
+                              : <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">Active</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-stone-300">
+                        <td colSpan={4} className="py-1.5 font-semibold text-stone-600">{folios.length} check-in{folios.length !== 1 ? 's' : ''}</td>
+                        <td className="py-1.5 text-right font-bold text-stone-900">
+                          {new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(folios.reduce((s, f) => s + f.grandTotal, 0))}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                )
               ) : txns.length === 0 ? (
                 <p className="text-xs text-stone-400 py-2">{t('reports.noSales')}</p>
               ) : (
@@ -344,6 +406,7 @@ export default function SalesReportPage() {
   const { t } = useTranslation();
   const { shopId, shops } = useAuthStore();
   const isHotel = shops.find(s => s.id === shopId)?.businessType === 'HOTEL_GUESTHOUSE';
+  const visibleTabs = REPORT_TABS.filter(tab => !(isHotel && tab.to === '/reports/inventory'));
   const location = useLocation();
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [from, setFrom] = useState(() => {
@@ -429,13 +492,13 @@ export default function SalesReportPage() {
 
       {/* Report tabs */}
       <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1 w-fit">
-        {REPORT_TABS.map(({ to: tabTo, label, icon: Icon }) => (
+        {visibleTabs.map(({ to: tabTo, label, icon: Icon }) => (
           <Link key={tabTo} to={tabTo}
             className={`flex items-center gap-1.5 px-4 py-1.5 text-xs rounded-md transition-colors font-medium ${
               location.pathname === tabTo ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'
             }`}
           >
-            <Icon size={13} />{label}
+            <Icon size={13} />{isHotel && label === 'By Seller' ? 'By Receptionist' : label}
           </Link>
         ))}
       </div>

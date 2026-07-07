@@ -911,8 +911,12 @@ model RoomFolio {
   room        Room     @relation(fields: [roomId], references: [id])
   guestName   String
   guestEmail  String?
-  guestId     String?
-  guestPhone  String?
+  guestId         String?
+  guestPhone      String?
+  customerId      String?
+  checkedInBy     String?
+  checkedInByName String?
+  paymentMethod   String?
   checkIn     DateTime
   checkOut    DateTime?
   nights      Int      @default(1)

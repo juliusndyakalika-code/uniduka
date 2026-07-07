@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Hotel, Plus, X, BedDouble, Users, DollarSign, CheckCircle2, Clock, Trash2, Receipt } from 'lucide-react';
+import { Hotel, Plus, X, BedDouble, Users, DollarSign, CheckCircle2, Clock, Trash2, AlertTriangle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { format, differenceInDays } from 'date-fns';
+import { useAuthStore } from '../../store/authStore';
+import { printReceipt } from '../../utils/printReceipt';
 
 type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
 
@@ -17,8 +19,10 @@ interface Charge { id: string; description: string; amount: number; chargeType: 
 interface Folio {
   id: string; roomId: string; guestName: string; guestEmail?: string;
   guestId?: string; guestPhone?: string;
+  checkedInByName?: string;
   checkIn: string; checkOut?: string; nights: number;
   roomTotal: number; fbTotal: number; grandTotal: number; isPaid: boolean;
+  paymentMethod?: string;
   room?: { roomNo: string; roomType: string };
   charges?: Charge[];
 }
@@ -35,18 +39,85 @@ const STATUS_BADGE: Record<RoomStatus, string> = {
   MAINTENANCE: 'bg-red-100 text-red-700',
   RESERVED:    'bg-blue-100 text-blue-700',
 };
+const PM_LABELS: Record<string, string> = { CASH: 'Cash', MOBILE_MONEY: 'Mobile Money', CARD: 'Card' };
 
 const fmt = (n: number) => new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+
+function PaymentModal({
+  title, total, onConfirm, onCancel, isPending,
+}: {
+  title: string; total: number;
+  onConfirm: (method: string, cashReceived: number) => void;
+  onCancel: () => void; isPending: boolean;
+}) {
+  const [method, setMethod] = useState('CASH');
+  const [cashAmt, setCashAmt] = useState('');
+  const cashNum = Number(cashAmt) || 0;
+  const change  = method === 'CASH' && cashNum > total ? cashNum - total : 0;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={e => e.stopPropagation()}>
+      <div className="card w-full max-w-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-stone-900">{title}</h3>
+          <button onClick={onCancel} className="text-stone-400"><X size={18} /></button>
+        </div>
+
+        <div className="bg-stone-50 rounded-lg p-3 mb-4 text-center">
+          <p className="text-xs text-stone-500">Total Amount</p>
+          <p className="text-2xl font-bold text-stone-900">{fmt(total)}</p>
+        </div>
+
+        <div className="mb-4">
+          <label className="label mb-2">Payment Method</label>
+          <div className="grid grid-cols-3 gap-2">
+            {(['CASH', 'MOBILE_MONEY', 'CARD'] as const).map(m => (
+              <button key={m} onClick={() => setMethod(m)}
+                className={`py-2 rounded-lg text-xs font-medium border transition-colors ${method === m ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-200 bg-white text-stone-600 hover:border-stone-400'}`}>
+                {PM_LABELS[m]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {method === 'CASH' && (
+          <div className="mb-4">
+            <label className="label">Cash Received (TZS)</label>
+            <input type="number" value={cashAmt} onChange={e => setCashAmt(e.target.value)}
+              className="input w-full" placeholder={String(total)} autoFocus />
+            {change > 0 && (
+              <p className="text-xs text-emerald-600 mt-1">Change: {fmt(change)}</p>
+            )}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button className="btn-secondary flex-1" onClick={onCancel}>{isPending ? '' : 'Cancel'}</button>
+          <button className="btn-primary flex-1" disabled={isPending || (method === 'CASH' && cashNum > 0 && cashNum < total)}
+            onClick={() => onConfirm(method, cashNum)}>
+            {isPending ? 'Processing…' : 'Confirm Payment'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function HotelPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<'rooms' | 'folios'>('rooms');
-  const [showAddRoom, setShowAddRoom] = useState(false);
-  const [showCheckIn, setShowCheckIn] = useState<Room | null>(null);
-  const [showFolio, setShowFolio] = useState<Folio | null>(null);
+  const { shopId, shops, account } = useAuthStore();
+  const currentShop = shops.find(s => s.id === shopId);
+
+  const [tab, setTab] = useState<'rooms' | 'folios' | 'debts'>('rooms');
+  const [showAddRoom, setShowAddRoom]     = useState(false);
+  const [showCheckIn, setShowCheckIn]     = useState<Room | null>(null);
+  const [showFolio, setShowFolio]         = useState<Folio | null>(null);
   const [showAddCharge, setShowAddCharge] = useState(false);
-  const [chargeForm, setChargeForm] = useState({ description: '', amount: '', chargeType: 'service' });
+  const [chargeForm, setChargeForm]       = useState({ description: '', amount: '', chargeType: 'service' });
+
+  // Payment modal state
+  const [paymentTarget, setPaymentTarget] = useState<{ folio: Folio; mode: 'checkout' | 'settle' } | null>(null);
 
   const { data: rooms = [] } = useQuery<Room[]>({
     queryKey: ['hotel-rooms'],
@@ -56,6 +127,11 @@ export default function HotelPage() {
   const { data: folios = [] } = useQuery<Folio[]>({
     queryKey: ['hotel-folios'],
     queryFn: () => api.get('/hotel/folios').then(r => r.data.data),
+  });
+
+  const { data: debts = [] } = useQuery<Folio[]>({
+    queryKey: ['hotel-debts'],
+    queryFn: () => api.get('/hotel/folios/debts').then(r => r.data.data),
   });
 
   const { register: rRoom, handleSubmit: hsRoom, reset: resetRoom } = useForm<{ roomNo: string; roomType: string; floor: string; ratePerNight: string }>();
@@ -93,9 +169,54 @@ export default function HotelPage() {
   });
 
   const { mutate: doCheckOut, isPending: checkingOut } = useMutation({
-    mutationFn: ({ id, isPaid }: { id: string; isPaid: boolean }) => api.post(`/hotel/folios/${id}/check-out`, { isPaid }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['hotel-rooms'] }); qc.invalidateQueries({ queryKey: ['hotel-folios'] }); setShowFolio(null); },
+    mutationFn: ({ id, isPaid, paymentMethod }: { id: string; isPaid: boolean; paymentMethod?: string }) =>
+      api.post(`/hotel/folios/${id}/check-out`, { isPaid, paymentMethod }).then(r => r.data.data as Folio),
+    onSuccess: (updatedFolio, vars) => {
+      qc.invalidateQueries({ queryKey: ['hotel-rooms'] });
+      qc.invalidateQueries({ queryKey: ['hotel-folios'] });
+      qc.invalidateQueries({ queryKey: ['hotel-debts'] });
+      setShowFolio(null);
+      setPaymentTarget(null);
+      if (vars.isPaid && vars.paymentMethod) printFolioReceipt(updatedFolio, vars.paymentMethod);
+    },
   });
+
+  const { mutate: doSettle, isPending: settling } = useMutation({
+    mutationFn: ({ id, paymentMethod }: { id: string; paymentMethod: string }) =>
+      api.post(`/hotel/folios/${id}/settle`, { paymentMethod }).then(r => r.data.data as Folio),
+    onSuccess: (updatedFolio, vars) => {
+      qc.invalidateQueries({ queryKey: ['hotel-debts'] });
+      qc.invalidateQueries({ queryKey: ['hotel-folios'] });
+      setPaymentTarget(null);
+      printFolioReceipt(updatedFolio, vars.paymentMethod);
+    },
+  });
+
+  function printFolioReceipt(folio: Folio, paymentMethod: string, cashReceived = 0) {
+    const charges = folio.charges ?? [];
+    printReceipt({
+      receiptNo:    `FOLIO-${folio.id.slice(-8).toUpperCase()}`,
+      total:        folio.grandTotal,
+      subtotal:     folio.grandTotal,
+      discount:     0,
+      paymentMethod,
+      cashReceived: paymentMethod === 'CASH' ? (cashReceived || folio.grandTotal) : 0,
+      change:       paymentMethod === 'CASH' && cashReceived > folio.grandTotal ? cashReceived - folio.grandTotal : 0,
+      items: charges.map(c => ({
+        name:       c.description,
+        qty:        1,
+        unitPrice:  c.amount,
+        discountPct: 0,
+        lineTotal:  c.amount,
+        unit:       '',
+      })),
+      shop: {
+        tradingName:  currentShop?.tradingName ?? account?.legalName ?? 'Hotel',
+      },
+      customerName: folio.guestName,
+      printedAt:    folio.checkOut ?? new Date().toISOString(),
+    });
+  }
 
   const activeFolios = folios.filter(f => !f.checkOut);
 
@@ -135,10 +256,13 @@ export default function HotelPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 border-b border-stone-200">
-        {(['rooms', 'folios'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 -mb-px transition-colors ${tab === t ? 'border-primary-600 text-primary-700' : 'border-transparent text-stone-500 hover:text-stone-700'}`}>
-            {t === 'folios' ? 'Guest Folios' : 'Rooms'}
+        {(['rooms', 'folios', 'debts'] as const).map(tabKey => (
+          <button key={tabKey} onClick={() => setTab(tabKey)}
+            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 -mb-px transition-colors relative ${tab === tabKey ? 'border-primary-600 text-primary-700' : 'border-transparent text-stone-500 hover:text-stone-700'}`}>
+            {tabKey === 'debts' ? 'Debts' : tabKey === 'folios' ? 'Guest Folios' : 'Rooms'}
+            {tabKey === 'debts' && debts.length > 0 && (
+              <span className="ml-1.5 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-semibold">{debts.length}</span>
+            )}
           </button>
         ))}
       </div>
@@ -229,13 +353,58 @@ export default function HotelPage() {
                   <td className="text-right font-medium">{fmt(f.grandTotal)}</td>
                   <td>
                     {f.checkOut
-                      ? <span className={`text-[10px] px-2 py-0.5 rounded-full ${f.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{f.isPaid ? 'Paid' : 'Unpaid'}</span>
+                      ? <span className={`text-[10px] px-2 py-0.5 rounded-full ${f.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{f.isPaid ? 'Paid' : 'Debt'}</span>
                       : <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Active</span>}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Debts tab */}
+      {tab === 'debts' && (
+        <div>
+          {debts.length === 0 ? (
+            <div className="card p-10 text-center text-stone-400">
+              <CheckCircle2 size={32} className="mx-auto mb-2 text-emerald-400" />
+              <p className="text-sm">No outstanding debts</p>
+            </div>
+          ) : (
+            <div className="table-wrapper">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('hotel.guest')}</th>
+                    <th>Room</th>
+                    <th>Check-out</th>
+                    <th className="text-right">Amount Owed</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {debts.map(f => (
+                    <tr key={f.id}>
+                      <td>
+                        <p className="font-medium text-stone-900">{f.guestName}</p>
+                        {f.guestPhone && <p className="text-xs text-stone-400">{f.guestPhone}</p>}
+                      </td>
+                      <td>#{f.room?.roomNo} {f.room?.roomType}</td>
+                      <td className="text-stone-500 text-xs">{f.checkOut ? format(new Date(f.checkOut), 'MMM d, yyyy') : '—'}</td>
+                      <td className="text-right font-bold text-red-600">{fmt(f.grandTotal)}</td>
+                      <td>
+                        <button className="btn-primary text-xs py-1 px-3"
+                          onClick={() => setPaymentTarget({ folio: f, mode: 'settle' })}>
+                          Record Payment
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -334,12 +503,8 @@ export default function HotelPage() {
             <div className="bg-stone-50 rounded-lg p-3 mb-4 text-xs">
               {(showFolio.guestId || showFolio.guestPhone) && (
                 <div className="flex gap-4 mb-2 pb-2 border-b border-stone-200">
-                  {showFolio.guestId && (
-                    <div><span className="text-stone-500">ID: </span><span className="font-medium">{showFolio.guestId}</span></div>
-                  )}
-                  {showFolio.guestPhone && (
-                    <div><span className="text-stone-500">Phone: </span><span className="font-medium">{showFolio.guestPhone}</span></div>
-                  )}
+                  {showFolio.guestId && <div><span className="text-stone-500">ID: </span><span className="font-medium">{showFolio.guestId}</span></div>}
+                  {showFolio.guestPhone && <div><span className="text-stone-500">Phone: </span><span className="font-medium">{showFolio.guestPhone}</span></div>}
                 </div>
               )}
               <div className="flex justify-between mb-1">
@@ -347,15 +512,21 @@ export default function HotelPage() {
                 <span>{format(new Date(showFolio.checkIn), 'MMM d, yyyy h:mm a')}</span>
               </div>
               {showFolio.checkOut && (
-                <div className="flex justify-between">
+                <div className="flex justify-between mb-1">
                   <span className="text-stone-500">{t('hotel.checkOut')}</span>
                   <span>{format(new Date(showFolio.checkOut), 'MMM d, yyyy h:mm a')}</span>
                 </div>
               )}
               {!showFolio.checkOut && (
-                <div className="flex justify-between">
+                <div className="flex justify-between mb-1">
                   <span className="text-stone-500">Nights so far</span>
                   <span>{Math.max(1, differenceInDays(new Date(), new Date(showFolio.checkIn)))}</span>
+                </div>
+              )}
+              {showFolio.checkedInByName && (
+                <div className="flex justify-between">
+                  <span className="text-stone-500">Receptionist</span>
+                  <span>{showFolio.checkedInByName}</span>
                 </div>
               )}
             </div>
@@ -411,21 +582,45 @@ export default function HotelPage() {
 
             {!showFolio.checkOut && (
               <div className="flex gap-3">
-                <button className="btn-secondary flex-1" onClick={() => doCheckOut({ id: showFolio.id, isPaid: false })} disabled={checkingOut}>
-                  Check Out (Pay Later)
+                <button className="btn-secondary flex-1"
+                  onClick={() => doCheckOut({ id: showFolio.id, isPaid: false })}
+                  disabled={checkingOut}>
+                  <AlertTriangle size={14} className="mr-1 text-amber-500" />
+                  Check Out (Debt)
                 </button>
-                <button className="btn-primary flex-1" onClick={() => doCheckOut({ id: showFolio.id, isPaid: true })} disabled={checkingOut}>
-                  Check Out (Paid)
+                <button className="btn-primary flex-1"
+                  onClick={() => setPaymentTarget({ folio: showFolio, mode: 'checkout' })}
+                  disabled={checkingOut}>
+                  Check Out &amp; Pay
                 </button>
               </div>
             )}
             {showFolio.checkOut && (
               <div className={`text-center text-sm font-medium py-2 rounded-lg ${showFolio.isPaid ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                {showFolio.isPaid ? 'Checked out — Paid' : 'Checked out — Payment pending'}
+                {showFolio.isPaid ? `Checked out · Paid via ${PM_LABELS[showFolio.paymentMethod ?? ''] ?? showFolio.paymentMethod}` : 'Checked out — Payment pending (Debt)'}
               </div>
             )}
           </div>
         </div>
+      )}
+
+      {/* Payment modal (checkout or settle) */}
+      {paymentTarget && (
+        <PaymentModal
+          title={paymentTarget.mode === 'checkout' ? 'Check Out & Pay' : `Settle Debt — ${paymentTarget.folio.guestName}`}
+          total={paymentTarget.folio.grandTotal}
+          isPending={checkingOut || settling}
+          onCancel={() => setPaymentTarget(null)}
+          onConfirm={(method, cashReceived) => {
+            if (paymentTarget.mode === 'checkout') {
+              doCheckOut({ id: paymentTarget.folio.id, isPaid: true, paymentMethod: method });
+              // pass cashReceived via closure for receipt
+              printFolioReceipt({ ...paymentTarget.folio }, method, cashReceived);
+            } else {
+              doSettle({ id: paymentTarget.folio.id, paymentMethod: method });
+            }
+          }}
+        />
       )}
     </div>
   );

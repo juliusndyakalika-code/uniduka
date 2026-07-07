@@ -242,7 +242,9 @@ function SellerRow({ stat, rank, share, from, to, shopId }: SellerRowProps) {
 
 export default function StaffReportPage() {
   const { t } = useTranslation();
-  const { shopId } = useAuthStore();
+  const { shopId, shops } = useAuthStore();
+  const isHotel = shops.find(s => s.id === shopId)?.businessType === 'HOTEL_GUESTHOUSE';
+  const visibleTabs = REPORT_TABS.filter(tab => !(isHotel && tab.to === '/reports/inventory'));
   const location = useLocation();
   const [from, setFrom] = useState(() => {
     const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0];
@@ -262,14 +264,14 @@ export default function StaffReportPage() {
     <div className="space-y-6">
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t('reports.staffTitle')}</h1>
-          <p className="page-subtitle">Sales performance by seller</p>
+          <h1 className="page-title">{isHotel ? 'By Receptionist' : t('reports.staffTitle')}</h1>
+          <p className="page-subtitle">{isHotel ? 'Check-in performance by receptionist' : 'Sales performance by seller'}</p>
         </div>
       </div>
 
       {/* Report tabs */}
       <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1 w-fit">
-        {REPORT_TABS.map(({ to: tabTo, label, icon: Icon }) => (
+        {visibleTabs.map(({ to: tabTo, label, icon: Icon }) => (
           <Link key={tabTo} to={tabTo}
             className={`flex items-center gap-1.5 px-4 py-1.5 text-xs rounded-md transition-colors font-medium ${
               location.pathname === tabTo ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'
@@ -332,8 +334,8 @@ export default function StaffReportPage() {
       {/* Summary cards */}
       {!isLoading && data.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="card p-4"><p className="stat-value">{data.length}</p><p className="stat-label">Active sellers</p></div>
-          <div className="card p-4"><p className="stat-value">{total.tx}</p><p className="stat-label">Total transactions</p></div>
+          <div className="card p-4"><p className="stat-value">{data.length}</p><p className="stat-label">{isHotel ? 'Receptionists' : 'Active sellers'}</p></div>
+          <div className="card p-4"><p className="stat-value">{total.tx}</p><p className="stat-label">{isHotel ? 'Total check-ins' : 'Total transactions'}</p></div>
           <div className="card p-4"><p className="stat-value">{fmt(total.rev)}</p><p className="stat-label">Total revenue</p></div>
           <div className="card p-4"><p className="stat-value text-emerald-600">{fmt(total.profit)}</p><p className="stat-label">Total profit</p></div>
         </div>

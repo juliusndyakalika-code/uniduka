@@ -48,7 +48,8 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
 }
 
 export default function Dashboard() {
-  const { shopId, account, user } = useAuthStore();
+  const { shopId, account, user, shops } = useAuthStore();
+  const isHotel = shops.find(s => s.id === shopId)?.businessType === 'HOTEL_GUESTHOUSE';
   const qc = useQueryClient();
   const { t } = useTranslation();
 
@@ -136,12 +137,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={TrendingUp} label={t('dashboard.revenueToday')} value={fmt(data?.revenue?.today ?? 0)}
           sub={`${fmt(data?.revenue?.month ?? 0)} ${t('dashboard.thisMonth')}`} color="bg-primary-50 text-primary-600" />
-        <StatCard icon={ShoppingCart} label={t('dashboard.transactionsToday')} value={String(data?.transactions?.today ?? 0)}
+        <StatCard icon={ShoppingCart} label={isHotel ? 'Check-ins Today' : t('dashboard.transactionsToday')} value={String(data?.transactions?.today ?? 0)}
           sub={`${data?.transactions?.week ?? 0} ${t('dashboard.thisWeek')}`} color="bg-duka-50 text-duka-600" />
-        <StatCard icon={Users} label={t('dashboard.totalCustomers')} value={String(data?.customers?.total ?? 0)}
+        <StatCard icon={Users} label={isHotel ? 'Total Guests' : t('dashboard.totalCustomers')} value={String(data?.customers?.total ?? 0)}
           sub={t('dashboard.new', { count: data?.customers?.new ?? 0 })} color="bg-blue-50 text-blue-600" />
-        <StatCard icon={Package} label={t('dashboard.lowStockAlerts')} value={String(data?.lowStock ?? 0)}
-          color={data?.lowStock ? 'bg-red-50 text-red-600' : 'bg-stone-50 text-stone-500'} />
+        <StatCard icon={Package} label={isHotel ? 'Rooms Available' : t('dashboard.lowStockAlerts')} value={String(data?.lowStock ?? 0)}
+          color={isHotel ? 'bg-emerald-50 text-emerald-600' : (data?.lowStock ? 'bg-red-50 text-red-600' : 'bg-stone-50 text-stone-500')} />
       </div>
 
       {/* Charts + top products */}
@@ -177,7 +178,7 @@ export default function Dashboard() {
       {/* Recent transactions */}
       <div className="card">
         <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-stone-700">{t('dashboard.recentTransactions')}</h3>
+          <h3 className="text-sm font-semibold text-stone-700">{isHotel ? 'Recent Check-ins' : t('dashboard.recentTransactions')}</h3>
           <a href="/reports/sales" className="text-xs text-primary-600 hover:underline">{t('dashboard.viewAll')}</a>
         </div>
         <div className="table-wrapper">
@@ -208,6 +209,7 @@ export default function Dashboard() {
                       hour: '2-digit', minute: '2-digit',
                     })}
                   </td>
+                  {!isHotel && (
                   <td>
                     <button
                       onClick={() => fetchAndPrint(tx.id)}
@@ -218,6 +220,7 @@ export default function Dashboard() {
                       {loadingTxId === tx.id ? <span className="text-[10px]">…</span> : <Printer size={13} />}
                     </button>
                   </td>
+                  )}
                 </tr>
               ))}
               {!data?.recentTransactions?.length && (

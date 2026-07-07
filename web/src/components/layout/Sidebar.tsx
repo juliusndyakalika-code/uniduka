@@ -248,7 +248,7 @@ export default function Sidebar({ open, onClose }: Props) {
           {role === 'CASHIER' && (
             <>
               <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
-              <NavItem to="/customers" icon={<Users size={16} />}        label={t('nav.customers')} />
+              <NavItem to="/customers" icon={<Users size={16} />}        label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'Guests' : t('nav.customers')} />
               {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
                 <NavItem to="/consignment" icon={<Handshake size={16} />} label={t('nav.consignment')} />
               )}
@@ -290,7 +290,7 @@ export default function Sidebar({ open, onClose }: Props) {
                   )}
                 </NavGroup>
               )}
-              <NavItem to="/customers"    icon={<Users size={16} />}     label={t('nav.customers')} />
+              <NavItem to="/customers"    icon={<Users size={16} />}     label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'Guests' : t('nav.customers')} />
               {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
                 <NavItem to="/consignment"  icon={<Handshake size={16} />} label={t('nav.consignment')} />
               )}
