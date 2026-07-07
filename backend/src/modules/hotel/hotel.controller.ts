@@ -16,6 +16,7 @@ export async function listRooms(req: AuthRequest, res: Response) {
         orderBy: { checkIn: 'desc' },
         take: 1,
       },
+      reservation: true,
     },
     orderBy: [{ floor: 'asc' }, { roomNo: 'asc' }],
   });
@@ -183,6 +184,111 @@ export async function checkOut(req: AuthRequest, res: Response) {
   });
   await prisma.room.update({ where: { id: folio.roomId }, data: { status: 'AVAILABLE' } });
   return R.ok(res, updated);
+}
+
+// ── RESERVATIONS ──────────────────────────────────────────────────────────
+
+export async function createReservation(req: AuthRequest, res: Response) {
+  const { roomId, guestName, guestPhone, guestEmail, guestId, notes, checkInDate, nights } = req.body;
+  const room = await prisma.room.findFirst({ where: { id: roomId, shopId: shop(req) } });
+  if (!room) return R.notFound(res, 'Room not found');
+  if (room.status === 'OCCUPIED') return R.badRequest(res, 'Room is currently occupied');
+
+  const existing = await prisma.roomReservation.findUnique({ where: { roomId } });
+  if (existing) return R.conflict(res, 'Room already has a reservation');
+
+  const reservation = await prisma.roomReservation.create({
+    data: { roomId, guestName, guestPhone, guestEmail, guestId, notes, checkInDate: new Date(checkInDate), nights: Number(nights) || 1 },
+  });
+  await prisma.room.update({ where: { id: roomId }, data: { status: 'RESERVED' } });
+  return R.created(res, reservation);
+}
+
+export async function updateReservation(req: AuthRequest, res: Response) {
+  const reservation = await prisma.roomReservation.findFirst({
+    where: { id: req.params.id, room: { shopId: shop(req) } },
+  });
+  if (!reservation) return R.notFound(res, 'Reservation not found');
+  const { guestName, guestPhone, guestEmail, guestId, notes, checkInDate, nights } = req.body;
+  const updated = await prisma.roomReservation.update({
+    where: { id: req.params.id },
+    data: {
+      ...(guestName && { guestName }),
+      ...(guestPhone !== undefined && { guestPhone }),
+      ...(guestEmail !== undefined && { guestEmail }),
+      ...(guestId !== undefined && { guestId }),
+      ...(notes !== undefined && { notes }),
+      ...(checkInDate && { checkInDate: new Date(checkInDate) }),
+      ...(nights && { nights: Number(nights) }),
+    },
+  });
+  return R.ok(res, updated);
+}
+
+export async function cancelReservation(req: AuthRequest, res: Response) {
+  const reservation = await prisma.roomReservation.findFirst({
+    where: { id: req.params.id, room: { shopId: shop(req) } },
+  });
+  if (!reservation) return R.notFound(res, 'Reservation not found');
+  await prisma.roomReservation.delete({ where: { id: req.params.id } });
+  await prisma.room.update({ where: { id: reservation.roomId }, data: { status: 'AVAILABLE' } });
+  return R.noContent(res);
+}
+
+export async function checkInFromReservation(req: AuthRequest, res: Response) {
+  const reservation = await prisma.roomReservation.findFirst({
+    where: { id: req.params.id, room: { shopId: shop(req) } },
+    include: { room: true },
+  });
+  if (!reservation) return R.notFound(res, 'Reservation not found');
+  if (reservation.room.status === 'OCCUPIED') return R.badRequest(res, 'Room is already occupied');
+
+  const receptionist = await prisma.user.findUnique({ where: { id: req.user!.sub }, select: { fullName: true } }).catch(() => null);
+  const checkedInByName = receptionist?.fullName ?? 'Unknown';
+
+  // Upsert customer record for the guest
+  let customerId: string | undefined;
+  try {
+    const existing = reservation.guestPhone
+      ? await prisma.customer.findFirst({ where: { shopId: shop(req), phone: reservation.guestPhone } })
+      : null;
+    if (existing) {
+      await prisma.customer.update({
+        where: { id: existing.id },
+        data: { fullName: reservation.guestName, lastVisitAt: new Date(), visitCount: { increment: 1 } },
+      });
+      customerId = existing.id;
+    } else {
+      const created = await prisma.customer.create({
+        data: { shopId: shop(req), fullName: reservation.guestName, phone: reservation.guestPhone || null, email: reservation.guestEmail || null, lastVisitAt: new Date(), visitCount: 1 },
+      });
+      customerId = created.id;
+    }
+  } catch { /* non-fatal */ }
+
+  const n = reservation.nights;
+  const roomTotal = reservation.room.ratePerNight * n;
+  const folio = await prisma.roomFolio.create({
+    data: {
+      roomId: reservation.roomId,
+      guestName: reservation.guestName,
+      guestEmail: reservation.guestEmail,
+      guestId: reservation.guestId,
+      guestPhone: reservation.guestPhone,
+      customerId,
+      checkedInBy: req.user!.sub,
+      checkedInByName,
+      checkIn: new Date(),
+      nights: n,
+      roomTotal,
+      grandTotal: roomTotal,
+      charges: { create: { description: `Room rate × ${n} night${n > 1 ? 's' : ''}`, amount: roomTotal, chargeType: 'room_rate' } },
+    },
+    include: { room: true, charges: true },
+  });
+  await prisma.roomReservation.delete({ where: { id: req.params.id } });
+  await prisma.room.update({ where: { id: reservation.roomId }, data: { status: 'OCCUPIED' } });
+  return R.created(res, folio);
 }
 
 export async function deleteCharge(req: AuthRequest, res: Response) {

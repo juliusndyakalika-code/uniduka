@@ -10,10 +10,15 @@ import { printReceipt } from '../../utils/printReceipt';
 
 type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
 
+interface Reservation {
+  id: string; guestName: string; guestPhone?: string; guestEmail?: string;
+  guestId?: string; notes?: string; checkInDate: string; nights: number;
+}
 interface Room {
   id: string; roomNo: string; roomType: string; floor?: number;
   status: RoomStatus; ratePerNight: number;
   folios?: Folio[];
+  reservation?: Reservation;
 }
 interface Charge { id: string; description: string; amount: number; chargeType: string; chargedAt: string }
 interface Folio {
@@ -110,11 +115,14 @@ export default function HotelPage() {
   const currentShop = shops.find(s => s.id === shopId);
 
   const [tab, setTab] = useState<'rooms' | 'folios' | 'debts'>('rooms');
-  const [showAddRoom, setShowAddRoom]     = useState(false);
-  const [showCheckIn, setShowCheckIn]     = useState<Room | null>(null);
-  const [showFolio, setShowFolio]         = useState<Folio | null>(null);
-  const [showAddCharge, setShowAddCharge] = useState(false);
-  const [chargeForm, setChargeForm]       = useState({ description: '', amount: '', chargeType: 'service' });
+  const [showAddRoom, setShowAddRoom]         = useState(false);
+  const [showCheckIn, setShowCheckIn]         = useState<Room | null>(null);
+  const [showFolio, setShowFolio]             = useState<Folio | null>(null);
+  const [showAddCharge, setShowAddCharge]     = useState(false);
+  const [chargeForm, setChargeForm]           = useState({ description: '', amount: '', chargeType: 'service' });
+  const [showReserveRoom, setShowReserveRoom] = useState<Room | null>(null);
+  const [showReservation, setShowReservation] = useState<{ res: Reservation; room: Room } | null>(null);
+  const [reserveError, setReserveError]       = useState('');
 
   // Payment modal state
   const [paymentTarget, setPaymentTarget] = useState<{ folio: Folio; mode: 'checkout' | 'settle' } | null>(null);
@@ -137,6 +145,7 @@ export default function HotelPage() {
 
   const { register: rRoom, handleSubmit: hsRoom, reset: resetRoom } = useForm<{ roomNo: string; roomType: string; floor: string; ratePerNight: string }>();
   const { register: rCI, handleSubmit: hsCI, reset: resetCI } = useForm<{ guestName: string; guestEmail: string; guestId: string; guestPhone: string; nights: string }>();
+  const { register: rRes, handleSubmit: hsRes, reset: resetRes } = useForm<{ guestName: string; guestPhone: string; guestEmail: string; guestId: string; checkInDate: string; nights: string; notes: string }>();
 
   const { mutate: createRoom, isPending: creatingRoom } = useMutation({
     mutationFn: (d: { roomNo: string; roomType: string; floor: string; ratePerNight: string }) => api.post('/hotel/rooms', d),
@@ -206,6 +215,42 @@ export default function HotelPage() {
       qc.invalidateQueries({ queryKey: ['hotel-folios'] });
       setShowFolio(null);
       setConfirmCancel(null);
+    },
+  });
+
+  const { mutate: doCreateReservation, isPending: reserving } = useMutation({
+    mutationFn: (d: { roomId: string; guestName: string; guestPhone?: string; guestEmail?: string; guestId?: string; checkInDate: string; nights: number; notes?: string }) =>
+      api.post('/hotel/reservations', d),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hotel-rooms'] });
+      setShowReserveRoom(null); resetRes(); setReserveError('');
+    },
+    onError: (e: unknown) => setReserveError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
+  });
+
+  const { mutate: doUpdateReservation, isPending: updatingRes } = useMutation({
+    mutationFn: ({ id, ...body }: { id: string; guestName: string; guestPhone?: string; guestEmail?: string; guestId?: string; checkInDate: string; nights: number; notes?: string }) =>
+      api.put(`/hotel/reservations/${id}`, body).then(r => r.data.data as Reservation),
+    onSuccess: (updated) => {
+      qc.invalidateQueries({ queryKey: ['hotel-rooms'] });
+      if (showReservation) setShowReservation({ ...showReservation, res: updated });
+    },
+  });
+
+  const { mutate: doCancelReservation, isPending: cancellingRes } = useMutation({
+    mutationFn: (id: string) => api.delete(`/hotel/reservations/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hotel-rooms'] });
+      setShowReservation(null);
+    },
+  });
+
+  const { mutate: doCheckInFromReservation, isPending: checkingInFromRes } = useMutation({
+    mutationFn: (id: string) => api.post(`/hotel/reservations/${id}/check-in`).then(r => r.data.data as Folio),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hotel-rooms'] });
+      qc.invalidateQueries({ queryKey: ['hotel-folios'] });
+      setShowReservation(null);
     },
   });
 
@@ -314,22 +359,41 @@ export default function HotelPage() {
 
                 <div className="flex flex-col gap-1">
                   {room.status === 'AVAILABLE' && (
-                    <button className="btn-primary py-1 text-xs w-full" onClick={() => setShowCheckIn(room)}>
-                      Check In Guest
-                    </button>
+                    <>
+                      <button className="btn-primary py-1 text-xs w-full" onClick={() => setShowCheckIn(room)}>
+                        Check In Guest
+                      </button>
+                      <button className="btn-secondary py-1 text-xs w-full" onClick={() => { setReserveError(''); setShowReserveRoom(room); }}>
+                        Reserve Room
+                      </button>
+                    </>
                   )}
                   {room.status === 'OCCUPIED' && activeFolio && (
                     <button className="btn-secondary py-1 text-xs w-full" onClick={() => loadFolio(activeFolio.id)}>
                       View Folio
                     </button>
                   )}
-                  {room.status !== 'OCCUPIED' && (
+                  {room.status === 'RESERVED' && room.reservation && (
+                    <>
+                      <div className="text-xs bg-blue-50 rounded px-2 py-1.5 mb-1">
+                        <p className="font-medium text-blue-900 truncate">{room.reservation.guestName}</p>
+                        <p className="text-blue-600">{format(new Date(room.reservation.checkInDate), 'MMM d')} · {room.reservation.nights} night{room.reservation.nights !== 1 ? 's' : ''}</p>
+                        {room.reservation.guestPhone && <p className="text-blue-500 text-[10px]">{room.reservation.guestPhone}</p>}
+                      </div>
+                      <button className="btn-primary py-1 text-xs w-full" onClick={() => doCheckInFromReservation(room.reservation!.id)} disabled={checkingInFromRes}>
+                        {checkingInFromRes ? 'Checking in…' : 'Check In Now'}
+                      </button>
+                      <button className="btn-secondary py-1 text-xs w-full" onClick={() => setShowReservation({ res: room.reservation!, room })}>
+                        Edit Reservation
+                      </button>
+                    </>
+                  )}
+                  {room.status !== 'OCCUPIED' && room.status !== 'RESERVED' && (
                     <div className="flex gap-1">
                       <select className="input text-xs py-1 flex-1" value={room.status}
                         onChange={e => updateRoom({ id: room.id, status: e.target.value })}>
                         <option value="AVAILABLE">Available</option>
                         <option value="MAINTENANCE">Maintenance</option>
-                        <option value="RESERVED">Reserved</option>
                       </select>
                       <button onClick={() => { if (confirm('Delete room?')) deleteRoom(room.id); }} className="text-stone-400 hover:text-red-500 p-1">
                         <Trash2 size={13} />
@@ -636,6 +700,100 @@ export default function HotelPage() {
                 {showFolio.isPaid ? `Checked out · Paid via ${PM_LABELS[showFolio.paymentMethod ?? ''] ?? showFolio.paymentMethod}` : 'Checked out — Payment pending (Debt)'}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Reserve Room modal */}
+      {showReserveRoom && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-stone-900">Reserve Room #{showReserveRoom.roomNo}</h3>
+              <button onClick={() => { setShowReserveRoom(null); resetRes(); setReserveError(''); }} className="text-stone-400"><X size={18} /></button>
+            </div>
+            <p className="text-xs text-stone-500 mb-4">{showReserveRoom.roomType} · {fmt(showReserveRoom.ratePerNight)}/night</p>
+            {reserveError && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{reserveError}</div>}
+            <form onSubmit={hsRes(d => doCreateReservation({ roomId: showReserveRoom.id, guestName: d.guestName, guestPhone: d.guestPhone || undefined, guestEmail: d.guestEmail || undefined, guestId: d.guestId || undefined, checkInDate: d.checkInDate, nights: Number(d.nights) || 1, notes: d.notes || undefined }))} className="space-y-3">
+              <div>
+                <label className="label">Guest Name *</label>
+                <input {...rRes('guestName', { required: true })} className="input w-full" placeholder="Full name" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Phone</label>
+                  <input {...rRes('guestPhone')} type="tel" className="input w-full" placeholder="+255…" />
+                </div>
+                <div>
+                  <label className="label">ID Number</label>
+                  <input {...rRes('guestId')} className="input w-full" placeholder="National ID" />
+                </div>
+              </div>
+              <div>
+                <label className="label">Email</label>
+                <input {...rRes('guestEmail')} type="email" className="input w-full" placeholder="Optional" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Expected Check-in *</label>
+                  <input {...rRes('checkInDate', { required: true })} type="date" className="input w-full" defaultValue={new Date().toISOString().split('T')[0]} />
+                </div>
+                <div>
+                  <label className="label">Nights</label>
+                  <input {...rRes('nights')} type="number" min="1" className="input w-full" defaultValue="1" />
+                </div>
+              </div>
+              <div>
+                <label className="label">Notes</label>
+                <textarea {...rRes('notes')} className="input w-full" rows={2} placeholder="Special requests…" />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button type="button" className="btn-secondary flex-1" onClick={() => { setShowReserveRoom(null); resetRes(); setReserveError(''); }}>{t('common.cancel')}</button>
+                <button type="submit" className="btn-primary flex-1" disabled={reserving}>{reserving ? t('common.saving') : 'Reserve'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View/Edit Reservation modal */}
+      {showReservation && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-bold text-stone-900">Reservation — Room #{showReservation.room.roomNo}</h3>
+                <p className="text-xs text-stone-500">{showReservation.room.roomType}</p>
+              </div>
+              <button onClick={() => setShowReservation(null)} className="text-stone-400"><X size={18} /></button>
+            </div>
+
+            <div className="bg-blue-50 rounded-lg p-3 mb-4 text-xs space-y-1">
+              <div className="flex justify-between"><span className="text-blue-600">Guest</span><span className="font-semibold text-blue-900">{showReservation.res.guestName}</span></div>
+              {showReservation.res.guestPhone && <div className="flex justify-between"><span className="text-blue-600">Phone</span><span>{showReservation.res.guestPhone}</span></div>}
+              {showReservation.res.guestEmail && <div className="flex justify-between"><span className="text-blue-600">Email</span><span>{showReservation.res.guestEmail}</span></div>}
+              {showReservation.res.guestId && <div className="flex justify-between"><span className="text-blue-600">ID</span><span>{showReservation.res.guestId}</span></div>}
+              <div className="flex justify-between"><span className="text-blue-600">Check-in</span><span>{format(new Date(showReservation.res.checkInDate), 'MMM d, yyyy')}</span></div>
+              <div className="flex justify-between"><span className="text-blue-600">Nights</span><span>{showReservation.res.nights}</span></div>
+              {showReservation.res.notes && <div className="flex justify-between"><span className="text-blue-600">Notes</span><span className="text-right max-w-[60%]">{showReservation.res.notes}</span></div>}
+            </div>
+
+            <div className="space-y-2">
+              <button
+                className="btn-primary w-full"
+                onClick={() => doCheckInFromReservation(showReservation.res.id)}
+                disabled={checkingInFromRes}
+              >
+                {checkingInFromRes ? 'Checking in…' : 'Check In Now'}
+              </button>
+              <button
+                className="w-full py-2 text-xs border border-red-200 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                onClick={() => { if (confirm(`Cancel reservation for ${showReservation.res.guestName}?`)) doCancelReservation(showReservation.res.id); }}
+                disabled={cancellingRes}
+              >
+                {cancellingRes ? 'Cancelling…' : 'Cancel Reservation'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { listRooms, createRoom, updateRoom, deleteRoom, listFolios, checkIn, getFolio, addCharge, deleteCharge, cancelFolio, checkOut, settleFolio, listDebts } from './hotel.controller';
+import { listRooms, createRoom, updateRoom, deleteRoom, listFolios, checkIn, getFolio, addCharge, deleteCharge, cancelFolio, checkOut, settleFolio, listDebts, createReservation, updateReservation, cancelReservation, checkInFromReservation } from './hotel.controller';
 import { authenticate } from '../../middleware/auth';
 const router = Router();
 router.use(authenticate);
@@ -9,6 +9,10 @@ router.put('/rooms/:id',                  updateRoom);
 router.delete('/rooms/:id',               deleteRoom);
 router.get('/folios',                     listFolios);
 router.get('/folios/debts',               listDebts);
+router.post('/reservations',              createReservation);
+router.put('/reservations/:id',           updateReservation);
+router.delete('/reservations/:id',        cancelReservation);
+router.post('/reservations/:id/check-in', checkInFromReservation);
 router.post('/check-in',                  checkIn);
 router.get('/folios/:id',                 getFolio);
 router.post('/folios/:id/charges',                  addCharge);

@@ -900,10 +900,28 @@ model Room {
   ratePerNight Float
   createdAt DateTime   @default(now())
 
-  folios RoomFolio[]
+  folios      RoomFolio[]
+  reservation RoomReservation?
 
   @@unique([shopId, roomNo])
   @@map("rooms")
+}
+
+model RoomReservation {
+  id          String   @id @default(cuid())
+  roomId      String   @unique
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  guestName   String
+  guestPhone  String?
+  guestEmail  String?
+  guestId     String?
+  notes       String?
+  checkInDate DateTime
+  nights      Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("room_reservations")
 }
 
 model RoomFolio {
