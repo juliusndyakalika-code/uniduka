@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { printReceipt as doPrint } from '../../utils/printReceipt';
+import { saleFeedback } from '../../utils/saleFeedback';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import CameraScanner from '../../components/CameraScanner';
 
@@ -315,6 +316,7 @@ export default function PosPage() {
       customerTin:   customerTin.trim() || undefined,
     }),
     onSuccess: (res) => {
+      saleFeedback();
       const tx = res.data.data;
       const shopName = shopDetail?.tradingName ?? shops.find(s => s.id === shopId)?.tradingName ?? 'MauzoSmart';
       const cartSnapshot = cart.map(i => ({
