@@ -197,6 +197,7 @@ enum RoomStatus {
   OCCUPIED
   CHECKOUT
   MAINTENANCE
+  RESERVED
 }
 
 // ─── OWNER ACCOUNT (TIER 2 TENANT) ──────────────────────────────────────────
