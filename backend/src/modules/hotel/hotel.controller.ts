@@ -5,26 +5,57 @@ import * as R from '../../utils/response';
 
 const shop = (req: AuthRequest) => req.user!.shopId!;
 
+// ── HOTEL SETTINGS ─────────────────────────────────────────────────────────
+
+export async function getHotelSettings(req: AuthRequest, res: Response) {
+  const s = await prisma.shop.findUnique({ where: { id: shop(req) }, select: { hotelCheckoutHour: true } });
+  return R.ok(res, { checkoutHour: s?.hotelCheckoutHour ?? 12 });
+}
+
+export async function updateHotelSettings(req: AuthRequest, res: Response) {
+  const { checkoutHour } = req.body;
+  const h = Number(checkoutHour);
+  if (isNaN(h) || h < 0 || h > 23) return R.badRequest(res, 'checkoutHour must be 0–23');
+  await prisma.shop.update({ where: { id: shop(req) }, data: { hotelCheckoutHour: h } });
+  return R.ok(res, { checkoutHour: h });
+}
+
 // ── ROOMS ──────────────────────────────────────────────────────────────────
 
 export async function listRooms(req: AuthRequest, res: Response) {
-  const rooms = await prisma.room.findMany({
-    where: { shopId: shop(req) },
-    include: {
-      folios: { where: { checkOut: null }, orderBy: { checkIn: 'desc' }, take: 1 },
-      reservation: true,
-    },
-    orderBy: [{ floor: 'asc' }, { roomNo: 'asc' }],
-  });
+  const [rooms, shopData] = await Promise.all([
+    prisma.room.findMany({
+      where: { shopId: shop(req) },
+      include: {
+        folios: { where: { checkOut: null }, orderBy: { checkIn: 'desc' }, take: 1 },
+        reservation: true,
+      },
+      orderBy: [{ floor: 'asc' }, { roomNo: 'asc' }],
+    }),
+    prisma.shop.findUnique({ where: { id: shop(req) }, select: { hotelCheckoutHour: true } }),
+  ]);
 
-  // Compute effective status from reservation date — no cron job needed
+  const checkoutHour = shopData?.hotelCheckoutHour ?? 12;
+  const now = new Date();
   const today = new Date(); today.setHours(0, 0, 0, 0);
+
   const result = rooms.map(r => {
+    // Derive RESERVED status from reservation date
     if (r.reservation && r.status === 'AVAILABLE') {
       const checkInDay = new Date(r.reservation.checkInDate); checkInDay.setHours(0, 0, 0, 0);
-      if (checkInDay <= today) return { ...r, status: 'RESERVED' as const };
+      if (checkInDay <= today) return { ...r, status: 'RESERVED' as const, isOverstay: false };
     }
-    return r;
+
+    // Compute overstay for occupied rooms
+    let isOverstay = false;
+    if (r.status === 'OCCUPIED' && r.folios[0]) {
+      const expectedCheckout = new Date(r.folios[0].checkIn);
+      expectedCheckout.setDate(expectedCheckout.getDate() + r.folios[0].nights);
+      expectedCheckout.setHours(checkoutHour, 0, 0, 0);
+      isOverstay = now > expectedCheckout;
+    }
+
+    return { ...r, isOverstay };
   });
 
   return R.ok(res, result);

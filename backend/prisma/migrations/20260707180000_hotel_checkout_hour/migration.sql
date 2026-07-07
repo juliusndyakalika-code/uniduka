@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "hotelCheckoutHour" INTEGER NOT NULL DEFAULT 12;

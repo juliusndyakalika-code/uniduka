@@ -264,6 +264,9 @@ model Shop {
   parentShop      Shop?        @relation("BranchChildren", fields: [parentShopId], references: [id])
   childShops      Shop[]       @relation("BranchChildren")
 
+  // Hotel configuration
+  hotelCheckoutHour Int        @default(12)  // hour of day (0-23) when a hotel "day" ends / checkout time
+
   // Config Health Score 0-100
   configScore     Int          @default(0)
   isActive        Boolean      @default(true)

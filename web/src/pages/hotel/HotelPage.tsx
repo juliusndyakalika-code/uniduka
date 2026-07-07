@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Hotel, Plus, X, BedDouble, Users, DollarSign, CheckCircle2, Clock, Trash2, AlertTriangle, XCircle } from 'lucide-react';
+import { Hotel, Plus, X, BedDouble, Users, DollarSign, CheckCircle2, Clock, Trash2, AlertTriangle, XCircle, Settings } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -17,6 +17,7 @@ interface Reservation {
 interface Room {
   id: string; roomNo: string; roomType: string; floor?: number;
   status: RoomStatus; ratePerNight: number;
+  isOverstay?: boolean;
   folios?: Folio[];
   reservation?: Reservation;
 }
@@ -114,7 +115,8 @@ export default function HotelPage() {
   const { shopId, shops, account } = useAuthStore();
   const currentShop = shops.find(s => s.id === shopId);
 
-  const [tab, setTab] = useState<'rooms' | 'folios' | 'debts'>('rooms');
+  const [tab, setTab] = useState<'rooms' | 'folios' | 'debts' | 'settings'>('rooms');
+  const { user } = useAuthStore();
   const [showAddRoom, setShowAddRoom]         = useState(false);
   const [showCheckIn, setShowCheckIn]         = useState<Room | null>(null);
   const [showFolio, setShowFolio]             = useState<Folio | null>(null);
@@ -141,6 +143,18 @@ export default function HotelPage() {
   const { data: debts = [] } = useQuery<Folio[]>({
     queryKey: ['hotel-debts'],
     queryFn: () => api.get('/hotel/folios/debts').then(r => r.data.data),
+  });
+
+  const { data: settings, refetch: refetchSettings } = useQuery<{ checkoutHour: number }>({
+    queryKey: ['hotel-settings'],
+    queryFn: () => api.get('/hotel/settings').then(r => r.data.data),
+  });
+  const [checkoutHourDraft, setCheckoutHourDraft] = useState<number | null>(null);
+  const checkoutHour = checkoutHourDraft ?? settings?.checkoutHour ?? 12;
+
+  const { mutate: saveSettings, isPending: savingSettings } = useMutation({
+    mutationFn: (h: number) => api.patch('/hotel/settings', { checkoutHour: h }),
+    onSuccess: () => { refetchSettings(); setCheckoutHourDraft(null); },
   });
 
   const { register: rRoom, handleSubmit: hsRoom, reset: resetRoom } = useForm<{ roomNo: string; roomType: string; floor: string; ratePerNight: string }>();
@@ -325,8 +339,19 @@ export default function HotelPage() {
             {tabKey === 'debts' && debts.length > 0 && (
               <span className="ml-1.5 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-semibold">{debts.length}</span>
             )}
+            {tabKey === 'rooms' && rooms.some(r => r.isOverstay) && (
+              <span className="ml-1.5 bg-orange-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-semibold">
+                {rooms.filter(r => r.isOverstay).length}
+              </span>
+            )}
           </button>
         ))}
+        {user?.role === 'ACCOUNT_OWNER' && (
+          <button onClick={() => setTab('settings')}
+            className={`ml-auto px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${tab === 'settings' ? 'border-primary-600 text-primary-700' : 'border-transparent text-stone-400 hover:text-stone-700'}`}>
+            <Settings size={13} /> Settings
+          </button>
+        )}
       </div>
 
       {/* Rooms grid */}
@@ -346,14 +371,20 @@ export default function HotelPage() {
                     <p className="font-bold text-stone-900 text-lg">#{room.roomNo}</p>
                     <p className="text-xs text-stone-500">{room.roomType}{room.floor ? ` · Floor ${room.floor}` : ''}</p>
                   </div>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_BADGE[room.status]}`}>{room.status}</span>
+                  {room.isOverstay
+                    ? <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-orange-100 text-orange-700 animate-pulse">OVERSTAY</span>
+                    : <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_BADGE[room.status]}`}>{room.status}</span>}
                 </div>
                 <p className="text-xs font-medium text-stone-700 mb-3">{fmt(room.ratePerNight)}/night</p>
 
                 {activeFolio ? (
-                  <div className="mb-3 text-xs text-amber-800 bg-amber-50 rounded px-2 py-1.5">
+                  <div className={`mb-3 text-xs rounded px-2 py-1.5 ${room.isOverstay ? 'bg-orange-50 text-orange-900' : 'bg-amber-50 text-amber-800'}`}>
                     <p className="font-medium truncate">{activeFolio.guestName}</p>
-                    <p className="text-amber-600">In since {format(new Date(activeFolio.checkIn), 'MMM d')}</p>
+                    <p className={room.isOverstay ? 'text-orange-600 font-semibold' : 'text-amber-600'}>
+                      {room.isOverstay
+                        ? `Due out ${format(new Date(new Date(activeFolio.checkIn).setDate(new Date(activeFolio.checkIn).getDate() + activeFolio.nights)), 'MMM d')} · Overstay`
+                        : `In since ${format(new Date(activeFolio.checkIn), 'MMM d')} · ${activeFolio.nights}n`}
+                    </p>
                   </div>
                 ) : null}
 
@@ -433,9 +464,19 @@ export default function HotelPage() {
               {folios.length === 0 && (
                 <tr><td colSpan={6} className="text-center py-8 text-stone-400">No folios yet</td></tr>
               )}
-              {folios.map(f => (
-                <tr key={f.id} className="hover:bg-stone-50 cursor-pointer" onClick={() => loadFolio(f.id)}>
-                  <td className="font-medium text-stone-900">{f.guestName}</td>
+              {folios.map(f => {
+                const isOverstay = !f.checkOut && (() => {
+                  const exp = new Date(f.checkIn);
+                  exp.setDate(exp.getDate() + f.nights);
+                  exp.setHours(checkoutHour, 0, 0, 0);
+                  return new Date() > exp;
+                })();
+                return (
+                <tr key={f.id} className={`cursor-pointer ${isOverstay ? 'bg-orange-50 hover:bg-orange-100' : 'hover:bg-stone-50'}`} onClick={() => loadFolio(f.id)}>
+                  <td className="font-medium text-stone-900">
+                    {f.guestName}
+                    {isOverstay && <span className="ml-1.5 text-[9px] bg-orange-200 text-orange-800 px-1 py-0.5 rounded font-bold">OVERSTAY</span>}
+                  </td>
                   <td>#{f.room?.roomNo} {f.room?.roomType}</td>
                   <td>{format(new Date(f.checkIn), 'MMM d, yyyy')}</td>
                   <td>{f.checkOut ? format(new Date(f.checkOut), 'MMM d, yyyy') : '—'}</td>
@@ -443,10 +484,13 @@ export default function HotelPage() {
                   <td>
                     {f.checkOut
                       ? <span className={`text-[10px] px-2 py-0.5 rounded-full ${f.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{f.isPaid ? 'Paid' : 'Debt'}</span>
+                      : isOverstay
+                      ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Overstay</span>
                       : <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Active</span>}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -494,6 +538,44 @@ export default function HotelPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Settings tab */}
+      {tab === 'settings' && (
+        <div className="max-w-md space-y-6">
+          <div className="card p-5">
+            <h3 className="text-sm font-semibold text-stone-800 mb-1">Check-out / Day Start Time</h3>
+            <p className="text-xs text-stone-400 mb-4">
+              Guests who stay past this hour on their departure day are marked as Overstay.
+              Also used to determine when a new hotel day begins.
+            </p>
+            <div className="flex items-center gap-3">
+              <select
+                className="select flex-1"
+                value={checkoutHourDraft ?? settings?.checkoutHour ?? 12}
+                onChange={e => setCheckoutHourDraft(Number(e.target.value))}
+              >
+                {Array.from({ length: 24 }, (_, h) => {
+                  const label = h === 0 ? '12:00 AM (Midnight)' : h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM (Noon)' : `${h - 12}:00 PM`;
+                  return <option key={h} value={h}>{label}</option>;
+                })}
+              </select>
+              <button
+                className="btn-primary px-5"
+                disabled={savingSettings || checkoutHourDraft === null}
+                onClick={() => checkoutHourDraft !== null && saveSettings(checkoutHourDraft)}
+              >
+                {savingSettings ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+            <p className="mt-3 text-xs text-stone-400">
+              Current: guests should check out by{' '}
+              <strong>
+                {checkoutHour === 0 ? '12:00 AM' : checkoutHour < 12 ? `${checkoutHour}:00 AM` : checkoutHour === 12 ? '12:00 PM' : `${checkoutHour - 12}:00 PM`}
+              </strong>
+            </p>
+          </div>
         </div>
       )}
 

@@ -1,8 +1,10 @@
 import { Router } from 'express';
-import { listRooms, createRoom, updateRoom, deleteRoom, listFolios, checkIn, getFolio, addCharge, deleteCharge, cancelFolio, checkOut, settleFolio, listDebts, createReservation, updateReservation, cancelReservation, checkInFromReservation } from './hotel.controller';
+import { getHotelSettings, updateHotelSettings, listRooms, createRoom, updateRoom, deleteRoom, listFolios, checkIn, getFolio, addCharge, deleteCharge, cancelFolio, checkOut, settleFolio, listDebts, createReservation, updateReservation, cancelReservation, checkInFromReservation } from './hotel.controller';
 import { authenticate } from '../../middleware/auth';
 const router = Router();
 router.use(authenticate);
+router.get('/settings',                   getHotelSettings);
+router.patch('/settings',                 updateHotelSettings);
 router.get('/rooms',                      listRooms);
 router.post('/rooms',                     createRoom);
 router.put('/rooms/:id',                  updateRoom);
