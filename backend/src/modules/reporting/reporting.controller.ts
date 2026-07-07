@@ -32,10 +32,69 @@ export async function dashboardStats(req: AuthRequest, res: Response) {
   });
 }
 
+async function hotelSalesReport(req: AuthRequest, res: Response, range: { gte: Date; lte: Date }, period: string) {
+  const folios = await prisma.roomFolio.findMany({
+    where: { room: { shopId: shop(req) }, createdAt: range },
+    include: { room: { select: { roomType: true, roomNo: true } }, charges: true },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const revenue = folios.reduce((s, f) => s + f.grandTotal, 0);
+  const folioCount = folios.length;
+
+  // Group by period
+  const grouped: Record<string, { date: string; revenue: number; txCount: number; grossProfit: number }> = {};
+  for (const folio of folios) {
+    const d = folio.createdAt;
+    let key: string;
+    if (period === 'month') {
+      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    } else if (period === 'week') {
+      const wk = new Date(d); wk.setDate(wk.getDate() - wk.getDay()); key = wk.toISOString().slice(0, 10);
+    } else {
+      key = d.toISOString().slice(0, 10);
+    }
+    if (!grouped[key]) grouped[key] = { date: key, revenue: 0, txCount: 0, grossProfit: 0 };
+    grouped[key].revenue     += folio.grandTotal;
+    grouped[key].grossProfit += folio.grandTotal; // no product cost for room stays
+    grouped[key].txCount++;
+  }
+
+  // Room types as "top products"
+  const roomTypeMap: Record<string, { name: string; revenue: number; qty: number }> = {};
+  for (const folio of folios) {
+    const type = folio.room?.roomType || 'Room';
+    if (!roomTypeMap[type]) roomTypeMap[type] = { name: type, revenue: 0, qty: 0 };
+    roomTypeMap[type].revenue += folio.grandTotal;
+    roomTypeMap[type].qty     += folio.nights;
+  }
+
+  // Payment method breakdown: paid vs unpaid
+  const paid   = folios.filter(f => f.isPaid).reduce((s, f) => s + f.grandTotal, 0);
+  const unpaid = folios.filter(f => !f.isPaid).reduce((s, f) => s + f.grandTotal, 0);
+  const byPaymentMethod = [
+    { method: 'PAID', label: 'Paid', total: paid, count: folios.filter(f => f.isPaid).length },
+    { method: 'UNPAID', label: 'Unpaid / Active', total: unpaid, count: folios.filter(f => !f.isPaid).length },
+  ].filter(p => p.count > 0);
+
+  return R.ok(res, {
+    summary:         { revenue, transactions: folioCount, avgTicket: folioCount > 0 ? revenue / folioCount : 0, grossProfit: revenue },
+    byDay:           Object.values(grouped),
+    byPaymentMethod,
+    topProducts:     Object.values(roomTypeMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10),
+  });
+}
+
 export async function salesReport(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const range = dateRange(req);
     const { period = 'day', paymentMethod } = req.query as Record<string, string>;
+
+    // Hotel/Guesthouse revenue lives in RoomFolio, not Transaction
+    const shopData = await prisma.shop.findUnique({ where: { id: shop(req) }, select: { businessType: true } });
+    if (shopData?.businessType === 'HOTEL_GUESTHOUSE') {
+      return hotelSalesReport(req, res, range, period);
+    }
 
     const transactions = await prisma.transaction.findMany({
       where: {

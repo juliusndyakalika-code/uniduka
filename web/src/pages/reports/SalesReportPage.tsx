@@ -50,6 +50,7 @@ interface DayRowProps {
   shopId: string | null;
   pmFilter?: string;
   period: 'day' | 'week' | 'month';
+  isHotel?: boolean;
 }
 
 function dateRangeForPeriod(date: string, period: 'day' | 'week' | 'month'): { from: string; to: string } {
@@ -69,7 +70,7 @@ function dateRangeForPeriod(date: string, period: 'day' | 'week' | 'month'): { f
   };
 }
 
-function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
+function DayRow({ day, shopId, pmFilter, period, isHotel }: DayRowProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded]         = useState(false);
   const [loadingPrint, setLoadingPrint] = useState<string | null>(null);
@@ -148,14 +149,14 @@ function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
   return (
     <>
       <tr
-        className="cursor-pointer hover:bg-stone-50 transition-colors"
-        onClick={() => setExpanded(v => !v)}
+        className={isHotel ? '' : 'cursor-pointer hover:bg-stone-50 transition-colors'}
+        onClick={isHotel ? undefined : () => setExpanded(v => !v)}
       >
         <td>
           <div className="flex items-center gap-2">
-            {expanded
+            {!isHotel && (expanded
               ? <ChevronDown size={14} className="text-primary-500 shrink-0" />
-              : <ChevronRight size={14} className="text-stone-400 shrink-0" />}
+              : <ChevronRight size={14} className="text-stone-400 shrink-0" />)}
             <span className="font-medium text-stone-800">{label}</span>
           </div>
         </td>
@@ -341,7 +342,8 @@ function DayRow({ day, shopId, pmFilter, period }: DayRowProps) {
 // ── Main page ──────────────────────────────────────────────────────────────
 export default function SalesReportPage() {
   const { t } = useTranslation();
-  const { shopId } = useAuthStore();
+  const { shopId, shops } = useAuthStore();
+  const isHotel = shops.find(s => s.id === shopId)?.businessType === 'HOTEL_GUESTHOUSE';
   const location = useLocation();
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [from, setFrom] = useState(() => {
@@ -599,7 +601,7 @@ export default function SalesReportPage() {
                   </thead>
                   <tbody>
                     {(data?.byDay ?? []).map(day => (
-                      <DayRow key={day.date} day={day} shopId={shopId} pmFilter={pmFilter} period={period} />
+                      <DayRow key={day.date} day={day} shopId={shopId} pmFilter={pmFilter} period={period} isHotel={isHotel} />
                     ))}
                   </tbody>
                   <tfoot>
@@ -619,11 +621,11 @@ export default function SalesReportPage() {
           {/* Top products */}
           <div className="card">
             <div className="px-5 py-4 border-b border-stone-100">
-              <h3 className="text-sm font-semibold text-stone-700">{t('reports.topProducts')}</h3>
+              <h3 className="text-sm font-semibold text-stone-700">{isHotel ? 'Revenue by Room Type' : t('reports.topProducts')}</h3>
             </div>
             <div className="table-wrapper">
               <table className="table">
-                <thead><tr><th>#</th><th>{t('reports.product')}</th><th>{t('reports.revenue')}</th><th>{t('reports.totalQty')}</th></tr></thead>
+                <thead><tr><th>#</th><th>{isHotel ? 'Room Type' : t('reports.product')}</th><th>{t('reports.revenue')}</th><th>{isHotel ? 'Total Nights' : t('reports.totalQty')}</th></tr></thead>
                 <tbody>
                   {(data?.topProducts ?? []).map((p, i) => (
                     <tr key={i}>

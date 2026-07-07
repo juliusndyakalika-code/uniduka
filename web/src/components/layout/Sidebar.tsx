@@ -247,10 +247,12 @@ export default function Sidebar({ open, onClose }: Props) {
 
           {role === 'CASHIER' && (
             <>
-              <NavItem to="/pos"          icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
-              <NavItem to="/customers"    icon={<Users size={16} />}        label={t('nav.customers')} />
-              <NavItem to="/consignment"  icon={<Handshake size={16} />}    label={t('nav.consignment')} />
-              <NavItem to="/timeclock"    icon={<Clock size={16} />}        label={t('nav.timeclock')} />
+              <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
+              <NavItem to="/customers" icon={<Users size={16} />}        label={t('nav.customers')} />
+              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
+                <NavItem to="/consignment" icon={<Handshake size={16} />} label={t('nav.consignment')} />
+              )}
+              <NavItem to="/timeclock" icon={<Clock size={16} />} label={t('nav.timeclock')} />
             </>
           )}
 
@@ -277,18 +279,24 @@ export default function Sidebar({ open, onClose }: Props) {
               {currentShop?.businessType === 'HOTEL_GUESTHOUSE' && (
                 <NavItem to="/hotel" icon={<BedDouble size={16} />} label={t('nav.hotelRooms')} />
               )}
-              <NavGroup icon={<Package size={16} />} label={t('nav.inventory')} prefix="/inventory">
-                <NavItem to="/inventory"                 icon={<BarChart2 size={14} />}     label={t('nav.stockOverview')} end />
-                <NavItem to="/inventory/products"        icon={<Package size={14} />}       label={t('nav.products')} />
-                <NavItem to="/inventory/stock"           icon={<ArrowUpDown size={14} />}   label={t('nav.stockMovements')} />
-                <NavItem to="/inventory/purchase-orders" icon={<ClipboardList size={14} />} label={t('nav.purchaseOrders')} />
-                {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
-                  <NavItem to="/inventory/recipes" icon={<Utensils size={14} />} label={t('nav.recipes')} />
-                )}
-              </NavGroup>
+              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
+                <NavGroup icon={<Package size={16} />} label={t('nav.inventory')} prefix="/inventory">
+                  <NavItem to="/inventory"                 icon={<BarChart2 size={14} />}     label={t('nav.stockOverview')} end />
+                  <NavItem to="/inventory/products"        icon={<Package size={14} />}       label={t('nav.products')} />
+                  <NavItem to="/inventory/stock"           icon={<ArrowUpDown size={14} />}   label={t('nav.stockMovements')} />
+                  <NavItem to="/inventory/purchase-orders" icon={<ClipboardList size={14} />} label={t('nav.purchaseOrders')} />
+                  {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
+                    <NavItem to="/inventory/recipes" icon={<Utensils size={14} />} label={t('nav.recipes')} />
+                  )}
+                </NavGroup>
+              )}
               <NavItem to="/customers"    icon={<Users size={16} />}     label={t('nav.customers')} />
-              <NavItem to="/consignment"  icon={<Handshake size={16} />} label={t('nav.consignment')} />
-              <NavItem to="/appointments" icon={<Calendar size={16} />}  label={t('nav.appointments')} />
+              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
+                <NavItem to="/consignment"  icon={<Handshake size={16} />} label={t('nav.consignment')} />
+              )}
+              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
+                <NavItem to="/appointments" icon={<Calendar size={16} />}  label={t('nav.appointments')} />
+              )}
               <NavGroup icon={<TrendingUp size={16} />} label={t('nav.reports')} prefix="/reports">
                 <NavItem to="/reports/sales"     icon={<TrendingUp size={14} />} label={t('nav.sales')} />
                 <NavItem to="/reports/staff"     icon={<Users size={14} />}      label={t('nav.bySeller')} />
