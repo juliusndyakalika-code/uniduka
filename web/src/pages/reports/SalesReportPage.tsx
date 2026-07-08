@@ -8,6 +8,7 @@ import { printReceipt } from '../../utils/printReceipt';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 const REPORT_TABS = [
   { to: '/reports/sales',     label: 'Sales',      icon: TrendingUp },
@@ -497,6 +498,23 @@ export default function SalesReportPage() {
   );
   const hasConsignment = consignment.salesCount > 0;
 
+  // Table state (search + sort + pagination) for the two report tables
+  const byDayTable = useDataTable(data?.byDay ?? [], {
+    searchable: d => [d.date],
+    sortValues: {
+      date: d => d.date, txCount: d => d.txCount, revenue: d => d.revenue,
+      grossProfit: d => d.grossProfit, avgTicket: d => (d.txCount > 0 ? d.revenue / d.txCount : 0),
+    },
+    initialSort: { field: 'date', dir: 'desc' },
+    pageSize: 15,
+  });
+  const topProductsTable = useDataTable(data?.topProducts ?? [], {
+    searchable: p => [p.name],
+    sortValues: { name: p => p.name, revenue: p => p.revenue, qty: p => p.qty },
+    initialSort: { field: 'revenue', dir: 'desc' },
+    pageSize: 15,
+  });
+
   return (
     <div className="space-y-6">
       <div className="page-header">
@@ -806,25 +824,31 @@ export default function SalesReportPage() {
           {/* Expandable transactions by day */}
           {(data?.byDay ?? []).length > 0 && (
             <div className="card">
-              <div className="px-5 py-3 border-b border-stone-100 flex items-center justify-between">
+              <div className="px-5 py-3 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold text-stone-700">Transactions by day</h3>
-                <p className="text-xs text-stone-400">Click a row to expand individual transactions</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs text-stone-400 hidden sm:block">Click a row to expand individual transactions</p>
+                  <TableSearch value={byDayTable.search} onChange={byDayTable.setSearch} placeholder="Search date…" className="max-w-[11rem]" />
+                </div>
               </div>
               <div className="table-wrapper overflow-x-auto">
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>{t('reports.date')}</th>
-                      <th>{t('reports.transactions')}</th>
-                      <th>{t('reports.revenue')}</th>
-                      <th className="text-emerald-700">{t('reports.grossProfit')}</th>
-                      <th>{t('reports.avgTicket')}</th>
+                      <SortableTh field="date" sort={byDayTable.sort} onSort={byDayTable.toggleSort}>{t('reports.date')}</SortableTh>
+                      <SortableTh field="txCount" sort={byDayTable.sort} onSort={byDayTable.toggleSort}>{t('reports.transactions')}</SortableTh>
+                      <SortableTh field="revenue" sort={byDayTable.sort} onSort={byDayTable.toggleSort}>{t('reports.revenue')}</SortableTh>
+                      <SortableTh field="grossProfit" sort={byDayTable.sort} onSort={byDayTable.toggleSort} className="text-emerald-700">{t('reports.grossProfit')}</SortableTh>
+                      <SortableTh field="avgTicket" sort={byDayTable.sort} onSort={byDayTable.toggleSort}>{t('reports.avgTicket')}</SortableTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {(data?.byDay ?? []).map(day => (
+                    {byDayTable.view.map(day => (
                       <DayRow key={day.date} day={day} shopId={shopId} pmFilter={pmFilter} period={period} isHotel={isHotel} />
                     ))}
+                    {byDayTable.total === 0 && (
+                      <tr><td colSpan={5} className="text-center text-stone-400 py-6">{t('common.noData')}</td></tr>
+                    )}
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-stone-200 bg-stone-50">
@@ -837,30 +861,38 @@ export default function SalesReportPage() {
                   </tfoot>
                 </table>
               </div>
+              <TablePagination page={byDayTable.page} pageCount={byDayTable.pageCount} total={byDayTable.total} pageSize={byDayTable.pageSize} onPage={byDayTable.setPage} />
             </div>
           )}
 
           {/* Top products */}
           <div className="card">
-            <div className="px-5 py-4 border-b border-stone-100">
+            <div className="px-5 py-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-stone-700">{isHotel ? 'Revenue by Room Type' : t('reports.topProducts')}</h3>
+              <TableSearch value={topProductsTable.search} onChange={topProductsTable.setSearch} placeholder={isHotel ? 'Search room type…' : 'Search product…'} className="max-w-[13rem]" />
             </div>
             <div className="table-wrapper">
               <table className="table">
-                <thead><tr><th>#</th><th>{isHotel ? 'Room Type' : t('reports.product')}</th><th>{t('reports.revenue')}</th><th>{isHotel ? 'Total Nights' : t('reports.totalQty')}</th></tr></thead>
+                <thead><tr>
+                  <th>#</th>
+                  <SortableTh field="name" sort={topProductsTable.sort} onSort={topProductsTable.toggleSort}>{isHotel ? 'Room Type' : t('reports.product')}</SortableTh>
+                  <SortableTh field="revenue" sort={topProductsTable.sort} onSort={topProductsTable.toggleSort}>{t('reports.revenue')}</SortableTh>
+                  <SortableTh field="qty" sort={topProductsTable.sort} onSort={topProductsTable.toggleSort}>{isHotel ? 'Total Nights' : t('reports.totalQty')}</SortableTh>
+                </tr></thead>
                 <tbody>
-                  {(data?.topProducts ?? []).map((p, i) => (
-                    <tr key={i}>
-                      <td className="text-stone-400">{i + 1}</td>
+                  {topProductsTable.view.map((p, i) => (
+                    <tr key={(topProductsTable.page - 1) * topProductsTable.pageSize + i}>
+                      <td className="text-stone-400">{(topProductsTable.page - 1) * topProductsTable.pageSize + i + 1}</td>
                       <td className="font-medium">{p.name}</td>
                       <td>{fmt(p.revenue)}</td>
                       <td>{p.qty}</td>
                     </tr>
                   ))}
-                  {!data?.topProducts?.length && <tr><td colSpan={4} className="text-center text-stone-400 py-6">{t('common.noData')}</td></tr>}
+                  {topProductsTable.total === 0 && <tr><td colSpan={4} className="text-center text-stone-400 py-6">{t('common.noData')}</td></tr>}
                 </tbody>
               </table>
             </div>
+            <TablePagination page={topProductsTable.page} pageCount={topProductsTable.pageCount} total={topProductsTable.total} pageSize={topProductsTable.pageSize} onPage={topProductsTable.setPage} />
           </div>
         </>
       )}

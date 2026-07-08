@@ -5,6 +5,7 @@ import { downloadCsv } from '../../utils/exportCsv';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 const REPORT_TABS = [
   { to: '/reports/sales',     label: 'Sales',     icon: TrendingUp },
@@ -32,6 +33,25 @@ export default function InventoryReportPage() {
     queryKey: ['inventory-report', shopId],
     queryFn: () => api.get('/reporting/inventory').then(r => r.data.data),
     enabled: !!shopId,
+  });
+
+  const lowStockTable = useDataTable(data?.lowStock ?? [], {
+    searchable: p => [p.name, p.sku],
+    sortValues: { name: p => p.name, stock: p => p.stock, reorderPoint: p => p.reorderPoint },
+    initialSort: { field: 'stock', dir: 'asc' },
+    pageSize: 10,
+  });
+  const valuationTable = useDataTable(data?.valuation ?? [], {
+    searchable: p => [p.name],
+    sortValues: { name: p => p.name, stock: p => p.stock, value: p => p.value },
+    initialSort: { field: 'value', dir: 'desc' },
+    pageSize: 10,
+  });
+  const expiringTable = useDataTable(data?.expiring ?? [], {
+    searchable: e => [e.name, e.batchNo],
+    sortValues: { name: e => e.name, batchNo: e => e.batchNo, qty: e => e.qty, expiresAt: e => new Date(e.expiresAt) },
+    initialSort: { field: 'expiresAt', dir: 'asc' },
+    pageSize: 10,
   });
 
   return (
@@ -110,14 +130,19 @@ export default function InventoryReportPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Low stock */}
             <div className="card">
-              <div className="px-5 py-4 border-b border-stone-100">
+              <div className="px-5 py-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold text-stone-700">Low Stock Alerts</h3>
+                <TableSearch value={lowStockTable.search} onChange={lowStockTable.setSearch} placeholder="Search product…" className="max-w-[12rem]" />
               </div>
               <div className="table-wrapper">
                 <table className="table">
-                  <thead><tr><th>{t('reports.product')}</th><th>{t('stock.quantity')}</th><th>Reorder at</th></tr></thead>
+                  <thead><tr>
+                    <SortableTh field="name" sort={lowStockTable.sort} onSort={lowStockTable.toggleSort}>{t('reports.product')}</SortableTh>
+                    <SortableTh field="stock" sort={lowStockTable.sort} onSort={lowStockTable.toggleSort}>{t('stock.quantity')}</SortableTh>
+                    <SortableTh field="reorderPoint" sort={lowStockTable.sort} onSort={lowStockTable.toggleSort}>Reorder at</SortableTh>
+                  </tr></thead>
                   <tbody>
-                    {(data?.lowStock ?? []).map(p => (
+                    {lowStockTable.view.map(p => (
                       <tr key={p.id}>
                         <td>
                           <p className="font-medium">{p.name}</p>
@@ -129,57 +154,74 @@ export default function InventoryReportPage() {
                         <td className="text-stone-400">{p.reorderPoint} {p.unit}</td>
                       </tr>
                     ))}
-                    {!data?.lowStock?.length && <tr><td colSpan={3} className="text-center text-stone-400 py-6">All stocked up!</td></tr>}
+                    {lowStockTable.total === 0 && <tr><td colSpan={3} className="text-center text-stone-400 py-6">All stocked up!</td></tr>}
                   </tbody>
                 </table>
               </div>
+              <TablePagination page={lowStockTable.page} pageCount={lowStockTable.pageCount} total={lowStockTable.total} pageSize={lowStockTable.pageSize} onPage={lowStockTable.setPage} />
             </div>
 
             {/* Stock valuation */}
             <div className="card">
-              <div className="px-5 py-4 border-b border-stone-100">
-                <h3 className="text-sm font-semibold text-stone-700">Stock Valuation (top 10)</h3>
+              <div className="px-5 py-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-stone-700">Stock Valuation</h3>
+                <TableSearch value={valuationTable.search} onChange={valuationTable.setSearch} placeholder="Search product…" className="max-w-[12rem]" />
               </div>
               <div className="table-wrapper">
                 <table className="table">
-                  <thead><tr><th>{t('reports.product')}</th><th>{t('stock.quantity')}</th><th>{t('common.amount')}</th></tr></thead>
+                  <thead><tr>
+                    <SortableTh field="name" sort={valuationTable.sort} onSort={valuationTable.toggleSort}>{t('reports.product')}</SortableTh>
+                    <SortableTh field="stock" sort={valuationTable.sort} onSort={valuationTable.toggleSort}>{t('stock.quantity')}</SortableTh>
+                    <SortableTh field="value" sort={valuationTable.sort} onSort={valuationTable.toggleSort}>{t('common.amount')}</SortableTh>
+                  </tr></thead>
                   <tbody>
-                    {(data?.valuation ?? []).slice(0, 10).map((p, i) => (
-                      <tr key={i}>
+                    {valuationTable.view.map((p, i) => (
+                      <tr key={(valuationTable.page - 1) * valuationTable.pageSize + i}>
                         <td className="font-medium">{p.name}</td>
                         <td>{p.stock}</td>
                         <td className="font-medium">{fmt(p.value)}</td>
                       </tr>
                     ))}
-                    {!data?.valuation?.length && <tr><td colSpan={3} className="text-center text-stone-400 py-6">{t('common.noData')}</td></tr>}
+                    {valuationTable.total === 0 && <tr><td colSpan={3} className="text-center text-stone-400 py-6">{t('common.noData')}</td></tr>}
                   </tbody>
                 </table>
               </div>
+              <TablePagination page={valuationTable.page} pageCount={valuationTable.pageCount} total={valuationTable.total} pageSize={valuationTable.pageSize} onPage={valuationTable.setPage} />
             </div>
           </div>
 
           {/* Expiring */}
           {data?.expiring && data.expiring.length > 0 && (
             <div className="card">
-              <div className="px-5 py-4 border-b border-stone-100 flex items-center gap-2">
-                <AlertTriangle size={14} className="text-amber-500" />
-                <h3 className="text-sm font-semibold text-stone-700">Expiring Soon</h3>
+              <div className="px-5 py-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={14} className="text-amber-500" />
+                  <h3 className="text-sm font-semibold text-stone-700">Expiring Soon</h3>
+                </div>
+                <TableSearch value={expiringTable.search} onChange={expiringTable.setSearch} placeholder="Search product, batch…" className="max-w-[13rem]" />
               </div>
               <div className="table-wrapper">
                 <table className="table">
-                  <thead><tr><th>Product</th><th>Batch</th><th>Qty</th><th>Expires</th></tr></thead>
+                  <thead><tr>
+                    <SortableTh field="name" sort={expiringTable.sort} onSort={expiringTable.toggleSort}>Product</SortableTh>
+                    <SortableTh field="batchNo" sort={expiringTable.sort} onSort={expiringTable.toggleSort}>Batch</SortableTh>
+                    <SortableTh field="qty" sort={expiringTable.sort} onSort={expiringTable.toggleSort}>Qty</SortableTh>
+                    <SortableTh field="expiresAt" sort={expiringTable.sort} onSort={expiringTable.toggleSort}>Expires</SortableTh>
+                  </tr></thead>
                   <tbody>
-                    {data.expiring.map((e, i) => (
-                      <tr key={i}>
+                    {expiringTable.view.map((e, i) => (
+                      <tr key={(expiringTable.page - 1) * expiringTable.pageSize + i}>
                         <td className="font-medium">{e.name}</td>
                         <td className="font-mono text-xs">{e.batchNo || '—'}</td>
                         <td>{e.qty}</td>
                         <td className="text-amber-600 font-medium text-xs">{new Date(e.expiresAt).toLocaleDateString('sw-TZ')}</td>
                       </tr>
                     ))}
+                    {expiringTable.total === 0 && <tr><td colSpan={4} className="text-center text-stone-400 py-6">{t('common.noData')}</td></tr>}
                   </tbody>
                 </table>
               </div>
+              <TablePagination page={expiringTable.page} pageCount={expiringTable.pageCount} total={expiringTable.total} pageSize={expiringTable.pageSize} onPage={expiringTable.setPage} />
             </div>
           )}
         </>

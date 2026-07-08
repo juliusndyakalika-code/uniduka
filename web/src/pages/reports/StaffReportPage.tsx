@@ -7,6 +7,7 @@ import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { printReceipt } from '../../utils/printReceipt';
 import { useTranslation } from 'react-i18next';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface StaffStat {
   userId: string; fullName: string; role: string;
@@ -302,8 +303,18 @@ export default function StaffReportPage() {
     enabled: !!shopId,
   });
 
-  const sorted = [...data].sort((a, b) => b.revenue - a.revenue);
   const total  = data.reduce((s, r) => ({ tx: s.tx + r.transactionCount, rev: s.rev + r.revenue, profit: s.profit + r.grossProfit }), { tx: 0, rev: 0, profit: 0 });
+
+  const sortedForExport = [...data].sort((a, b) => b.revenue - a.revenue);
+  const staffTable = useDataTable(data, {
+    searchable: s => [s.fullName, s.role.replace(/_/g, ' ')],
+    sortValues: {
+      fullName: s => s.fullName, role: s => s.role, transactionCount: s => s.transactionCount,
+      revenue: s => s.revenue, grossProfit: s => s.grossProfit, avgTicket: s => s.avgTicket,
+    },
+    initialSort: { field: 'revenue', dir: 'desc' },
+    pageSize: 15,
+  });
 
   return (
     <div className="space-y-6">
@@ -339,7 +350,7 @@ export default function StaffReportPage() {
             disabled={data.length === 0}
             onClick={() => downloadCsv(
               `seller-summary-${from}-to-${to}.csv`,
-              sorted.map(s => [s.fullName, s.role.replace(/_/g, ' '), s.transactionCount, s.revenue, s.grossProfit.toFixed(0), s.avgTicket.toFixed(0)]),
+              sortedForExport.map(s => [s.fullName, s.role.replace(/_/g, ' '), s.transactionCount, s.revenue, s.grossProfit.toFixed(0), s.avgTicket.toFixed(0)]),
               ['Seller', 'Role', 'Transactions', 'Revenue (TZS)', 'Gross Profit (TZS)', 'Avg Sale (TZS)']
             )}
           >
@@ -351,7 +362,7 @@ export default function StaffReportPage() {
             onClick={async () => {
               if (!shopId) return;
               const rows: (string | number | null)[][] = [];
-              for (const s of sorted) {
+              for (const s of sortedForExport) {
                 const res = await api.get('/pos/transactions', { params: { cashierId: s.userId, from, to, limit: 500 } });
                 const txns: Tx[] = res.data.data ?? [];
                 for (const tx of txns) {
@@ -389,34 +400,36 @@ export default function StaffReportPage() {
 
       {/* Table */}
       <div className="card">
-        <div className="px-5 py-3 border-b border-stone-100">
+        <div className="px-5 py-3 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-stone-400">Click a row to expand and see {isHotel ? 'individual check-ins' : 'individual sales'}</p>
+          <TableSearch value={staffTable.search} onChange={staffTable.setSearch} placeholder={isHotel ? 'Search receptionist…' : 'Search seller…'} className="max-w-[13rem]" />
         </div>
         {isLoading ? (
           <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : isError ? (
           <div className="p-8 text-center text-red-500 text-sm">{t('common.error')}</div>
         ) : (
+          <>
           <div className="table-wrapper overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>{isHotel ? 'Receptionist' : t('reports.staffName')}</th>
-                  {!isHotel && <th>Role</th>}
-                  <th>{isHotel ? 'Check-ins' : t('reports.transactions')}</th>
-                  <th>{t('reports.revenue')}</th>
-                  {!isHotel && <th className="text-emerald-700">{t('reports.grossProfit')}</th>}
-                  <th>{isHotel ? 'Avg Stay' : t('reports.avgTicket')}</th>
-                  <th>Share %</th>
+                  <SortableTh field="fullName" sort={staffTable.sort} onSort={staffTable.toggleSort}>{isHotel ? 'Receptionist' : t('reports.staffName')}</SortableTh>
+                  {!isHotel && <SortableTh field="role" sort={staffTable.sort} onSort={staffTable.toggleSort}>Role</SortableTh>}
+                  <SortableTh field="transactionCount" sort={staffTable.sort} onSort={staffTable.toggleSort}>{isHotel ? 'Check-ins' : t('reports.transactions')}</SortableTh>
+                  <SortableTh field="revenue" sort={staffTable.sort} onSort={staffTable.toggleSort}>{t('reports.revenue')}</SortableTh>
+                  {!isHotel && <SortableTh field="grossProfit" sort={staffTable.sort} onSort={staffTable.toggleSort} className="text-emerald-700">{t('reports.grossProfit')}</SortableTh>}
+                  <SortableTh field="avgTicket" sort={staffTable.sort} onSort={staffTable.toggleSort}>{isHotel ? 'Avg Stay' : t('reports.avgTicket')}</SortableTh>
+                  <SortableTh field="revenue" sort={staffTable.sort} onSort={staffTable.toggleSort}>Share %</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((s, i) => (
+                {staffTable.view.map((s, i) => (
                   <SellerRow
                     key={s.userId}
                     stat={s}
-                    rank={i + 1}
+                    rank={(staffTable.page - 1) * staffTable.pageSize + i + 1}
                     share={total.rev > 0 ? (s.revenue / total.rev) * 100 : 0}
                     from={from}
                     to={to}
@@ -424,11 +437,11 @@ export default function StaffReportPage() {
                     isHotel={isHotel}
                   />
                 ))}
-                {data.length === 0 && (
+                {staffTable.total === 0 && (
                   <tr><td colSpan={isHotel ? 6 : 8} className="text-center text-stone-400 py-10">{t('reports.noSales')}</td></tr>
                 )}
               </tbody>
-              {sorted.length > 1 && (
+              {data.length > 1 && (
                 <tfoot>
                   <tr className="border-t-2 border-stone-200 bg-stone-50">
                     <td colSpan={isHotel ? 2 : 3} className="font-semibold text-stone-700 py-2 px-3">{t('common.total')}</td>
@@ -442,6 +455,8 @@ export default function StaffReportPage() {
               )}
             </table>
           </div>
+          <TablePagination page={staffTable.page} pageCount={staffTable.pageCount} total={staffTable.total} pageSize={staffTable.pageSize} onPage={staffTable.setPage} />
+          </>
         )}
       </div>
     </div>
