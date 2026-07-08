@@ -60,6 +60,25 @@ interface DayRowProps {
   isHotel?: boolean;
 }
 
+// Local YYYY-MM-DD (avoids UTC off-by-one that toISOString can introduce for date pickers)
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// The from/to range a period button should fill the date pickers with
+function presetRange(period: 'day' | 'week' | 'month'): { from: string; to: string } {
+  const now = new Date();
+  const to = ymd(now);
+  if (period === 'day') return { from: to, to };
+  if (period === 'week') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay()); // back to Sunday (matches backend week grouping)
+    return { from: ymd(start), to };
+  }
+  // month: from the 1st of the current month
+  return { from: ymd(new Date(now.getFullYear(), now.getMonth(), 1)), to };
+}
+
 function dateRangeForPeriod(date: string, period: 'day' | 'week' | 'month'): { from: string; to: string } {
   if (period === 'day') return { from: date, to: date };
   if (period === 'week') {
@@ -409,10 +428,17 @@ export default function SalesReportPage() {
   const visibleTabs = REPORT_TABS.filter(tab => !(isHotel && tab.to === '/reports/inventory'));
   const location = useLocation();
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
-  const [from, setFrom] = useState(() => {
-    const d = new Date(Date.now() - 7 * 86_400_000); return d.toISOString().split('T')[0];
-  });
-  const [to, setTo] = useState(() => new Date().toISOString().split('T')[0]);
+  const [from, setFrom] = useState(() => presetRange('week').from);
+  const [to, setTo] = useState(() => presetRange('week').to);
+
+  // Clicking a period button both changes grouping AND fills the date pickers
+  // with the matching interval. The user can still fine-tune the dates after.
+  const selectPeriod = (p: 'day' | 'week' | 'month') => {
+    setPeriod(p);
+    const r = presetRange(p);
+    setFrom(r.from);
+    setTo(r.to);
+  };
 
   const [pmFilter, setPmFilter] = useState('');  // '' = all, 'CASH', 'MOBILE_MONEY', 'CARD', 'DEBIT'
 
@@ -515,7 +541,7 @@ export default function SalesReportPage() {
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1">
           {(['day', 'week', 'month'] as const).map(p => (
-            <button key={p} onClick={() => setPeriod(p)}
+            <button key={p} onClick={() => selectPeriod(p)}
               className={`px-3 py-1.5 text-xs rounded-md transition-colors capitalize ${
                 period === p ? 'bg-white shadow-sm text-stone-900 font-medium' : 'text-stone-500 hover:text-stone-700'
               }`}
