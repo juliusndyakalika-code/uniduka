@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Store, CreditCard, Printer, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -32,11 +33,11 @@ function fmt(n: number) {
   return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
 }
 
-function StatCard({ icon: Icon, label, value, sub, color }: {
-  icon: React.ElementType; label: string; value: string; sub?: string; color: string;
+function StatCard({ icon: Icon, label, value, sub, color, to }: {
+  icon: React.ElementType; label: string; value: string; sub?: string; color: string; to?: string;
 }) {
-  return (
-    <div className="card p-4 sm:p-5 min-w-0 overflow-hidden">
+  const body = (
+    <>
       <div className="flex items-start justify-between mb-3">
         <div className={`p-2 rounded-lg ${color}`}><Icon size={18} /></div>
         <ArrowUpRight size={14} className="text-stone-400 shrink-0" />
@@ -44,8 +45,16 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
       <p className="stat-value leading-tight">{value}</p>
       <p className="stat-label truncate">{label}</p>
       {sub && <p className="text-[10px] sm:text-xs text-stone-400 mt-1 truncate">{sub}</p>}
-    </div>
+    </>
   );
+  if (to) {
+    return (
+      <Link to={to} className="card p-4 sm:p-5 min-w-0 overflow-hidden block hover:shadow-md hover:border-primary-200 transition-shadow focus:outline-none focus:ring-2 focus:ring-primary-300">
+        {body}
+      </Link>
+    );
+  }
+  return <div className="card p-4 sm:p-5 min-w-0 overflow-hidden">{body}</div>;
 }
 
 export default function Dashboard() {
@@ -150,13 +159,17 @@ export default function Dashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={TrendingUp} label={t('dashboard.revenueToday')} value={fmt(data?.revenue?.today ?? 0)}
-          sub={`${fmt(data?.revenue?.month ?? 0)} ${t('dashboard.thisMonth')}`} color="bg-primary-50 text-primary-600" />
+          sub={`${fmt(data?.revenue?.month ?? 0)} ${t('dashboard.thisMonth')}`} color="bg-primary-50 text-primary-600"
+          to="/reports/sales" />
         <StatCard icon={ShoppingCart} label={isHotel ? 'Check-ins Today' : t('dashboard.transactionsToday')} value={String(data?.transactions?.today ?? 0)}
-          sub={`${data?.transactions?.week ?? 0} ${t('dashboard.thisWeek')}`} color="bg-duka-50 text-duka-600" />
+          sub={`${data?.transactions?.week ?? 0} ${t('dashboard.thisWeek')}`} color="bg-duka-50 text-duka-600"
+          to={isHotel ? '/hotel' : '/reports/sales'} />
         <StatCard icon={Users} label={isHotel ? 'Total Guests' : t('dashboard.totalCustomers')} value={String(data?.customers?.total ?? 0)}
-          sub={t('dashboard.new', { count: data?.customers?.new ?? 0 })} color="bg-blue-50 text-blue-600" />
+          sub={t('dashboard.new', { count: data?.customers?.new ?? 0 })} color="bg-blue-50 text-blue-600"
+          to={isHotel ? '/hotel' : '/customers'} />
         <StatCard icon={Package} label={isHotel ? 'Rooms Available' : t('dashboard.lowStockAlerts')} value={String(data?.lowStock ?? 0)}
-          color={isHotel ? 'bg-emerald-50 text-emerald-600' : (data?.lowStock ? 'bg-red-50 text-red-600' : 'bg-stone-50 text-stone-500')} />
+          color={isHotel ? 'bg-emerald-50 text-emerald-600' : (data?.lowStock ? 'bg-red-50 text-red-600' : 'bg-stone-50 text-stone-500')}
+          to={isHotel ? '/hotel' : '/inventory/stock'} />
       </div>
 
       {/* Charts + top products */}
