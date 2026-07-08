@@ -430,9 +430,9 @@ export default function SalesReportPage() {
   const isHotel = shops.find(s => s.id === shopId)?.businessType === 'HOTEL_GUESTHOUSE';
   const visibleTabs = REPORT_TABS.filter(tab => !(isHotel && tab.to === '/reports/inventory'));
   const location = useLocation();
-  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
-  const [from, setFrom] = useState(() => presetRange('week').from);
-  const [to, setTo] = useState(() => presetRange('week').to);
+  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [from, setFrom] = useState(() => presetRange('day').from);
+  const [to, setTo] = useState(() => presetRange('day').to);
 
   // Clicking a period button both changes grouping AND fills the date pickers
   // with the matching interval. The user can still fine-tune the dates after.
