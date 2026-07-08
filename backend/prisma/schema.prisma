@@ -1090,6 +1090,8 @@ model ConsignmentSale {
   profit       Float   // (sellingPrice - costPrice) * qty
   notes        String?
 
+  paymentMethod PaymentMethod @default(CASH)
+
   soldById String
   soldBy   User   @relation(fields: [soldById], references: [id])
 

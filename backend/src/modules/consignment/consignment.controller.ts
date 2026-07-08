@@ -58,7 +58,7 @@ export async function listSales(req: AuthRequest, res: Response) {
 }
 
 export async function createSale(req: AuthRequest, res: Response) {
-  const { partnerId, productName, costPrice, sellingPrice, qty, notes, soldAt } = req.body;
+  const { partnerId, productName, costPrice, sellingPrice, qty, notes, soldAt, paymentMethod } = req.body;
 
   const partner = await prisma.consignmentPartner.findFirst({
     where: { id: partnerId, shopId: shop(req), isActive: true },
@@ -70,6 +70,9 @@ export async function createSale(req: AuthRequest, res: Response) {
   const quantity = Number(qty);
   const profit = (sell - cost) * quantity;
 
+  const VALID_METHODS = ['CASH', 'CARD', 'MOBILE_MONEY', 'BANK_TRANSFER'];
+  const method = VALID_METHODS.includes(paymentMethod) ? paymentMethod : 'CASH';
+
   const sale = await prisma.consignmentSale.create({
     data: {
       shopId: shop(req),
@@ -80,6 +83,7 @@ export async function createSale(req: AuthRequest, res: Response) {
       qty: quantity,
       profit,
       notes,
+      paymentMethod: method as never,
       soldById: req.user!.sub,
       ...(soldAt && { soldAt: new Date(soldAt) }),
     },

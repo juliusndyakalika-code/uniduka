@@ -11,9 +11,19 @@ import { useTranslation } from 'react-i18next';
 interface Partner { id: string; name: string; phone?: string; email?: string; notes?: string; }
 interface Sale {
   id: string; productName: string; costPrice: number; sellingPrice: number;
-  qty: number; profit: number; notes?: string; soldAt: string;
+  qty: number; profit: number; notes?: string; soldAt: string; paymentMethod?: string;
   partner: { id: string; name: string };
   soldBy: { id: string; fullName: string };
+}
+
+const PAYMENT_METHODS = [
+  { value: 'CASH',          label: 'Cash' },
+  { value: 'MOBILE_MONEY',  label: 'Mobile Money' },
+  { value: 'CARD',          label: 'Card' },
+  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+];
+function paymentLabel(m?: string) {
+  return PAYMENT_METHODS.find(p => p.value === m)?.label ?? (m ? m.replace('_', ' ') : '—');
 }
 interface SellerStat {
   sellerId: string; sellerName: string;
@@ -33,7 +43,7 @@ function date(s: string) { return new Date(s).toLocaleDateString('en-TZ', { day:
 // ── Forms ─────────────────────────────────────────────────────────────────────
 
 type PartnerForm = { name: string; phone?: string; email?: string; notes?: string; };
-type SaleForm = { partnerId: string; productName: string; costPrice: number; sellingPrice: number; qty: number; notes?: string; soldAt?: string; };
+type SaleForm = { partnerId: string; productName: string; costPrice: number; sellingPrice: number; qty: number; notes?: string; soldAt?: string; paymentMethod?: string; };
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
@@ -215,6 +225,7 @@ export default function ConsignmentPage() {
                     <th>Cost / Sell</th>
                     <th>{t('consignment.qty')}</th>
                     <th>{t('consignment.profit')}</th>
+                    <th>{t('consignment.paymentMethod')}</th>
                     <th>Sold By</th>
                     <th>{t('common.date')}</th>
                     {isOwner && <th></th>}
@@ -232,6 +243,7 @@ export default function ConsignmentPage() {
                       </td>
                       <td className="text-xs">{s.qty}</td>
                       <td className="font-semibold text-green-600">{fmt(s.profit)}</td>
+                      <td><span className="badge badge-stone text-xs">{paymentLabel(s.paymentMethod)}</span></td>
                       <td className="text-stone-500">{s.soldBy.fullName}</td>
                       <td className="text-stone-400">{date(s.soldAt)}</td>
                       {isOwner && (
@@ -418,6 +430,12 @@ export default function ConsignmentPage() {
               <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-center justify-between">
                 <span className="text-xs text-green-700">{t('consignment.profit')}</span>
                 <span className="text-sm font-bold text-green-700">{fmt(previewProfit)}</span>
+              </div>
+              <div>
+                <label className="label">{t('consignment.paymentMethod')}</label>
+                <select className="select w-full" defaultValue="CASH" {...saleForm.register('paymentMethod')}>
+                  {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

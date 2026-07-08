@@ -421,6 +421,7 @@
     "qty": "Quantity",
     "saleDate": "Sale Date",
     "notes": "Notes (optional)",
+    "paymentMethod": "Payment Method",
     "profit": "Profit",
     "revenue": "Revenue",
     "noSales": "No sales recorded",
