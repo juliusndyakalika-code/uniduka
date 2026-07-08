@@ -360,7 +360,11 @@
     "lowStockOnly": "Low stock only",
     "voidConfirm": "Confirm void",
     "voidReason": "Reason",
-    "voidPlaceholder": "Why is this being voided?"
+    "voidPlaceholder": "Why is this being voided?",
+    "consignmentSales": "Consignment Sales",
+    "consignmentRevenue": "Consignment Revenue",
+    "consignmentProfit": "Consignment Profit",
+    "consignmentNote": "Goods sold on behalf of partners"
   },
   "timeclock": {
     "title": "Staff Timeclock",

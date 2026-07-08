@@ -360,7 +360,11 @@
     "lowStockOnly": "Hisa chini tu",
     "voidConfirm": "Thibitisha kufuta",
     "voidReason": "Sababu",
-    "voidPlaceholder": "Kwa nini unafuta?"
+    "voidPlaceholder": "Kwa nini unafuta?",
+    "consignmentSales": "Mauzo ya Amana",
+    "consignmentRevenue": "Mapato ya Amana",
+    "consignmentProfit": "Faida ya Amana",
+    "consignmentNote": "Bidhaa zilizouzwa kwa niaba ya washirika"
   },
   "timeclock": {
     "title": "Saa za Kazi za Wafanyakazi",

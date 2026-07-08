@@ -31,6 +31,10 @@ interface HotelFolio {
   checkedInByName?: string;
   room?: { roomNo: string; roomType: string };
 }
+interface ConsignmentSellerStat {
+  sellerId: string; sellerName: string;
+  salesCount: number; totalQty: number; totalRevenue: number; totalProfit: number;
+}
 interface TxItem { name: string; quantity: number; unitPrice: number; unitLabel: string; discountPct: number; lineTotal: number; costPrice: number; }
 interface Tx {
   id: string; receiptNo: string; total: number; subtotal: number; discountAmount: number;
@@ -463,6 +467,25 @@ export default function SalesReportPage() {
   });
   const outstandingTotal = activeFolios.reduce((s, f) => s + f.grandTotal, 0);
 
+  // Consignment sales for the same date range — shown as a separate card
+  const { data: consignmentStats = [] } = useQuery<ConsignmentSellerStat[]>({
+    queryKey: ['consignment-profit-report', shopId, from, to],
+    queryFn: () =>
+      api.get('/consignment/profit-report', { params: { from, to } }).then(r => r.data.data ?? []),
+    enabled: !!shopId,
+    retry: false,
+  });
+  const consignment = consignmentStats.reduce(
+    (acc, s) => ({
+      salesCount: acc.salesCount + s.salesCount,
+      totalQty: acc.totalQty + s.totalQty,
+      revenue: acc.revenue + s.totalRevenue,
+      profit: acc.profit + s.totalProfit,
+    }),
+    { salesCount: 0, totalQty: 0, revenue: 0, profit: 0 },
+  );
+  const hasConsignment = consignment.salesCount > 0;
+
   return (
     <div className="space-y-6">
       <div className="page-header">
@@ -640,6 +663,39 @@ export default function SalesReportPage() {
               </div>
             );
           })()}
+
+          {/* Consignment sales — goods sold on behalf of partners (separate stream) */}
+          {hasConsignment && (
+            <div className="card p-5 border-l-4 border-l-primary-400">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-stone-700">{t('reports.consignmentSales')}</h3>
+                  <p className="text-[11px] text-stone-400 mt-0.5">{t('reports.consignmentNote')}</p>
+                </div>
+                <Link to="/consignment" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+                  {t('common.view')} →
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <p className="stat-value">{fmt(consignment.revenue)}</p>
+                  <p className="stat-label">{t('reports.consignmentRevenue')}</p>
+                </div>
+                <div>
+                  <p className="stat-value text-emerald-600">{fmt(consignment.profit)}</p>
+                  <p className="stat-label">{t('reports.consignmentProfit')}</p>
+                </div>
+                <div>
+                  <p className="stat-value">{consignment.salesCount}</p>
+                  <p className="stat-label">{t('reports.salesCount')}</p>
+                </div>
+                <div>
+                  <p className="stat-value">{consignment.totalQty}</p>
+                  <p className="stat-label">{t('reports.totalQty')}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Revenue chart */}
