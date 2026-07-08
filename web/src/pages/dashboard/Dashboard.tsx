@@ -199,6 +199,13 @@ export default function Dashboard() {
                   <td className="font-mono text-xs">
                     {tx.receiptNo}
                     {tx.status === 'VOIDED' && <span className="ml-1.5 text-[10px] bg-red-100 text-red-600 rounded px-1 py-0.5 font-semibold">VOID</span>}
+                    {/* Date & time — shown inline here on mobile where the dedicated column is hidden */}
+                    <span className="sm:hidden block text-stone-400 font-sans mt-0.5">
+                      {new Date(tx.createdAt).toLocaleString('en-TZ', {
+                        day: '2-digit', month: 'short',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </span>
                   </td>
                   <td className="hidden sm:table-cell text-xs text-stone-500">{tx.cashierName ?? '—'}</td>
                   <td className="font-medium">{fmt(tx.total)}</td>
