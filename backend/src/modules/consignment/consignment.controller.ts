@@ -103,11 +103,14 @@ export async function deleteSale(req: AuthRequest, res: Response) {
 
 export async function getProfitReport(req: AuthRequest, res: Response) {
   const { from, to } = req.query as Record<string, string>;
+  const soldAtFilter: { gte?: Date; lte?: Date } = {};
+  if (from) soldAtFilter.gte = new Date(from);
+  if (to)   soldAtFilter.lte = new Date(new Date(to).setHours(23, 59, 59, 999));
+
   const sales = await prisma.consignmentSale.findMany({
     where: {
       shopId: shop(req),
-      ...(from && { soldAt: { gte: new Date(from) } }),
-      ...(to   && { soldAt: { lte: new Date(new Date(to).setHours(23, 59, 59, 999)) } }),
+      ...(Object.keys(soldAtFilter).length && { soldAt: soldAtFilter }),
     },
     include: { soldBy: { select: { id: true, fullName: true } } },
   });
