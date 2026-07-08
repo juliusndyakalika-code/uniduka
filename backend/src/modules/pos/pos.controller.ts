@@ -43,7 +43,7 @@ export async function createTransaction(req: AuthRequest, res: Response) {
 
   // Deduct stock
   for (const item of txItems) {
-    await prisma.stockMovement.create({ data: { shopId: shop(req), productId: item.productId, type: 'SALE', quantity: -item.quantity, reference: tx.id } });
+    await prisma.stockMovement.create({ data: { shopId: shop(req), productId: item.productId, type: 'SALE', quantity: -item.quantity, reference: tx.id, userId: req.user!.sub } });
     await prisma.inventoryItem.updateMany({ where: { shopId: shop(req), productId: item.productId }, data: { quantity: { decrement: item.quantity } } });
   }
 
@@ -117,7 +117,7 @@ export async function voidTransaction(req: AuthRequest, res: Response) {
   for (const item of tx.items) {
     // Log the stock movement
     await prisma.stockMovement.create({
-      data: { shopId: shop(req), productId: item.productId, type: 'RETURN', quantity: item.quantity, reference: tx.id, note: `Void: ${reason || 'No reason'}` },
+      data: { shopId: shop(req), productId: item.productId, type: 'RETURN', quantity: item.quantity, reference: tx.id, note: `Void: ${reason || 'No reason'}`, userId: req.user!.sub },
     });
     // Actually restore the inventory quantity
     await prisma.inventoryItem.updateMany({

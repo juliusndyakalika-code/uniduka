@@ -43,8 +43,8 @@ export async function transferStock(req: AuthRequest, res: Response) {
   const { fromShopId, toShopId, productId, quantity, note } = req.body;
   await prisma.stockMovement.createMany({
     data: [
-      { shopId: fromShopId, productId, type: 'TRANSFER_OUT', quantity: -quantity, note },
-      { shopId: toShopId,   productId, type: 'TRANSFER_IN',  quantity:  quantity, note },
+      { shopId: fromShopId, productId, type: 'TRANSFER_OUT', quantity: -quantity, note, userId: req.user!.sub },
+      { shopId: toShopId,   productId, type: 'TRANSFER_IN',  quantity:  quantity, note, userId: req.user!.sub },
     ],
   });
   return R.ok(res, { message: 'Transfer recorded' });

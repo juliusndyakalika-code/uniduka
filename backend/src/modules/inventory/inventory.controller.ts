@@ -153,7 +153,7 @@ export async function createProduct(req: AuthRequest, res: Response) {
   });
   if (initialStock > 0) {
     await prisma.inventoryItem.create({ data: { shopId: shop(req), productId: product.id, quantity: initialStock, costPrice: fields.costPrice } });
-    await prisma.stockMovement.create({ data: { shopId: shop(req), productId: product.id, type: 'PURCHASE', quantity: initialStock, unitCost: fields.costPrice, note: 'Opening stock' } });
+    await prisma.stockMovement.create({ data: { shopId: shop(req), productId: product.id, type: 'PURCHASE', quantity: initialStock, unitCost: fields.costPrice, note: 'Opening stock', userId: req.user!.sub } });
   }
   return R.created(res, normaliseProduct(product, []));
 }
@@ -255,7 +255,7 @@ export async function importProducts(req: AuthRequest, res: Response) {
       const created = await prisma.product.create({ data: { ...productData, type: productData.type as never } });
       if (initialStock > 0) {
         await prisma.inventoryItem.create({ data: { shopId: p.shopId, productId: created.id, quantity: initialStock, costPrice: p.costPrice } });
-        await prisma.stockMovement.create({ data: { shopId: p.shopId, productId: created.id, type: 'PURCHASE', quantity: initialStock, unitCost: p.costPrice, note: 'CSV import opening stock' } });
+        await prisma.stockMovement.create({ data: { shopId: p.shopId, productId: created.id, type: 'PURCHASE', quantity: initialStock, unitCost: p.costPrice, note: 'CSV import opening stock', userId: req.user!.sub } });
       }
       imported.push(created.id);
     } catch (e: unknown) {
@@ -444,7 +444,7 @@ export async function addProductStock(req: AuthRequest, res: Response) {
     data: { shopId: shop(req), productId, quantity: qty, costPrice: cost, batchNo, expiryDate: expiryDate ? new Date(expiryDate) : undefined },
   });
   await prisma.stockMovement.create({
-    data: { shopId: shop(req), productId, type: 'PURCHASE', quantity: qty, unitCost: cost, batchNo, note: note || 'Manual restock' },
+    data: { shopId: shop(req), productId, type: 'PURCHASE', quantity: qty, unitCost: cost, batchNo, note: note || 'Manual restock', userId: req.user!.sub },
   });
 
   // Optionally update selling price (and record new cost on product)
@@ -654,7 +654,7 @@ export async function receivePO(req: AuthRequest, res: Response) {
     if (!poLine) continue;
     await prisma.purchaseOrderLine.update({ where: { id: rl.lineId }, data: { receivedQty: rl.receivedQty } });
     await prisma.inventoryItem.create({ data: { shopId: shop(req), productId: poLine.productId, quantity: rl.receivedQty, costPrice: poLine.unitCost, batchNo: rl.batchNo, expiryDate: rl.expiryDate ? new Date(rl.expiryDate) : undefined } });
-    await prisma.stockMovement.create({ data: { shopId: shop(req), productId: poLine.productId, type: 'PURCHASE', quantity: rl.receivedQty, unitCost: poLine.unitCost, batchNo: rl.batchNo, reference: po.id } });
+    await prisma.stockMovement.create({ data: { shopId: shop(req), productId: poLine.productId, type: 'PURCHASE', quantity: rl.receivedQty, unitCost: poLine.unitCost, batchNo: rl.batchNo, reference: po.id, userId: req.user!.sub } });
   }
   await prisma.purchaseOrder.update({ where: { id: po.id }, data: { status: 'RECEIVED', receivedAt: new Date() } });
   return R.ok(res, { message: 'Stock received' });
