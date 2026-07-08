@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, CheckCircle, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
+import { useDataTable, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface Shop {
   id: string; tradingName: string; businessType: string; isActive: boolean;
@@ -24,6 +25,20 @@ export default function PlatformShops() {
       api.patch(`/platform/shops/${id}`, { isActive }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['platform-shops'] }),
   });
+
+  const shopsTable = useDataTable(data ?? [], {
+    sortValues: {
+      shop: s => s.tradingName,
+      tenant: s => s.ownerAccount.legalName,
+      type: s => s.businessType,
+      setup: s => (s.wizardCompleted ? 0 : 1),
+      status: s => (s.isActive ? 0 : 1),
+      created: s => new Date(s.createdAt),
+    },
+    initialSort: { field: 'created', dir: 'desc' },
+    pageSize: 25,
+  });
+  const thBase = 'text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider';
 
   return (
     <div className="space-y-5">
@@ -50,16 +65,16 @@ export default function PlatformShops() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Shop</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tenant</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Setup</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Created</th>
+                <SortableTh field="shop" sort={shopsTable.sort} onSort={shopsTable.toggleSort} className={thBase}>Shop</SortableTh>
+                <SortableTh field="tenant" sort={shopsTable.sort} onSort={shopsTable.toggleSort} className={thBase}>Tenant</SortableTh>
+                <SortableTh field="type" sort={shopsTable.sort} onSort={shopsTable.toggleSort} className={thBase}>Type</SortableTh>
+                <SortableTh field="setup" sort={shopsTable.sort} onSort={shopsTable.toggleSort} className={thBase}>Setup</SortableTh>
+                <SortableTh field="status" sort={shopsTable.sort} onSort={shopsTable.toggleSort} className={thBase}>Status</SortableTh>
+                <SortableTh field="created" sort={shopsTable.sort} onSort={shopsTable.toggleSort} className={thBase}>Created</SortableTh>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(data ?? []).map(s => (
+              {shopsTable.view.map(s => (
                 <tr key={s.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3">
                     <p className="font-semibold text-slate-900">{s.tradingName}</p>
@@ -91,12 +106,13 @@ export default function PlatformShops() {
                   <td className="px-4 py-3 text-xs text-slate-400">{new Date(s.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
-              {!data?.length && (
+              {shopsTable.total === 0 && (
                 <tr><td colSpan={6} className="text-center text-slate-400 py-12">No shops found</td></tr>
               )}
             </tbody>
           </table>
         )}
+        {!isLoading && <TablePagination page={shopsTable.page} pageCount={shopsTable.pageCount} total={shopsTable.total} pageSize={shopsTable.pageSize} onPage={shopsTable.setPage} />}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { Plus, Search, Building2, X, ChevronRight } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
+import { useDataTable, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface Account {
   id: string; legalName: string; email: string; phone?: string;
@@ -63,6 +64,20 @@ export default function PlatformAccounts() {
     onError: (e: unknown) => setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
 
+  const acctTable = useDataTable(data ?? [], {
+    sortValues: {
+      account: a => a.legalName,
+      plan: a => a.subscriptionPlan,
+      counts: a => a._count.shops,
+      status: a => (a.subscriptionActive ? (a.isActive ? 0 : 1) : 2),
+      joined: a => new Date(a.createdAt),
+    },
+    initialSort: { field: 'joined', dir: 'desc' },
+    pageSize: 25,
+  });
+
+  const thBase = 'text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider';
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -94,16 +109,16 @@ export default function PlatformAccounts() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Account</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Plan</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Shops / Users</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
+                <SortableTh field="account" sort={acctTable.sort} onSort={acctTable.toggleSort} className={thBase}>Account</SortableTh>
+                <SortableTh field="plan" sort={acctTable.sort} onSort={acctTable.toggleSort} className={thBase}>Plan</SortableTh>
+                <SortableTh field="counts" sort={acctTable.sort} onSort={acctTable.toggleSort} className={thBase}>Shops / Users</SortableTh>
+                <SortableTh field="status" sort={acctTable.sort} onSort={acctTable.toggleSort} className={thBase}>Status</SortableTh>
+                <SortableTh field="joined" sort={acctTable.sort} onSort={acctTable.toggleSort} className={thBase}>Joined</SortableTh>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(data ?? []).map(a => (
+              {acctTable.view.map(a => (
                 <tr key={a.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -163,12 +178,13 @@ export default function PlatformAccounts() {
                   </td>
                 </tr>
               ))}
-              {!data?.length && (
+              {acctTable.total === 0 && (
                 <tr><td colSpan={6} className="text-center text-slate-400 py-12">No accounts yet</td></tr>
               )}
             </tbody>
           </table>
         )}
+        {!isLoading && <TablePagination page={acctTable.page} pageCount={acctTable.pageCount} total={acctTable.total} pageSize={acctTable.pageSize} onPage={acctTable.setPage} />}
       </div>
 
       {/* Create account modal */}

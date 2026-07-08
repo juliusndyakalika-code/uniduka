@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { printReceipt as doPrint } from '../../utils/printReceipt';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface DashboardData {
   revenue: { today: number; week: number; month: number };
@@ -60,6 +61,19 @@ export default function Dashboard() {
     queryKey: ['dashboard', shopId],
     queryFn: () => api.get('/tenant/dashboard').then(r => r.data.data),
     enabled: !!shopId,
+  });
+
+  const txTable = useDataTable(data?.recentTransactions ?? [], {
+    searchable: tx => [tx.receiptNo, tx.cashierName, tx.paymentMethod],
+    sortValues: {
+      receipt: tx => tx.receiptNo,
+      cashier: tx => tx.cashierName,
+      total: tx => tx.total,
+      payment: tx => tx.paymentMethod,
+      createdAt: tx => new Date(tx.createdAt),
+    },
+    initialSort: { field: 'createdAt', dir: 'desc' },
+    pageSize: 10,
   });
 
   const fetchAndPrint = async (txId: string) => {
@@ -177,24 +191,27 @@ export default function Dashboard() {
 
       {/* Recent transactions */}
       <div className="card">
-        <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-stone-700">{isHotel ? 'Recent Check-ins' : t('dashboard.recentTransactions')}</h3>
-          <a href="/reports/sales" className="text-xs text-primary-600 hover:underline">{t('dashboard.viewAll')}</a>
+          <div className="flex items-center gap-3">
+            <TableSearch value={txTable.search} onChange={txTable.setSearch} placeholder="Search receipt, cashier…" className="max-w-[12rem]" />
+            <a href="/reports/sales" className="text-xs text-primary-600 hover:underline shrink-0">{t('dashboard.viewAll')}</a>
+          </div>
         </div>
         <div className="table-wrapper">
           <table className="table">
             <thead>
               <tr>
-                <th>{t('dashboard.receipt')}</th>
-                <th className="hidden sm:table-cell">{t('dashboard.customerCashier')}</th>
-                <th>Amount</th>
-                <th className="hidden sm:table-cell">{t('dashboard.payment')}</th>
-                <th className="hidden sm:table-cell">{t('dashboard.dateTime')}</th>
+                <SortableTh field="receipt" sort={txTable.sort} onSort={txTable.toggleSort}>{t('dashboard.receipt')}</SortableTh>
+                <SortableTh field="cashier" sort={txTable.sort} onSort={txTable.toggleSort} className="hidden sm:table-cell">{t('dashboard.customerCashier')}</SortableTh>
+                <SortableTh field="total" sort={txTable.sort} onSort={txTable.toggleSort}>Amount</SortableTh>
+                <SortableTh field="payment" sort={txTable.sort} onSort={txTable.toggleSort} className="hidden sm:table-cell">{t('dashboard.payment')}</SortableTh>
+                <SortableTh field="createdAt" sort={txTable.sort} onSort={txTable.toggleSort} className="hidden sm:table-cell">{t('dashboard.dateTime')}</SortableTh>
                 <th>{t('common.print')}</th>
               </tr>
             </thead>
             <tbody>
-              {(data?.recentTransactions ?? []).map(tx => (
+              {txTable.view.map(tx => (
                 <tr key={tx.id} className={tx.status === 'VOIDED' ? 'opacity-50' : ''}>
                   <td className="font-mono text-xs">
                     {tx.receiptNo}
@@ -230,12 +247,13 @@ export default function Dashboard() {
                   )}
                 </tr>
               ))}
-              {!data?.recentTransactions?.length && (
+              {txTable.total === 0 && (
                 <tr><td colSpan={6} className="text-center text-stone-400 py-6">{t('dashboard.noTransactionsYet')}</td></tr>
               )}
             </tbody>
           </table>
         </div>
+        <TablePagination page={txTable.page} pageCount={txTable.pageCount} total={txTable.total} pageSize={txTable.pageSize} onPage={txTable.setPage} />
       </div>
 
       {/* Subscription info */}

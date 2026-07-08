@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Store, Users, CheckCircle, XCircle, Calendar, CreditCard, AlertTriangle } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import api from '../../api/client';
+import { useDataTable, SortableTh } from '../../components/ui/DataTable';
 
 interface AccountDetail {
   id: string; legalName: string; email: string; phone?: string;
@@ -73,6 +74,24 @@ export default function PlatformAccountDetail() {
       api.patch(`/platform/users/${userId}`, { isActive }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['platform-account', id] }),
   });
+
+  const shopsTable = useDataTable(account?.shops ?? [], {
+    sortValues: {
+      shop: s => s.tradingName, type: s => s.businessType,
+      setup: s => (s.wizardCompleted ? 0 : 1), status: s => (s.isActive ? 0 : 1),
+    },
+    initialSort: { field: 'shop', dir: 'asc' },
+    pageSize: 1000,
+  });
+  const usersTable = useDataTable(account?.users ?? [], {
+    sortValues: {
+      user: u => u.fullName, role: u => u.role,
+      lastLogin: u => (u.lastLoginAt ? new Date(u.lastLoginAt) : null), status: u => (u.isActive ? 0 : 1),
+    },
+    initialSort: { field: 'user', dir: 'asc' },
+    pageSize: 1000,
+  });
+  const thBase = 'text-left px-5 py-2.5 text-xs font-semibold text-slate-500';
 
   if (isLoading) return <div className="text-slate-400 text-sm p-8">Loading…</div>;
   if (!account)  return <div className="text-red-500 text-sm p-8">Account not found</div>;
@@ -176,14 +195,14 @@ export default function PlatformAccountDetail() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
-                <th className="text-left px-5 py-2.5 text-xs font-semibold text-slate-500">Shop</th>
-                <th className="text-left px-5 py-2.5 text-xs font-semibold text-slate-500">Type</th>
-                <th className="text-left px-5 py-2.5 text-xs font-semibold text-slate-500">Setup</th>
-                <th className="text-left px-5 py-2.5 text-xs font-semibold text-slate-500">Status</th>
+                <SortableTh field="shop" sort={shopsTable.sort} onSort={shopsTable.toggleSort} className={thBase}>Shop</SortableTh>
+                <SortableTh field="type" sort={shopsTable.sort} onSort={shopsTable.toggleSort} className={thBase}>Type</SortableTh>
+                <SortableTh field="setup" sort={shopsTable.sort} onSort={shopsTable.toggleSort} className={thBase}>Setup</SortableTh>
+                <SortableTh field="status" sort={shopsTable.sort} onSort={shopsTable.toggleSort} className={thBase}>Status</SortableTh>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {account.shops.map(s => (
+              {shopsTable.sorted.map(s => (
                 <tr key={s.id} className="hover:bg-slate-50">
                   <td className="px-5 py-3">
                     <p className="font-medium text-slate-900">{s.tradingName}</p>
@@ -224,14 +243,14 @@ export default function PlatformAccountDetail() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
-                <th className="text-left px-5 py-2.5 text-xs font-semibold text-slate-500">User</th>
-                <th className="text-left px-5 py-2.5 text-xs font-semibold text-slate-500">Role</th>
-                <th className="text-left px-5 py-2.5 text-xs font-semibold text-slate-500">Last Login</th>
-                <th className="text-left px-5 py-2.5 text-xs font-semibold text-slate-500">Status</th>
+                <SortableTh field="user" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>User</SortableTh>
+                <SortableTh field="role" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>Role</SortableTh>
+                <SortableTh field="lastLogin" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>Last Login</SortableTh>
+                <SortableTh field="status" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>Status</SortableTh>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {account.users.map(u => (
+              {usersTable.sorted.map(u => (
                 <tr key={u.id} className="hover:bg-slate-50">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-2.5">

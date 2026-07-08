@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
+import { useDataTable, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface PlatformUser {
   id: string; fullName: string; email: string; role: string; isActive: boolean;
@@ -31,6 +32,19 @@ export default function PlatformUsers() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['platform-users'] }),
   });
 
+  const usersTable = useDataTable(data ?? [], {
+    sortValues: {
+      user: u => u.fullName,
+      tenant: u => u.ownerAccount.legalName,
+      role: u => u.role,
+      lastLogin: u => (u.lastLoginAt ? new Date(u.lastLoginAt) : null),
+      status: u => (u.isActive ? 0 : 1),
+    },
+    initialSort: { field: 'user', dir: 'asc' },
+    pageSize: 25,
+  });
+  const thBase = 'text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider';
+
   return (
     <div className="space-y-5">
       <div>
@@ -54,15 +68,15 @@ export default function PlatformUsers() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tenant</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Login</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                <SortableTh field="user" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>User</SortableTh>
+                <SortableTh field="tenant" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>Tenant</SortableTh>
+                <SortableTh field="role" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>Role</SortableTh>
+                <SortableTh field="lastLogin" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>Last Login</SortableTh>
+                <SortableTh field="status" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>Status</SortableTh>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(data ?? []).map(u => (
+              {usersTable.view.map(u => (
                 <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -101,12 +115,13 @@ export default function PlatformUsers() {
                   </td>
                 </tr>
               ))}
-              {!data?.length && (
+              {usersTable.total === 0 && (
                 <tr><td colSpan={5} className="text-center text-slate-400 py-12">No users found</td></tr>
               )}
             </tbody>
           </table>
         )}
+        {!isLoading && <TablePagination page={usersTable.page} pageCount={usersTable.pageCount} total={usersTable.total} pageSize={usersTable.pageSize} onPage={usersTable.setPage} />}
       </div>
     </div>
   );
