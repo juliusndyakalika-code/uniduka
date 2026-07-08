@@ -5,6 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface POLine { productId: string; qty: number; unitCost: number; }
 interface PO { id: string; poNumber: string; status: string; total: number; supplier: { name: string }; lines: (POLine & { product: { name: string } })[]; createdAt: string; expectedDate?: string; }
@@ -59,6 +60,16 @@ export default function PurchaseOrdersPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-orders'] }),
   });
 
+  const poTable = useDataTable(orders, {
+    searchable: po => [po.poNumber, po.supplier.name, po.status],
+    sortValues: {
+      poNumber: po => po.poNumber, supplier: po => po.supplier.name, total: po => po.total,
+      status: po => po.status, expectedDate: po => (po.expectedDate ? new Date(po.expectedDate) : null),
+    },
+    initialSort: { field: 'poNumber', dir: 'desc' },
+    pageSize: 20,
+  });
+
   return (
     <div className="space-y-4">
       <div className="page-header">
@@ -75,20 +86,24 @@ export default function PurchaseOrdersPage() {
         {isLoading ? (
           <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : (
+          <>
+          <div className="px-4 py-3 border-b border-stone-100">
+            <TableSearch value={poTable.search} onChange={poTable.setSearch} placeholder="Search PO, supplier, status…" />
+          </div>
           <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
-                  <th>PO Number</th>
-                  <th>{t('purchaseOrders.supplier')}</th>
-                  <th>{t('purchaseOrders.total')}</th>
-                  <th>{t('purchaseOrders.status')}</th>
-                  <th>Expected</th>
+                  <SortableTh field="poNumber" sort={poTable.sort} onSort={poTable.toggleSort}>PO Number</SortableTh>
+                  <SortableTh field="supplier" sort={poTable.sort} onSort={poTable.toggleSort}>{t('purchaseOrders.supplier')}</SortableTh>
+                  <SortableTh field="total" sort={poTable.sort} onSort={poTable.toggleSort}>{t('purchaseOrders.total')}</SortableTh>
+                  <SortableTh field="status" sort={poTable.sort} onSort={poTable.toggleSort}>{t('purchaseOrders.status')}</SortableTh>
+                  <SortableTh field="expectedDate" sort={poTable.sort} onSort={poTable.toggleSort}>Expected</SortableTh>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map(po => (
+                {poTable.view.map(po => (
                   <tr key={po.id}>
                     <td className="font-mono text-xs">{po.poNumber}</td>
                     <td className="font-medium">{po.supplier.name}</td>
@@ -109,12 +124,14 @@ export default function PurchaseOrdersPage() {
                     </td>
                   </tr>
                 ))}
-                {orders.length === 0 && (
+                {poTable.total === 0 && (
                   <tr><td colSpan={6} className="text-center text-stone-400 py-8">{t('purchaseOrders.noOrders')}</td></tr>
                 )}
               </tbody>
             </table>
           </div>
+          <TablePagination page={poTable.page} pageCount={poTable.pageCount} total={poTable.total} pageSize={poTable.pageSize} onPage={poTable.setPage} />
+          </>
         )}
       </div>
 

@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useDataTable, SortableTh } from '../../components/ui/DataTable';
 
 interface Movement {
   id: string; type: string; quantity: number; note?: string;
@@ -73,6 +74,19 @@ export default function StockPage() {
   const movements = data?.data ?? [];
   const meta = data?.meta;
 
+  // Client-side column sorting over the current page (search + paging are server-side)
+  const stockSort = useDataTable(movements, {
+    sortValues: {
+      type: m => m.type,
+      product: m => m.product.name,
+      quantity: m => m.quantity,
+      note: m => m.note,
+      user: m => m.user?.fullName,
+      date: m => new Date(m.createdAt),
+    },
+    pageSize: movements.length || 1,
+  });
+
   const { data: products = [] } = useQuery<{ id: string; name: string; sku: string }[]>({
     queryKey: ['products-min', shopId],
     queryFn: () => api.get('/inventory/products', { params: { limit: 500 } }).then(r => r.data.data),
@@ -134,16 +148,16 @@ export default function StockPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>{t('stock.type')}</th>
-                    <th>{t('stock.product')}</th>
-                    <th>{t('stock.quantity')}</th>
-                    <th>{t('stock.note')}</th>
-                    <th>{t('stock.user')}</th>
-                    <th>{t('stock.date')}</th>
+                    <SortableTh field="type" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.type')}</SortableTh>
+                    <SortableTh field="product" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.product')}</SortableTh>
+                    <SortableTh field="quantity" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.quantity')}</SortableTh>
+                    <SortableTh field="note" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.note')}</SortableTh>
+                    <SortableTh field="user" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.user')}</SortableTh>
+                    <SortableTh field="date" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.date')}</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {movements.map(m => (
+                  {stockSort.sorted.map(m => (
                     <tr key={m.id}>
                       <td>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${TYPE_BADGE[m.type] ?? 'bg-stone-100 text-stone-600'}`}>

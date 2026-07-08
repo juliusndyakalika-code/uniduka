@@ -12,6 +12,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Kpis {
@@ -80,6 +81,16 @@ export default function InventoryDashboard() {
     queryFn: () => api.get('/inventory/dashboard').then(r => r.data.data),
     enabled: !!shopId,
     staleTime: 60_000,
+  });
+
+  const expiryTable = useDataTable(data?.expiryAlerts ?? [], {
+    searchable: a => [a.product.name, a.product.sku],
+    sortValues: {
+      name: a => a.product.name, sku: a => a.product.sku, qty: a => a.quantity,
+      expiry: a => new Date(a.expiryDate),
+    },
+    initialSort: { field: 'expiry', dir: 'asc' },
+    pageSize: 10,
   });
 
   if (isLoading || !data) {
@@ -306,22 +317,23 @@ export default function InventoryDashboard() {
       {/* ── Expiry alerts ── */}
       {expiryAlerts.length > 0 && (
         <div className="card">
-          <div className="p-4 border-b border-stone-100">
+          <div className="p-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
             <SectionHeader title={`Expiring Within 30 Days (${expiryAlerts.length})`} />
+            <TableSearch value={expiryTable.search} onChange={expiryTable.setSearch} placeholder="Search product, SKU…" className="max-w-[13rem]" />
           </div>
           <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Product</th>
-                  <th>SKU</th>
-                  <th>Qty</th>
-                  <th>Expires</th>
-                  <th>Days left</th>
+                  <SortableTh field="name" sort={expiryTable.sort} onSort={expiryTable.toggleSort}>Product</SortableTh>
+                  <SortableTh field="sku" sort={expiryTable.sort} onSort={expiryTable.toggleSort}>SKU</SortableTh>
+                  <SortableTh field="qty" sort={expiryTable.sort} onSort={expiryTable.toggleSort}>Qty</SortableTh>
+                  <SortableTh field="expiry" sort={expiryTable.sort} onSort={expiryTable.toggleSort}>Expires</SortableTh>
+                  <SortableTh field="expiry" sort={expiryTable.sort} onSort={expiryTable.toggleSort}>Days left</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {expiryAlerts.map(a => {
+                {expiryTable.view.map(a => {
                   const daysLeft = Math.ceil((new Date(a.expiryDate).getTime() - Date.now()) / 864e5);
                   return (
                     <tr key={a.id}>
@@ -337,9 +349,13 @@ export default function InventoryDashboard() {
                     </tr>
                   );
                 })}
+                {expiryTable.total === 0 && (
+                  <tr><td colSpan={5} className="text-center text-stone-400 py-6">{t('common.noData')}</td></tr>
+                )}
               </tbody>
             </table>
           </div>
+          <TablePagination page={expiryTable.page} pageCount={expiryTable.pageCount} total={expiryTable.total} pageSize={expiryTable.pageSize} onPage={expiryTable.setPage} />
         </div>
       )}
     </div>
