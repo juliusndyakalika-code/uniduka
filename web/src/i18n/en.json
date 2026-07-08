@@ -96,7 +96,8 @@
     "taxRules": "Tax Rules",
     "shopSettings": "Shop Settings",
     "businessSettings": "Business Settings",
-    "timeclock": "Timeclock"
+    "timeclock": "Timeclock",
+    "expenses": "Expenses"
   },
   "sidebar": {
     "changePassword": "Change Password",

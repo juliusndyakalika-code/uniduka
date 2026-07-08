@@ -6,7 +6,7 @@ import {
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
-  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages,
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
@@ -318,6 +318,7 @@ export default function Sidebar({ open, onClose }: Props) {
                   <NavItem to="/reports/inventory" icon={<Package size={14} />} label={t('nav.stock')} />
                 )}
               </NavGroup>
+              <NavItem to="/expenses" icon={<Wallet size={16} />} label={t('nav.expenses')} />
 
               <div className="pt-3 pb-1">
                 <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400">{t('nav.management')}</p>

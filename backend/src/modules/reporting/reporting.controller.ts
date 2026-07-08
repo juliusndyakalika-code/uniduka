@@ -77,8 +77,24 @@ async function hotelSalesReport(req: AuthRequest, res: Response, range: { gte: D
     { method: 'UNPAID', label: 'Unpaid / Active', total: unpaid, count: folios.filter(f => !f.isPaid).length },
   ].filter(p => p.count > 0);
 
+  // Operating expenses for the same period → net profit
+  const expenseAgg = await prisma.expense.aggregate({
+    where: { shopId: shop(req), incurredAt: range },
+    _sum: { amount: true },
+  });
+  const expenses  = expenseAgg._sum.amount ?? 0;
+  const grossProfit = revenue; // no product cost for room stays
+  const netProfit = grossProfit - expenses;
+
   return R.ok(res, {
-    summary:         { revenue, transactions: folioCount, avgTicket: folioCount > 0 ? revenue / folioCount : 0, grossProfit: revenue },
+    summary: {
+      revenue, transactions: folioCount,
+      avgTicket: folioCount > 0 ? revenue / folioCount : 0,
+      grossProfit,
+      debtAmount: unpaid,        // unpaid folios (guests not yet settled)
+      debtGrossProfit: unpaid,   // no COGS on rooms, so unpaid profit == unpaid revenue
+      expenses, netProfit,
+    },
     byDay:           Object.values(grouped),
     byPaymentMethod,
     topProducts:     Object.values(roomTypeMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10),
@@ -110,20 +126,41 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
       orderBy: { createdAt: 'asc' },
     });
 
-    // Summary — revenue = actual cash received (sum of non-DEBIT payments)
-    // DEBIT transactions only count when settlement payments exist
-    const revenue = transactions.reduce((s, t) => {
-      const received = t.payments.filter(p => p.method !== 'DEBIT').reduce((ps, p) => ps + p.amount, 0);
-      // If no DEBIT payment exists, it's a normal sale — use total
+    // Summary — revenue = full value of all sales made (accrual basis).
+    // A credit sale is still a sale; the unpaid part is tracked separately as debtAmount.
+    const revenue = transactions.reduce((s, t) => s + t.total, 0);
+    // debtAmount = portion of revenue not yet collected (unpaid credit sales)
+    const debtAmount = transactions.reduce((s, t) => {
       const hasDebit = t.payments.some(p => p.method === 'DEBIT');
-      return s + (hasDebit ? received : t.total);
+      if (!hasDebit) return s;
+      const received = t.payments.filter(p => p.method !== 'DEBIT').reduce((ps, p) => ps + p.amount, 0);
+      return s + Math.max(0, t.total - received);
     }, 0);
     const txCount   = transactions.length;
     const avgTicket = txCount > 0 ? revenue / txCount : 0;
     const grossProfit = transactions.reduce((s, t) => {
       const cost = t.items.reduce((cs, i) => cs + (i.product?.costPrice ?? 0) * i.quantity, 0);
-      return s + t.total - cost; // use full sale total — debt means payment is pending, not that goods weren't sold
+      return s + t.total - cost; // full sale total minus cost of goods sold
     }, 0);
+    // Gross profit still tied up in unpaid debt (informational — the profit not yet collected)
+    const debtGrossProfit = transactions.reduce((s, t) => {
+      const hasDebit = t.payments.some(p => p.method === 'DEBIT');
+      if (!hasDebit) return s;
+      const received = t.payments.filter(p => p.method !== 'DEBIT').reduce((ps, p) => ps + p.amount, 0);
+      const outstanding = Math.max(0, t.total - received);
+      if (outstanding <= 0) return s;
+      const cost = t.items.reduce((cs, i) => cs + (i.product?.costPrice ?? 0) * i.quantity, 0);
+      const marginRate = t.total > 0 ? (t.total - cost) / t.total : 0;
+      return s + outstanding * marginRate;
+    }, 0);
+
+    // Operating expenses for the same period → net profit
+    const expenseAgg = await prisma.expense.aggregate({
+      where: { shopId: shop(req), incurredAt: range },
+      _sum: { amount: true },
+    });
+    const expenses  = expenseAgg._sum.amount ?? 0;
+    const netProfit = grossProfit - expenses;
 
     // Group by period → byDay
     const grouped: Record<string, { date: string; revenue: number; txCount: number; grossProfit: number }> = {};
@@ -138,11 +175,9 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
         key = d.toISOString().slice(0, 10);
       }
       if (!grouped[key]) grouped[key] = { date: key, revenue: 0, txCount: 0, grossProfit: 0 };
-      const txHasDebit = tx.payments.some(p => p.method === 'DEBIT');
-      const txReceived = tx.payments.filter(p => p.method !== 'DEBIT').reduce((s, p) => s + p.amount, 0);
       const txCost     = tx.items.reduce((cs, i) => cs + (i.product?.costPrice ?? 0) * i.quantity, 0);
-      grouped[key].revenue     += txHasDebit ? txReceived : tx.total; // cash received
-      grouped[key].grossProfit += tx.total - txCost;                  // profit on all goods sold
+      grouped[key].revenue     += tx.total;            // full sale value (accrual)
+      grouped[key].grossProfit += tx.total - txCost;   // profit on all goods sold
       grouped[key].txCount++;
     }
 
@@ -171,7 +206,7 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
     const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
 
     return R.ok(res, {
-      summary:         { revenue, transactions: txCount, avgTicket, grossProfit },
+      summary: { revenue, transactions: txCount, avgTicket, grossProfit, debtAmount, debtGrossProfit, expenses, netProfit },
       byDay:           Object.values(grouped),
       byPaymentMethod: Object.values(pmMap),
       topProducts,

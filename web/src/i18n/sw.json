@@ -96,7 +96,8 @@
     "taxRules": "Kanuni za Kodi",
     "shopSettings": "Mipangilio ya Duka",
     "businessSettings": "Mipangilio ya Biashara",
-    "timeclock": "Saa za Kazi"
+    "timeclock": "Saa za Kazi",
+    "expenses": "Matumizi"
   },
   "sidebar": {
     "changePassword": "Badilisha Nenosiri",

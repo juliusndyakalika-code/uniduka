@@ -16,7 +16,10 @@ const REPORT_TABS = [
 ];
 
 interface SalesReport {
-  summary: { revenue: number; transactions: number; avgTicket: number; grossProfit: number };
+  summary: {
+    revenue: number; transactions: number; avgTicket: number; grossProfit: number;
+    debtAmount?: number; debtGrossProfit?: number; expenses?: number; netProfit?: number;
+  };
   byDay: { date: string; revenue: number; txCount: number; grossProfit: number }[];
   byPaymentMethod: { method: string; label: string; total: number; count: number }[];
   topProducts: { name: string; revenue: number; qty: number }[];
@@ -590,23 +593,53 @@ export default function SalesReportPage() {
       ) : !isError && (
         <>
           {/* Summary stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: t('reports.totalRevenue'), value: fmt(data?.summary.revenue ?? 0) },
-              { label: isHotel ? 'Check-ins' : t('reports.transactions'), value: String(data?.summary.transactions ?? 0) },
-              { label: isHotel ? 'Avg Stay Revenue' : t('reports.avgTicket'), value: fmt(data?.summary.avgTicket ?? 0) },
-              { label: isHotel ? 'Outstanding (Active)' : t('reports.grossProfit'),
-                value: isHotel ? fmt(outstandingTotal) : fmt(data?.summary.grossProfit ?? 0) },
-            ].map(s => (
-              <div key={s.label} className="card p-5">
-                <p className="stat-value">{s.value}</p>
-                <p className="stat-label">{s.label}</p>
-                {s.label === 'Outstanding (Active)' && activeFolios.length > 0 && (
-                  <p className="text-[10px] text-amber-600 mt-1">{activeFolios.length} active guest{activeFolios.length !== 1 ? 's' : ''} not yet settled</p>
-                )}
+          {(() => {
+            const sm         = data?.summary;
+            const revenue    = sm?.revenue ?? 0;
+            const grossProfit = sm?.grossProfit ?? 0;
+            const debtAmount = sm?.debtAmount ?? 0;
+            const debtGP     = sm?.debtGrossProfit ?? 0;
+            const expenses   = sm?.expenses ?? 0;
+            const netProfit  = sm?.netProfit ?? (grossProfit - expenses);
+
+            type Card = { label: string; value: string; note?: string; noteClass?: string; valueClass?: string };
+            const cards: Card[] = isHotel
+              ? [
+                  { label: t('reports.totalRevenue'), value: fmt(revenue),
+                    note: debtAmount > 0 ? `${fmt(debtAmount)} unpaid` : undefined, noteClass: 'text-amber-600' },
+                  { label: 'Check-ins', value: String(sm?.transactions ?? 0) },
+                  { label: 'Avg Stay Revenue', value: fmt(sm?.avgTicket ?? 0) },
+                  { label: 'Outstanding (Active)', value: fmt(outstandingTotal),
+                    note: activeFolios.length > 0 ? `${activeFolios.length} active guest${activeFolios.length !== 1 ? 's' : ''} not yet settled` : undefined,
+                    noteClass: 'text-amber-600' },
+                  { label: 'Expenses', value: fmt(expenses), valueClass: 'text-red-600' },
+                  { label: 'Net Profit', value: fmt(netProfit), valueClass: netProfit >= 0 ? 'text-emerald-600' : 'text-red-600',
+                    note: 'Revenue − expenses', noteClass: 'text-stone-400' },
+                ]
+              : [
+                  { label: t('reports.totalRevenue'), value: fmt(revenue),
+                    note: debtAmount > 0 ? `incl. ${fmt(debtAmount)} unpaid credit` : undefined, noteClass: 'text-amber-600' },
+                  { label: t('reports.transactions'), value: String(sm?.transactions ?? 0) },
+                  { label: t('reports.avgTicket'), value: fmt(sm?.avgTicket ?? 0) },
+                  { label: t('reports.grossProfit'), value: fmt(grossProfit), valueClass: 'text-emerald-600',
+                    note: debtGP > 0 ? `${fmt(debtGP)} not yet collected` : undefined, noteClass: 'text-amber-600' },
+                  { label: 'Expenses', value: fmt(expenses), valueClass: 'text-red-600' },
+                  { label: 'Net Profit', value: fmt(netProfit), valueClass: netProfit >= 0 ? 'text-emerald-600' : 'text-red-600',
+                    note: 'Gross profit − expenses', noteClass: 'text-stone-400' },
+                ];
+
+            return (
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                {cards.map(s => (
+                  <div key={s.label} className="card p-5">
+                    <p className={`stat-value ${s.valueClass ?? ''}`}>{s.value}</p>
+                    <p className="stat-label">{s.label}</p>
+                    {s.note && <p className={`text-[10px] mt-1 ${s.noteClass ?? 'text-stone-400'}`}>{s.note}</p>}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Revenue chart */}

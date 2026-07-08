@@ -45,6 +45,7 @@ import HotelPage from './pages/hotel/HotelPage';
 
 import PrintReceiptPage from './pages/PrintReceiptPage';
 import ConsignmentPage from './pages/consignment/ConsignmentPage';
+import ExpensesPage from './pages/expenses/ExpensesPage';
 import ShopsPage from './pages/admin/ShopsPage';
 import UsersPage from './pages/admin/UsersPage';
 import BusinessSettingsPage from './pages/admin/BusinessSettingsPage';
@@ -115,6 +116,7 @@ export default function App() {
 
             {/* Owner-only management routes */}
             <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER']} />}>
+              <Route path="/expenses"       element={<ExpensesPage />} />
               <Route path="/admin/users"    element={<UsersPage />} />
               <Route path="/admin/shops"    element={<ShopsPage />} />
               <Route path="/admin/shop"     element={<ShopSettingsPage />} />

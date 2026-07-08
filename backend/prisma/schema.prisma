@@ -300,6 +300,7 @@ model Shop {
   consignmentPartners   ConsignmentPartner[]
   consignmentSales      ConsignmentSale[]
   timeClocks            TimeClock[]
+  expenses              Expense[]
 
   @@map("shops")
 }
@@ -715,6 +716,44 @@ model TransactionPayment {
   createdAt     DateTime      @default(now())
 
   @@map("transaction_payments")
+}
+
+// ─── EXPENSES ────────────────────────────────────────────────────────────────
+
+enum ExpenseCategory {
+  RENT          // Rent / premises
+  SALARIES      // Staff wages & salaries
+  UTILITIES     // Electricity, water, internet, airtime
+  SUPPLIES      // Operating supplies, packaging
+  TRANSPORT     // Fuel, delivery, logistics
+  MARKETING     // Advertising & promotion
+  MAINTENANCE   // Repairs & equipment upkeep
+  TAX_LICENSE   // Taxes, licenses, government fees
+  BANK_FEES     // Bank & mobile money charges
+  OTHER         // Anything else
+}
+
+model Expense {
+  id             String          @id @default(cuid())
+  shopId         String
+  shop           Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  category       ExpenseCategory @default(OTHER)
+  description    String
+  amount         Float
+  paymentMethod  String?         // CASH, MOBILE_MONEY, CARD, BANK
+  reference      String?         // receipt no, M-Pesa ref
+  vendor         String?         // who was paid
+  incurredAt     DateTime        @default(now())  // when the expense happened — drives the reporting period
+
+  recordedById   String?         // user who logged it (snapshot, no FK to survive user deletion)
+  recordedByName String?
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([shopId, incurredAt])
+  @@map("expenses")
 }
 
 // ─── CRM / CUSTOMERS ─────────────────────────────────────────────────────────
