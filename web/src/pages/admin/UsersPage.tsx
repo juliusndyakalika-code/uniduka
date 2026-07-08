@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface StaffUser {
   id: string; fullName: string; email: string; role: string; isActive: boolean;
@@ -151,6 +152,18 @@ export default function UsersPage() {
 
   const isOwnerUser = user?.role === 'ACCOUNT_OWNER';
 
+  const usersTable = useDataTable(users, {
+    searchable: u => [u.fullName, u.email, u.role.replace(/_/g, ' '), u.shopAccess[0]?.shop.tradingName],
+    sortValues: {
+      fullName: u => u.fullName,
+      role: u => u.role,
+      shop: u => (u.role === 'ACCOUNT_OWNER' ? '' : u.shopAccess[0]?.shop.tradingName),
+      status: u => (u.isActive ? 0 : 1),
+    },
+    initialSort: { field: 'fullName', dir: 'asc' },
+    pageSize: 20,
+  });
+
   return (
     <div className="space-y-4">
       <div className="page-header">
@@ -177,19 +190,23 @@ export default function UsersPage() {
         {isLoading ? (
           <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : (
+          <>
+          <div className="px-4 py-3 border-b border-stone-100">
+            <TableSearch value={usersTable.search} onChange={usersTable.setSearch} placeholder="Search name, email, role…" />
+          </div>
           <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
-                  <th>{t('users.name')}</th>
-                  <th>{t('users.role')}</th>
-                  <th>{t('users.shop')}</th>
-                  <th>{t('users.status')}</th>
+                  <SortableTh field="fullName" sort={usersTable.sort} onSort={usersTable.toggleSort}>{t('users.name')}</SortableTh>
+                  <SortableTh field="role" sort={usersTable.sort} onSort={usersTable.toggleSort}>{t('users.role')}</SortableTh>
+                  <SortableTh field="shop" sort={usersTable.sort} onSort={usersTable.toggleSort}>{t('users.shop')}</SortableTh>
+                  <SortableTh field="status" sort={usersTable.sort} onSort={usersTable.toggleSort}>{t('users.status')}</SortableTh>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {users.map(u => {
+                {usersTable.view.map(u => {
                   const assignedShop = u.shopAccess[0];
                   const isOwner = u.role === 'ACCOUNT_OWNER';
                   const isMe = u.id === user?.id;
@@ -282,12 +299,14 @@ export default function UsersPage() {
                     </tr>
                   );
                 })}
-                {users.length === 0 && (
+                {usersTable.total === 0 && (
                   <tr><td colSpan={5} className="text-center text-stone-400 py-8">{t('users.noUsers')}</td></tr>
                 )}
               </tbody>
             </table>
           </div>
+          <TablePagination page={usersTable.page} pageCount={usersTable.pageCount} total={usersTable.total} pageSize={usersTable.pageSize} onPage={usersTable.setPage} />
+          </>
         )}
       </div>
 

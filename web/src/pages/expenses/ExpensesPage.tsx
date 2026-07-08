@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, X, Pencil, Trash2, Receipt, Wallet } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface Expense {
   id: string;
@@ -75,6 +76,20 @@ export default function ExpensesPage() {
   const expenses  = data?.expenses ?? [];
   const total     = data?.totalAmount ?? 0;
   const byCategory = data?.byCategory ?? [];
+
+  const expensesTable = useDataTable(expenses, {
+    searchable: x => [CATEGORY_LABEL(x.category), x.description, x.vendor, x.reference, x.paymentMethod],
+    sortValues: {
+      incurredAt: x => new Date(x.incurredAt),
+      category: x => CATEGORY_LABEL(x.category),
+      description: x => x.description,
+      vendor: x => x.vendor,
+      paymentMethod: x => x.paymentMethod,
+      amount: x => x.amount,
+    },
+    initialSort: { field: 'incurredAt', dir: 'desc' },
+    pageSize: 20,
+  });
 
   const save = useMutation({
     mutationFn: (f: FormState) => {
@@ -170,21 +185,25 @@ export default function ExpensesPage() {
             </button>
           </div>
         ) : (
+          <>
+          <div className="px-4 py-3 border-b border-stone-100">
+            <TableSearch value={expensesTable.search} onChange={expensesTable.setSearch} placeholder="Search description, vendor, category…" />
+          </div>
           <div className="table-wrapper overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Category</th>
-                  <th>Description</th>
-                  <th>Vendor</th>
-                  <th>Method</th>
-                  <th className="text-right">Amount</th>
+                  <SortableTh field="incurredAt" sort={expensesTable.sort} onSort={expensesTable.toggleSort}>Date</SortableTh>
+                  <SortableTh field="category" sort={expensesTable.sort} onSort={expensesTable.toggleSort}>Category</SortableTh>
+                  <SortableTh field="description" sort={expensesTable.sort} onSort={expensesTable.toggleSort}>Description</SortableTh>
+                  <SortableTh field="vendor" sort={expensesTable.sort} onSort={expensesTable.toggleSort}>Vendor</SortableTh>
+                  <SortableTh field="paymentMethod" sort={expensesTable.sort} onSort={expensesTable.toggleSort}>Method</SortableTh>
+                  <SortableTh field="amount" sort={expensesTable.sort} onSort={expensesTable.toggleSort} align="right" className="text-right">Amount</SortableTh>
                   <th className="w-16 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {expenses.map(x => (
+                {expensesTable.view.map(x => (
                   <tr key={x.id} className="hover:bg-stone-50">
                     <td className="text-xs text-stone-500 whitespace-nowrap">
                       {new Date(x.incurredAt).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -209,16 +228,21 @@ export default function ExpensesPage() {
                     </td>
                   </tr>
                 ))}
+                {expensesTable.total === 0 && (
+                  <tr><td colSpan={7} className="text-center text-stone-400 py-8">No matching expenses</td></tr>
+                )}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-stone-200 bg-stone-50">
                   <td colSpan={5} className="font-semibold text-stone-700 py-2 px-3">Total</td>
-                  <td className="text-right font-bold text-red-600">{fmt(expenses.reduce((s, x) => s + x.amount, 0))}</td>
+                  <td className="text-right font-bold text-red-600">{fmt(expensesTable.sorted.reduce((s, x) => s + x.amount, 0))}</td>
                   <td></td>
                 </tr>
               </tfoot>
             </table>
           </div>
+          <TablePagination page={expensesTable.page} pageCount={expensesTable.pageCount} total={expensesTable.total} pageSize={expensesTable.pageSize} onPage={expensesTable.setPage} />
+          </>
         )}
       </div>
 

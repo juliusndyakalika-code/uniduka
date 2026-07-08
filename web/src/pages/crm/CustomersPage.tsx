@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useDataTable, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface Customer {
   id: string; fullName: string; phone?: string; email?: string;
@@ -41,6 +42,18 @@ export default function CustomersPage() {
     onError: (e: unknown) => setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
 
+  const custTable = useDataTable(customers, {
+    sortValues: {
+      fullName: c => c.fullName,
+      totalSpend: c => c.totalSpend,
+      visitCount: c => c.visitCount,
+      loyaltyPoints: c => c.loyaltyPoints,
+      createdAt: c => new Date(c.createdAt),
+    },
+    initialSort: { field: 'totalSpend', dir: 'desc' },
+    pageSize: 20,
+  });
+
   return (
     <div className="space-y-4">
       <div className="page-header">
@@ -62,20 +75,21 @@ export default function CustomersPage() {
         {isLoading ? (
           <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : (
+          <>
           <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
-                  <th>{t('customers.customer')}</th>
+                  <SortableTh field="fullName" sort={custTable.sort} onSort={custTable.toggleSort}>{t('customers.customer')}</SortableTh>
                   <th className="hidden sm:table-cell">{t('customers.contact')}</th>
-                  <th>{t('customers.totalSpend')}</th>
-                  <th className="hidden sm:table-cell">{t('customers.visits')}</th>
-                  <th className="hidden sm:table-cell">{t('customers.points')}</th>
-                  <th className="hidden sm:table-cell">{t('customers.since')}</th>
+                  <SortableTh field="totalSpend" sort={custTable.sort} onSort={custTable.toggleSort}>{t('customers.totalSpend')}</SortableTh>
+                  <SortableTh field="visitCount" sort={custTable.sort} onSort={custTable.toggleSort} className="hidden sm:table-cell">{t('customers.visits')}</SortableTh>
+                  <SortableTh field="loyaltyPoints" sort={custTable.sort} onSort={custTable.toggleSort} className="hidden sm:table-cell">{t('customers.points')}</SortableTh>
+                  <SortableTh field="createdAt" sort={custTable.sort} onSort={custTable.toggleSort} className="hidden sm:table-cell">{t('customers.since')}</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {customers.map(c => (
+                {custTable.view.map(c => (
                   <tr key={c.id} className="cursor-pointer hover:bg-stone-50">
                     <td>
                       <div className="flex items-center gap-2">
@@ -102,12 +116,14 @@ export default function CustomersPage() {
                     <td className="hidden sm:table-cell text-stone-400 text-xs">{new Date(c.createdAt).toLocaleDateString('sw-TZ')}</td>
                   </tr>
                 ))}
-                {customers.length === 0 && (
+                {custTable.total === 0 && (
                   <tr><td colSpan={6} className="text-center text-stone-400 py-8">{t('customers.noCustomers')}</td></tr>
                 )}
               </tbody>
             </table>
           </div>
+          <TablePagination page={custTable.page} pageCount={custTable.pageCount} total={custTable.total} pageSize={custTable.pageSize} onPage={custTable.setPage} />
+          </>
         )}
       </div>
 
