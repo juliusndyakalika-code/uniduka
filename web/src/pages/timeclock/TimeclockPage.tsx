@@ -5,6 +5,7 @@ import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { format, formatDuration, intervalToDuration, startOfMonth, endOfMonth } from 'date-fns';
 import { useTranslation } from 'react-i18next';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface Shift {
   id: string; userId: string; clockIn: string; clockOut: string | null;
@@ -123,6 +124,18 @@ export default function TimeclockPage() {
   const summaryRows = Object.values(staffSummary).sort((a, b) => b.totalMins - a.totalMins);
   const totalHours = summaryRows.reduce((s, r) => s + r.totalMins, 0);
 
+  const summaryTable = useDataTable(summaryRows, {
+    searchable: r => [r.fullName],
+    sortValues: {
+      fullName: r => r.fullName,
+      shifts: r => r.shifts,
+      totalMins: r => r.totalMins,
+      avg: r => (r.shifts > 0 ? r.totalMins / r.shifts : 0),
+    },
+    initialSort: { field: 'totalMins', dir: 'desc' },
+    pageSize: 15,
+  });
+
   const isClockedIn = !!status;
 
   if (!shopId) {
@@ -181,21 +194,22 @@ export default function TimeclockPage() {
         {/* Per-staff summary */}
         {summaryRows.length > 0 && (
           <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-stone-100">
+            <div className="px-4 py-3 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-sm font-semibold text-stone-800">{t('timeclock.staffSummary')}</h2>
+              <TableSearch value={summaryTable.search} onChange={summaryTable.setSearch} placeholder="Search staff…" className="max-w-[12rem]" />
             </div>
             <div className="table-wrapper">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>{t('timeclock.staff')}</th>
-                    <th className="text-right">{t('timeclock.totalShifts')}</th>
-                    <th className="text-right">{t('timeclock.totalHours')}</th>
-                    <th className="text-right">{t('timeclock.avgPerShift')}</th>
+                    <SortableTh field="fullName" sort={summaryTable.sort} onSort={summaryTable.toggleSort}>{t('timeclock.staff')}</SortableTh>
+                    <SortableTh field="shifts" sort={summaryTable.sort} onSort={summaryTable.toggleSort} align="right" className="text-right">{t('timeclock.totalShifts')}</SortableTh>
+                    <SortableTh field="totalMins" sort={summaryTable.sort} onSort={summaryTable.toggleSort} align="right" className="text-right">{t('timeclock.totalHours')}</SortableTh>
+                    <SortableTh field="avg" sort={summaryTable.sort} onSort={summaryTable.toggleSort} align="right" className="text-right">{t('timeclock.avgPerShift')}</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {summaryRows.map(r => (
+                  {summaryTable.view.map(r => (
                     <tr key={r.fullName}>
                       <td>
                         <div className="flex items-center gap-2">
@@ -221,6 +235,7 @@ export default function TimeclockPage() {
                 </tfoot>
               </table>
             </div>
+            <TablePagination page={summaryTable.page} pageCount={summaryTable.pageCount} total={summaryTable.total} pageSize={summaryTable.pageSize} onPage={summaryTable.setPage} />
           </div>
         )}
 

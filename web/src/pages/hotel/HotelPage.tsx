@@ -7,6 +7,7 @@ import api from '../../api/client';
 import { format, differenceInDays } from 'date-fns';
 import { useAuthStore } from '../../store/authStore';
 import { printReceipt } from '../../utils/printReceipt';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
 
@@ -148,6 +149,31 @@ export default function HotelPage() {
   const { data: settings, refetch: refetchSettings } = useQuery<{ checkoutHour: number }>({
     queryKey: ['hotel-settings'],
     queryFn: () => api.get('/hotel/settings').then(r => r.data.data),
+  });
+
+  const foliosTable = useDataTable(folios, {
+    searchable: f => [f.guestName, f.guestPhone, f.room?.roomNo, f.room?.roomType],
+    sortValues: {
+      guest: f => f.guestName,
+      room: f => f.room?.roomNo,
+      checkIn: f => new Date(f.checkIn),
+      checkOut: f => (f.checkOut ? new Date(f.checkOut) : null),
+      total: f => f.grandTotal,
+    },
+    initialSort: { field: 'checkIn', dir: 'desc' },
+    pageSize: 20,
+  });
+
+  const debtsTable = useDataTable(debts, {
+    searchable: f => [f.guestName, f.guestPhone, f.room?.roomNo, f.room?.roomType],
+    sortValues: {
+      guest: f => f.guestName,
+      room: f => f.room?.roomNo,
+      checkOut: f => (f.checkOut ? new Date(f.checkOut) : null),
+      total: f => f.grandTotal,
+    },
+    initialSort: { field: 'total', dir: 'desc' },
+    pageSize: 20,
   });
   const [checkoutHourDraft, setCheckoutHourDraft] = useState<number | null>(null);
   const checkoutHour = checkoutHourDraft ?? settings?.checkoutHour ?? 12;
@@ -448,23 +474,27 @@ export default function HotelPage() {
 
       {/* Folios list */}
       {tab === 'folios' && (
+        <div className="card">
+        <div className="px-4 py-3 border-b border-stone-100">
+          <TableSearch value={foliosTable.search} onChange={foliosTable.setSearch} placeholder="Search guest, room…" />
+        </div>
         <div className="table-wrapper">
           <table className="table">
             <thead>
               <tr>
-                <th>{t('hotel.guest')}</th>
-                <th>{t('hotel.roomNumber')}</th>
-                <th>{t('hotel.checkIn')}</th>
-                <th>{t('hotel.checkOut')}</th>
-                <th className="text-right">Total</th>
+                <SortableTh field="guest" sort={foliosTable.sort} onSort={foliosTable.toggleSort}>{t('hotel.guest')}</SortableTh>
+                <SortableTh field="room" sort={foliosTable.sort} onSort={foliosTable.toggleSort}>{t('hotel.roomNumber')}</SortableTh>
+                <SortableTh field="checkIn" sort={foliosTable.sort} onSort={foliosTable.toggleSort}>{t('hotel.checkIn')}</SortableTh>
+                <SortableTh field="checkOut" sort={foliosTable.sort} onSort={foliosTable.toggleSort}>{t('hotel.checkOut')}</SortableTh>
+                <SortableTh field="total" sort={foliosTable.sort} onSort={foliosTable.toggleSort} align="right" className="text-right">Total</SortableTh>
                 <th>{t('hotel.status')}</th>
               </tr>
             </thead>
             <tbody>
-              {folios.length === 0 && (
+              {foliosTable.total === 0 && (
                 <tr><td colSpan={6} className="text-center py-8 text-stone-400">No folios yet</td></tr>
               )}
-              {folios.map(f => {
+              {foliosTable.view.map(f => {
                 const isOverstay = !f.checkOut && (() => {
                   const exp = new Date(f.checkIn);
                   exp.setDate(exp.getDate() + f.nights);
@@ -494,6 +524,8 @@ export default function HotelPage() {
             </tbody>
           </table>
         </div>
+        <TablePagination page={foliosTable.page} pageCount={foliosTable.pageCount} total={foliosTable.total} pageSize={foliosTable.pageSize} onPage={foliosTable.setPage} />
+        </div>
       )}
 
       {/* Debts tab */}
@@ -505,19 +537,23 @@ export default function HotelPage() {
               <p className="text-sm">No outstanding debts</p>
             </div>
           ) : (
-            <div className="table-wrapper">
+            <div className="card">
+              <div className="px-4 py-3 border-b border-stone-100">
+                <TableSearch value={debtsTable.search} onChange={debtsTable.setSearch} placeholder="Search guest, room…" />
+              </div>
+              <div className="table-wrapper">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>{t('hotel.guest')}</th>
-                    <th>Room</th>
-                    <th>Check-out</th>
-                    <th className="text-right">Amount Owed</th>
+                    <SortableTh field="guest" sort={debtsTable.sort} onSort={debtsTable.toggleSort}>{t('hotel.guest')}</SortableTh>
+                    <SortableTh field="room" sort={debtsTable.sort} onSort={debtsTable.toggleSort}>Room</SortableTh>
+                    <SortableTh field="checkOut" sort={debtsTable.sort} onSort={debtsTable.toggleSort}>Check-out</SortableTh>
+                    <SortableTh field="total" sort={debtsTable.sort} onSort={debtsTable.toggleSort} align="right" className="text-right">Amount Owed</SortableTh>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {debts.map(f => (
+                  {debtsTable.view.map(f => (
                     <tr key={f.id}>
                       <td>
                         <p className="font-medium text-stone-900">{f.guestName}</p>
@@ -536,6 +572,8 @@ export default function HotelPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
+              <TablePagination page={debtsTable.page} pageCount={debtsTable.pageCount} total={debtsTable.total} pageSize={debtsTable.pageSize} onPage={debtsTable.setPage} />
             </div>
           )}
         </div>

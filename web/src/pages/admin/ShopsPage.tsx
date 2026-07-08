@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface Shop {
   id: string; tradingName: string; legalName?: string; businessType: string;
@@ -77,6 +78,19 @@ export default function ShopsPage() {
       .catch(() => navigate('/admin/shop'));
   }
 
+  const shopsTable = useDataTable(shops, {
+    searchable: s => [s.tradingName, s.legalName, s.businessType.replace(/_/g, ' '), s.city, s.country, s.currency],
+    sortValues: {
+      tradingName: s => s.tradingName,
+      businessType: s => s.businessType,
+      location: s => [s.city, s.country].filter(Boolean).join(', '),
+      currency: s => s.currency,
+      status: s => (s.isActive ? 0 : 1),
+    },
+    initialSort: { field: 'tradingName', dir: 'asc' },
+    pageSize: 20,
+  });
+
   return (
     <div className="space-y-4">
       <div className="page-header">
@@ -92,20 +106,24 @@ export default function ShopsPage() {
       {isLoading ? (
         <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>
       ) : (
-        <div className="table-wrapper">
+        <div className="card">
+          <div className="px-4 py-3 border-b border-stone-100">
+            <TableSearch value={shopsTable.search} onChange={shopsTable.setSearch} placeholder="Search shop, type, location…" />
+          </div>
+          <div className="table-wrapper">
           <table className="table">
             <thead>
               <tr>
-                <th>Shop</th>
-                <th>Type</th>
-                <th>Location</th>
-                <th>Currency</th>
-                <th>Status</th>
+                <SortableTh field="tradingName" sort={shopsTable.sort} onSort={shopsTable.toggleSort}>Shop</SortableTh>
+                <SortableTh field="businessType" sort={shopsTable.sort} onSort={shopsTable.toggleSort}>Type</SortableTh>
+                <SortableTh field="location" sort={shopsTable.sort} onSort={shopsTable.toggleSort}>Location</SortableTh>
+                <SortableTh field="currency" sort={shopsTable.sort} onSort={shopsTable.toggleSort}>Currency</SortableTh>
+                <SortableTh field="status" sort={shopsTable.sort} onSort={shopsTable.toggleSort}>Status</SortableTh>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {shops.map(s => (
+              {shopsTable.view.map(s => (
                 <tr key={s.id}>
                   <td>
                     <div className="flex items-center gap-2">
@@ -166,11 +184,13 @@ export default function ShopsPage() {
                   </td>
                 </tr>
               ))}
-              {shops.length === 0 && (
+              {shopsTable.total === 0 && (
                 <tr><td colSpan={6} className="text-center text-stone-400 py-10">{t('common.noShopsYet')}</td></tr>
               )}
             </tbody>
           </table>
+          </div>
+          <TablePagination page={shopsTable.page} pageCount={shopsTable.pageCount} total={shopsTable.total} pageSize={shopsTable.pageSize} onPage={shopsTable.setPage} />
         </div>
       )}
 
