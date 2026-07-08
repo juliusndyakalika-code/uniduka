@@ -432,6 +432,7 @@
     "totalRevenue": "Revenue",
     "totalProfit": "Profit",
     "profitReportTitle": "Profit by Seller",
+    "byPaymentMethod": "Breakdown by Payment Method",
     "filterFrom": "From",
     "filterTo": "To",
     "clearFilter": "Clear",

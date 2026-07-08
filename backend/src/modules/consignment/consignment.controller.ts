@@ -103,7 +103,13 @@ export async function deleteSale(req: AuthRequest, res: Response) {
   return R.noContent(res);
 }
 
-// ── Profit report (by seller) ───────────────────────────────────────────────
+// ── Profit report (by seller & by payment method) ───────────────────────────
+
+const PAYMENT_LABELS: Record<string, string> = {
+  CASH: 'Cash', CARD: 'Card', MOBILE_MONEY: 'Mobile Money', BANK_TRANSFER: 'Bank Transfer',
+  VOUCHER: 'Voucher', STORE_CREDIT: 'Store Credit', INSURANCE: 'Insurance',
+  ACCOUNT_CREDIT: 'Account Credit', DEBIT: 'Debit',
+};
 
 export async function getProfitReport(req: AuthRequest, res: Response) {
   const { from, to } = req.query as Record<string, string>;
@@ -124,6 +130,11 @@ export async function getProfitReport(req: AuthRequest, res: Response) {
     salesCount: number; totalQty: number; totalRevenue: number; totalProfit: number;
   }> = {};
 
+  const byPaymentMethod: Record<string, {
+    method: string; label: string;
+    salesCount: number; totalQty: number; totalRevenue: number; totalProfit: number;
+  }> = {};
+
   for (const s of sales) {
     const id = s.soldBy.id;
     if (!bySeller[id]) {
@@ -133,7 +144,19 @@ export async function getProfitReport(req: AuthRequest, res: Response) {
     bySeller[id].totalQty += s.qty;
     bySeller[id].totalRevenue += s.sellingPrice * s.qty;
     bySeller[id].totalProfit += s.profit;
+
+    const method = s.paymentMethod ?? 'CASH';
+    if (!byPaymentMethod[method]) {
+      byPaymentMethod[method] = { method, label: PAYMENT_LABELS[method] ?? method, salesCount: 0, totalQty: 0, totalRevenue: 0, totalProfit: 0 };
+    }
+    byPaymentMethod[method].salesCount += 1;
+    byPaymentMethod[method].totalQty += s.qty;
+    byPaymentMethod[method].totalRevenue += s.sellingPrice * s.qty;
+    byPaymentMethod[method].totalProfit += s.profit;
   }
 
-  return R.ok(res, Object.values(bySeller).sort((a, b) => b.totalProfit - a.totalProfit));
+  return R.ok(res, {
+    bySeller: Object.values(bySeller).sort((a, b) => b.totalProfit - a.totalProfit),
+    byPaymentMethod: Object.values(byPaymentMethod).sort((a, b) => b.totalRevenue - a.totalRevenue),
+  });
 }

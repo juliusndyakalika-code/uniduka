@@ -35,6 +35,14 @@ interface ConsignmentSellerStat {
   sellerId: string; sellerName: string;
   salesCount: number; totalQty: number; totalRevenue: number; totalProfit: number;
 }
+interface ConsignmentPaymentStat {
+  method: string; label: string;
+  salesCount: number; totalQty: number; totalRevenue: number; totalProfit: number;
+}
+interface ConsignmentProfitReport {
+  bySeller: ConsignmentSellerStat[];
+  byPaymentMethod: ConsignmentPaymentStat[];
+}
 interface TxItem { name: string; quantity: number; unitPrice: number; unitLabel: string; discountPct: number; lineTotal: number; costPrice: number; }
 interface Tx {
   id: string; receiptNo: string; total: number; subtotal: number; discountAmount: number;
@@ -468,13 +476,16 @@ export default function SalesReportPage() {
   const outstandingTotal = activeFolios.reduce((s, f) => s + f.grandTotal, 0);
 
   // Consignment sales for the same date range — shown as a separate card
-  const { data: consignmentStats = [] } = useQuery<ConsignmentSellerStat[]>({
+  const { data: consignmentReport } = useQuery<ConsignmentProfitReport>({
     queryKey: ['consignment-profit-report', shopId, from, to],
     queryFn: () =>
-      api.get('/consignment/profit-report', { params: { from, to } }).then(r => r.data.data ?? []),
+      api.get('/consignment/profit-report', { params: { from, to } })
+        .then(r => r.data.data ?? { bySeller: [], byPaymentMethod: [] }),
     enabled: !!shopId,
     retry: false,
   });
+  const consignmentStats    = consignmentReport?.bySeller ?? [];
+  const consignmentPayments = consignmentReport?.byPaymentMethod ?? [];
   const consignment = consignmentStats.reduce(
     (acc, s) => ({
       salesCount: acc.salesCount + s.salesCount,
@@ -694,6 +705,27 @@ export default function SalesReportPage() {
                   <p className="stat-label">{t('reports.totalQty')}</p>
                 </div>
               </div>
+
+              {/* Breakdown by payment method */}
+              {consignmentPayments.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-stone-100">
+                  <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide mb-2">
+                    {t('reports.byPaymentMethod')}
+                  </p>
+                  <div className="space-y-1.5">
+                    {consignmentPayments.map(p => (
+                      <div key={p.method} className="flex items-center justify-between text-xs">
+                        <span className="badge badge-stone">{p.label}</span>
+                        <div className="flex items-center gap-3 text-right">
+                          <span className="text-stone-400">{p.salesCount} {p.salesCount === 1 ? 'sale' : 'sales'}</span>
+                          <span className="text-emerald-600 w-24">{fmt(p.totalProfit)}</span>
+                          <span className="font-medium text-stone-900 w-28">{fmt(p.totalRevenue)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

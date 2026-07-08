@@ -29,6 +29,14 @@ interface SellerStat {
   sellerId: string; sellerName: string;
   salesCount: number; totalQty: number; totalRevenue: number; totalProfit: number;
 }
+interface PaymentStat {
+  method: string; label: string;
+  salesCount: number; totalQty: number; totalRevenue: number; totalProfit: number;
+}
+interface ProfitReport {
+  bySeller: SellerStat[];
+  byPaymentMethod: PaymentStat[];
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -79,16 +87,18 @@ export default function ConsignmentPage() {
     enabled: !!shopId,
   });
 
-  const { data: report = [], isLoading: reportLoading } = useQuery<SellerStat[]>({
+  const { data: report, isLoading: reportLoading } = useQuery<ProfitReport>({
     queryKey: ['consignment-profit-report', shopId, reportFrom, reportTo],
     queryFn: () => api.get('/consignment/profit-report', {
       params: {
         ...(reportFrom && { from: reportFrom }),
         ...(reportTo   && { to: reportTo }),
       },
-    }).then(r => r.data.data),
+    }).then(r => r.data.data ?? { bySeller: [], byPaymentMethod: [] }),
     enabled: !!shopId && tab === 'Profit Report',
   });
+  const reportSellers  = report?.bySeller ?? [];
+  const reportPayments = report?.byPaymentMethod ?? [];
 
   // ── Mutations ─────────────────────────────────────────────────────────────────
 
@@ -318,7 +328,7 @@ export default function ConsignmentPage() {
         <div className="card">
           {reportLoading ? (
             <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
-          ) : report.length === 0 ? (
+          ) : reportSellers.length === 0 ? (
             <div className="p-10 text-center text-stone-400">
               <Trophy size={32} className="mx-auto mb-2 opacity-30" />
               <p className="text-sm">{t('consignment.noReport')}</p>
@@ -336,7 +346,7 @@ export default function ConsignmentPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {report.map(r => (
+                  {reportSellers.map(r => (
                     <tr key={r.sellerId}>
                       <td className="font-medium">{r.sellerName}</td>
                       <td className="text-xs">{r.salesCount}</td>
@@ -350,6 +360,39 @@ export default function ConsignmentPage() {
             </div>
           )}
         </div>
+
+        {/* Breakdown by payment method */}
+        {!reportLoading && reportPayments.length > 0 && (
+          <div className="card">
+            <div className="px-4 py-3 border-b border-stone-100">
+              <h3 className="text-sm font-semibold text-stone-700">{t('consignment.byPaymentMethod')}</h3>
+            </div>
+            <div className="table-wrapper">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('consignment.paymentMethod')}</th>
+                    <th>{t('consignment.salesCount')}</th>
+                    <th>{t('consignment.totalQty')}</th>
+                    <th>{t('consignment.totalRevenue')}</th>
+                    <th>{t('consignment.totalProfit')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportPayments.map(p => (
+                    <tr key={p.method}>
+                      <td><span className="badge badge-stone text-xs">{p.label}</span></td>
+                      <td className="text-xs">{p.salesCount}</td>
+                      <td className="text-xs">{p.totalQty}</td>
+                      <td className="text-stone-500">{fmt(p.totalRevenue)}</td>
+                      <td className="font-semibold text-green-600">{fmt(p.totalProfit)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
         </>
       )}
 
