@@ -4,6 +4,7 @@ import { Clock, CheckCircle, X, Banknote, Smartphone, CreditCard, User, ChevronD
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface Settlement { method: string; amount: number; reference?: string; providerName?: string; createdAt: string; }
 interface Debt {
@@ -164,6 +165,20 @@ export default function DebtsPage() {
   const totalOutstanding = outstanding.reduce((s, d) => s + d.outstanding, 0);
   const totalSettled     = settled.reduce((s, d) => s + d.total, 0);
 
+  const debtsTable = useDataTable(displayed, {
+    searchable: d => [d.receiptNo, d.customer?.fullName ?? d.customerName, d.customer?.phone],
+    sortValues: {
+      receiptNo: d => d.receiptNo,
+      customer: d => d.customer?.fullName ?? d.customerName,
+      createdAt: d => new Date(d.createdAt),
+      total: d => d.total,
+      paidAmount: d => d.paidAmount,
+      outstanding: d => d.outstanding,
+    },
+    initialSort: { field: 'createdAt', dir: 'desc' },
+    pageSize: 20,
+  });
+
   return (
     <div className="space-y-6">
       <div className="page-header">
@@ -220,40 +235,47 @@ export default function DebtsPage() {
             </p>
           </div>
         ) : (
+          <>
+          <div className="px-5 py-2.5 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[10px] text-stone-400">Click a row to see payment history</p>
+            <TableSearch value={debtsTable.search} onChange={debtsTable.setSearch} placeholder="Search receipt, customer…" className="max-w-[14rem]" />
+          </div>
           <div className="table-wrapper overflow-x-auto">
-            <p className="px-5 py-2 text-[10px] text-stone-400 border-b border-stone-100">
-              Click a row to see payment history
-            </p>
             <table className="table">
               <thead>
                 <tr>
-                  <th>{t('debts.receiptNo')}</th>
-                  <th>{t('debts.customer')}</th>
-                  <th className="hidden sm:table-cell">{t('debts.date')}</th>
-                  <th className="hidden sm:table-cell">Sale Total</th>
-                  <th className="hidden sm:table-cell">Paid</th>
-                  <th>{t('debts.amount')}</th>
+                  <SortableTh field="receiptNo" sort={debtsTable.sort} onSort={debtsTable.toggleSort}>{t('debts.receiptNo')}</SortableTh>
+                  <SortableTh field="customer" sort={debtsTable.sort} onSort={debtsTable.toggleSort}>{t('debts.customer')}</SortableTh>
+                  <SortableTh field="createdAt" sort={debtsTable.sort} onSort={debtsTable.toggleSort} className="hidden sm:table-cell">{t('debts.date')}</SortableTh>
+                  <SortableTh field="total" sort={debtsTable.sort} onSort={debtsTable.toggleSort} className="hidden sm:table-cell">Sale Total</SortableTh>
+                  <SortableTh field="paidAmount" sort={debtsTable.sort} onSort={debtsTable.toggleSort} className="hidden sm:table-cell">Paid</SortableTh>
+                  <SortableTh field="outstanding" sort={debtsTable.sort} onSort={debtsTable.toggleSort}>{t('debts.amount')}</SortableTh>
                   <th>{t('debts.collect')}</th>
                 </tr>
               </thead>
               <tbody>
-                {displayed.map(debt => (
+                {debtsTable.view.map(debt => (
                   <DebtRow key={debt.id} debt={debt} onSettle={d => { setSettlingDebt(d); setAmount(String(d.outstanding)); setSettleError(''); }} />
                 ))}
+                {debtsTable.total === 0 && (
+                  <tr><td colSpan={7} className="text-center text-stone-400 py-8">{t('common.noData')}</td></tr>
+                )}
               </tbody>
-              {displayed.length > 1 && (
+              {debtsTable.total > 1 && (
                 <tfoot>
                   <tr className="border-t-2 border-stone-200 bg-stone-50">
                     <td colSpan={2} className="font-semibold text-stone-700 py-2 px-3">Total</td>
-                    <td className="hidden sm:table-cell font-bold">{fmt(displayed.reduce((s, d) => s + d.total, 0))}</td>
-                    <td className="hidden sm:table-cell font-bold text-emerald-600">{fmt(displayed.reduce((s, d) => s + d.paidAmount, 0))}</td>
-                    <td className="font-bold text-red-600">{fmt(displayed.reduce((s, d) => s + d.outstanding, 0))}</td>
+                    <td className="hidden sm:table-cell font-bold">{fmt(debtsTable.sorted.reduce((s, d) => s + d.total, 0))}</td>
+                    <td className="hidden sm:table-cell font-bold text-emerald-600">{fmt(debtsTable.sorted.reduce((s, d) => s + d.paidAmount, 0))}</td>
+                    <td className="font-bold text-red-600">{fmt(debtsTable.sorted.reduce((s, d) => s + d.outstanding, 0))}</td>
                     <td></td>
                   </tr>
                 </tfoot>
               )}
             </table>
           </div>
+          <TablePagination page={debtsTable.page} pageCount={debtsTable.pageCount} total={debtsTable.total} pageSize={debtsTable.pageSize} onPage={debtsTable.setPage} />
+          </>
         )}
       </div>
 

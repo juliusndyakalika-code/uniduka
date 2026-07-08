@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useDataTable, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface VoidedTx {
   id: string; receiptNo: string; total: number; createdAt: string; note?: string;
@@ -23,7 +24,6 @@ export default function VoidsPage() {
   const { shopId } = useAuthStore();
   const [from, setFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().split('T')[0]; });
   const [to, setTo]     = useState(() => new Date().toISOString().split('T')[0]);
-  const [search, setSearch] = useState('');
 
   const { data: voids = [], isLoading } = useQuery<VoidedTx[]>({
     queryKey: ['voided-txns', shopId, from, to],
@@ -32,12 +32,21 @@ export default function VoidsPage() {
     enabled: !!shopId,
   });
 
-  const filtered = search
-    ? voids.filter(v => v.receiptNo.toLowerCase().includes(search.toLowerCase())
-        || (v.customer?.fullName ?? v.customerName ?? '').toLowerCase().includes(search.toLowerCase()))
-    : voids;
+  const voidsTable = useDataTable(voids, {
+    searchable: v => [v.receiptNo, v.customer?.fullName ?? v.customerName, v.cashierName, v.note],
+    sortValues: {
+      receiptNo: v => v.receiptNo,
+      createdAt: v => new Date(v.createdAt),
+      customer: v => v.customer?.fullName ?? v.customerName,
+      cashier: v => v.cashierName,
+      total: v => v.total,
+      note: v => v.note,
+    },
+    initialSort: { field: 'createdAt', dir: 'desc' },
+    pageSize: 20,
+  });
 
-  const totalVoided = filtered.reduce((s, v) => s + v.total, 0);
+  const totalVoided = voidsTable.sorted.reduce((s, v) => s + v.total, 0);
 
   return (
     <div className="space-y-6">
@@ -52,8 +61,8 @@ export default function VoidsPage() {
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search size={13} className="absolute left-3 top-2.5 text-stone-400" />
-          <input className="input pl-8 text-xs" placeholder="Search receipt or customer…"
-            value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="input pl-8 text-xs" placeholder="Search receipt, customer, cashier…"
+            value={voidsTable.search} onChange={e => voidsTable.setSearch(e.target.value)} />
         </div>
         <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto text-xs" />
         <span className="text-stone-400 text-xs">to</span>
@@ -63,7 +72,7 @@ export default function VoidsPage() {
       {/* Summary */}
       <div className="grid grid-cols-2 gap-4">
         <div className="card p-5">
-          <p className="stat-value">{filtered.length}</p>
+          <p className="stat-value">{voidsTable.total}</p>
           <p className="stat-label">Voided transactions</p>
         </div>
         <div className="card p-5">
@@ -76,24 +85,25 @@ export default function VoidsPage() {
       <div className="card">
         {isLoading ? (
           <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
-        ) : filtered.length === 0 ? (
+        ) : voidsTable.total === 0 ? (
           <div className="p-8 text-center text-stone-400">{t('voids.noVoids')}</div>
         ) : (
+          <>
           <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
-                  <th>{t('voids.receipt')}</th>
-                  <th>{t('voids.date')}</th>
-                  <th>Customer</th>
-                  <th>{t('voids.cashier')}</th>
+                  <SortableTh field="receiptNo" sort={voidsTable.sort} onSort={voidsTable.toggleSort}>{t('voids.receipt')}</SortableTh>
+                  <SortableTh field="createdAt" sort={voidsTable.sort} onSort={voidsTable.toggleSort}>{t('voids.date')}</SortableTh>
+                  <SortableTh field="customer" sort={voidsTable.sort} onSort={voidsTable.toggleSort}>Customer</SortableTh>
+                  <SortableTh field="cashier" sort={voidsTable.sort} onSort={voidsTable.toggleSort}>{t('voids.cashier')}</SortableTh>
                   <th>Items</th>
-                  <th>{t('voids.amount')}</th>
-                  <th>{t('voids.reason')}</th>
+                  <SortableTh field="total" sort={voidsTable.sort} onSort={voidsTable.toggleSort}>{t('voids.amount')}</SortableTh>
+                  <SortableTh field="note" sort={voidsTable.sort} onSort={voidsTable.toggleSort}>{t('voids.reason')}</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(tx => (
+                {voidsTable.view.map(tx => (
                   <tr key={tx.id} className="opacity-70">
                     <td className="font-mono text-xs text-red-600">{tx.receiptNo}</td>
                     <td className="text-xs text-stone-400 whitespace-nowrap">
@@ -114,13 +124,15 @@ export default function VoidsPage() {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-stone-200 bg-stone-50">
-                  <td colSpan={5} className="font-semibold text-stone-700 py-2 px-3">{filtered.length} voided</td>
+                  <td colSpan={5} className="font-semibold text-stone-700 py-2 px-3">{voidsTable.total} voided</td>
                   <td className="font-bold text-red-600 line-through">{fmt(totalVoided)}</td>
                   <td></td>
                 </tr>
               </tfoot>
             </table>
           </div>
+          <TablePagination page={voidsTable.page} pageCount={voidsTable.pageCount} total={voidsTable.total} pageSize={voidsTable.pageSize} onPage={voidsTable.setPage} />
+          </>
         )}
       </div>
     </div>
