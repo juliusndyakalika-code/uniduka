@@ -5,6 +5,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
+import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -141,6 +142,47 @@ export default function ConsignmentPage() {
   const totalProfit = sales.reduce((s, x) => s + x.profit, 0);
   const totalRevenue = sales.reduce((s, x) => s + x.sellingPrice * x.qty, 0);
 
+  // ── Table state (search + sort + pagination) ────────────────────────────────
+  const salesTable = useDataTable(sales, {
+    searchable: s => [s.productName, s.partner.name, s.soldBy.fullName, paymentLabel(s.paymentMethod)],
+    sortValues: {
+      productName: s => s.productName,
+      partner:     s => s.partner.name,
+      sellingPrice: s => s.sellingPrice,
+      qty:         s => s.qty,
+      profit:      s => s.profit,
+      payment:     s => paymentLabel(s.paymentMethod),
+      soldBy:      s => s.soldBy.fullName,
+      soldAt:      s => new Date(s.soldAt),
+    },
+    initialSort: { field: 'soldAt', dir: 'desc' },
+    pageSize: 12,
+  });
+  const partnersTable = useDataTable(partners, {
+    searchable: p => [p.name, p.phone, p.email],
+    sortValues: { name: p => p.name, phone: p => p.phone, email: p => p.email },
+    initialSort: { field: 'name', dir: 'asc' },
+    pageSize: 12,
+  });
+  const sellerTable = useDataTable(reportSellers, {
+    searchable: r => [r.sellerName],
+    sortValues: {
+      sellerName: r => r.sellerName, salesCount: r => r.salesCount, totalQty: r => r.totalQty,
+      totalRevenue: r => r.totalRevenue, totalProfit: r => r.totalProfit,
+    },
+    initialSort: { field: 'totalProfit', dir: 'desc' },
+    pageSize: 12,
+  });
+  const paymentTable = useDataTable(reportPayments, {
+    searchable: p => [p.label],
+    sortValues: {
+      label: p => p.label, salesCount: p => p.salesCount, totalQty: p => p.totalQty,
+      totalRevenue: p => p.totalRevenue, totalProfit: p => p.totalProfit,
+    },
+    initialSort: { field: 'totalRevenue', dir: 'desc' },
+    pageSize: 12,
+  });
+
   // Tab label helper
   function tabLabel(tabKey: Tab): string {
     if (tabKey === 'Sales') return t('consignment.salesTab');
@@ -226,23 +268,27 @@ export default function ConsignmentPage() {
               <p className="text-sm">{t('consignment.noSales')}</p>
             </div>
           ) : (
+            <>
+            <div className="px-4 py-3 border-b border-stone-100">
+              <TableSearch value={salesTable.search} onChange={salesTable.setSearch} placeholder="Search product, partner, seller…" />
+            </div>
             <div className="table-wrapper">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>{t('consignment.product')}</th>
-                    <th>{t('consignment.partner')}</th>
-                    <th>Cost / Sell</th>
-                    <th>{t('consignment.qty')}</th>
-                    <th>{t('consignment.profit')}</th>
-                    <th>{t('consignment.paymentMethod')}</th>
-                    <th>Sold By</th>
-                    <th>{t('common.date')}</th>
+                    <SortableTh field="productName" sort={salesTable.sort} onSort={salesTable.toggleSort}>{t('consignment.product')}</SortableTh>
+                    <SortableTh field="partner" sort={salesTable.sort} onSort={salesTable.toggleSort}>{t('consignment.partner')}</SortableTh>
+                    <SortableTh field="sellingPrice" sort={salesTable.sort} onSort={salesTable.toggleSort}>Cost / Sell</SortableTh>
+                    <SortableTh field="qty" sort={salesTable.sort} onSort={salesTable.toggleSort}>{t('consignment.qty')}</SortableTh>
+                    <SortableTh field="profit" sort={salesTable.sort} onSort={salesTable.toggleSort}>{t('consignment.profit')}</SortableTh>
+                    <SortableTh field="payment" sort={salesTable.sort} onSort={salesTable.toggleSort}>{t('consignment.paymentMethod')}</SortableTh>
+                    <SortableTh field="soldBy" sort={salesTable.sort} onSort={salesTable.toggleSort}>Sold By</SortableTh>
+                    <SortableTh field="soldAt" sort={salesTable.sort} onSort={salesTable.toggleSort}>{t('common.date')}</SortableTh>
                     {isOwner && <th></th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {sales.map(s => (
+                  {salesTable.view.map(s => (
                     <tr key={s.id}>
                       <td className="font-medium">{s.productName}</td>
                       <td className="text-stone-500">{s.partner.name}</td>
@@ -265,9 +311,14 @@ export default function ConsignmentPage() {
                       )}
                     </tr>
                   ))}
+                  {salesTable.total === 0 && (
+                    <tr><td colSpan={isOwner ? 9 : 8} className="text-center text-stone-400 py-8">{t('common.noData')}</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
+            <TablePagination page={salesTable.page} pageCount={salesTable.pageCount} total={salesTable.total} pageSize={salesTable.pageSize} onPage={salesTable.setPage} />
+            </>
           )}
         </div>
       )}
@@ -281,22 +332,35 @@ export default function ConsignmentPage() {
               <p className="text-sm">{t('consignment.noPartners')}</p>
             </div>
           ) : (
+            <>
+            <div className="px-4 py-3 border-b border-stone-100">
+              <TableSearch value={partnersTable.search} onChange={partnersTable.setSearch} placeholder="Search partners…" />
+            </div>
             <div className="table-wrapper">
               <table className="table">
                 <thead>
-                  <tr><th>Name</th><th>{t('common.phone')}</th><th>{t('common.email')}</th></tr>
+                  <tr>
+                    <SortableTh field="name" sort={partnersTable.sort} onSort={partnersTable.toggleSort}>Name</SortableTh>
+                    <SortableTh field="phone" sort={partnersTable.sort} onSort={partnersTable.toggleSort}>{t('common.phone')}</SortableTh>
+                    <SortableTh field="email" sort={partnersTable.sort} onSort={partnersTable.toggleSort}>{t('common.email')}</SortableTh>
+                  </tr>
                 </thead>
                 <tbody>
-                  {partners.map(p => (
+                  {partnersTable.view.map(p => (
                     <tr key={p.id}>
                       <td className="font-medium">{p.name}</td>
                       <td className="text-stone-500">{p.phone || '—'}</td>
                       <td className="text-stone-500">{p.email || '—'}</td>
                     </tr>
                   ))}
+                  {partnersTable.total === 0 && (
+                    <tr><td colSpan={3} className="text-center text-stone-400 py-8">{t('common.noData')}</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
+            <TablePagination page={partnersTable.page} pageCount={partnersTable.pageCount} total={partnersTable.total} pageSize={partnersTable.pageSize} onPage={partnersTable.setPage} />
+            </>
           )}
         </div>
       )}
@@ -334,19 +398,23 @@ export default function ConsignmentPage() {
               <p className="text-sm">{t('consignment.noReport')}</p>
             </div>
           ) : (
+            <>
+            <div className="px-4 py-3 border-b border-stone-100">
+              <TableSearch value={sellerTable.search} onChange={sellerTable.setSearch} placeholder="Search seller…" />
+            </div>
             <div className="table-wrapper">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>{t('consignment.seller')}</th>
-                    <th>{t('consignment.salesCount')}</th>
-                    <th>{t('consignment.totalQty')}</th>
-                    <th>{t('consignment.totalRevenue')}</th>
-                    <th>{t('consignment.totalProfit')}</th>
+                    <SortableTh field="sellerName" sort={sellerTable.sort} onSort={sellerTable.toggleSort}>{t('consignment.seller')}</SortableTh>
+                    <SortableTh field="salesCount" sort={sellerTable.sort} onSort={sellerTable.toggleSort}>{t('consignment.salesCount')}</SortableTh>
+                    <SortableTh field="totalQty" sort={sellerTable.sort} onSort={sellerTable.toggleSort}>{t('consignment.totalQty')}</SortableTh>
+                    <SortableTh field="totalRevenue" sort={sellerTable.sort} onSort={sellerTable.toggleSort}>{t('consignment.totalRevenue')}</SortableTh>
+                    <SortableTh field="totalProfit" sort={sellerTable.sort} onSort={sellerTable.toggleSort}>{t('consignment.totalProfit')}</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {reportSellers.map(r => (
+                  {sellerTable.view.map(r => (
                     <tr key={r.sellerId}>
                       <td className="font-medium">{r.sellerName}</td>
                       <td className="text-xs">{r.salesCount}</td>
@@ -355,31 +423,37 @@ export default function ConsignmentPage() {
                       <td className="font-semibold text-green-600">{fmt(r.totalProfit)}</td>
                     </tr>
                   ))}
+                  {sellerTable.total === 0 && (
+                    <tr><td colSpan={5} className="text-center text-stone-400 py-8">{t('common.noData')}</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
+            <TablePagination page={sellerTable.page} pageCount={sellerTable.pageCount} total={sellerTable.total} pageSize={sellerTable.pageSize} onPage={sellerTable.setPage} />
+            </>
           )}
         </div>
 
         {/* Breakdown by payment method */}
         {!reportLoading && reportPayments.length > 0 && (
           <div className="card">
-            <div className="px-4 py-3 border-b border-stone-100">
+            <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-stone-700">{t('consignment.byPaymentMethod')}</h3>
+              <TableSearch value={paymentTable.search} onChange={paymentTable.setSearch} placeholder="Search method…" className="max-w-[12rem]" />
             </div>
             <div className="table-wrapper">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>{t('consignment.paymentMethod')}</th>
-                    <th>{t('consignment.salesCount')}</th>
-                    <th>{t('consignment.totalQty')}</th>
-                    <th>{t('consignment.totalRevenue')}</th>
-                    <th>{t('consignment.totalProfit')}</th>
+                    <SortableTh field="label" sort={paymentTable.sort} onSort={paymentTable.toggleSort}>{t('consignment.paymentMethod')}</SortableTh>
+                    <SortableTh field="salesCount" sort={paymentTable.sort} onSort={paymentTable.toggleSort}>{t('consignment.salesCount')}</SortableTh>
+                    <SortableTh field="totalQty" sort={paymentTable.sort} onSort={paymentTable.toggleSort}>{t('consignment.totalQty')}</SortableTh>
+                    <SortableTh field="totalRevenue" sort={paymentTable.sort} onSort={paymentTable.toggleSort}>{t('consignment.totalRevenue')}</SortableTh>
+                    <SortableTh field="totalProfit" sort={paymentTable.sort} onSort={paymentTable.toggleSort}>{t('consignment.totalProfit')}</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {reportPayments.map(p => (
+                  {paymentTable.view.map(p => (
                     <tr key={p.method}>
                       <td><span className="badge badge-stone text-xs">{p.label}</span></td>
                       <td className="text-xs">{p.salesCount}</td>
@@ -391,6 +465,7 @@ export default function ConsignmentPage() {
                 </tbody>
               </table>
             </div>
+            <TablePagination page={paymentTable.page} pageCount={paymentTable.pageCount} total={paymentTable.total} pageSize={paymentTable.pageSize} onPage={paymentTable.setPage} />
           </div>
         )}
         </>
