@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 import { prisma } from '../../core/prisma';
 import { AuthRequest, JwtPayload } from '../../types';
 import * as R from '../../utils/response';
-import { normalizePhone } from '../../utils/phone';
+import { normalizePhone, phoneVariants } from '../../utils/phone';
 
 const SECRET      = process.env.JWT_SECRET         || 'uniduka-secret-change-in-prod';
 const REFRESH_KEY = process.env.JWT_REFRESH_SECRET || 'uniduka-refresh-secret';
@@ -74,14 +74,13 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     const identifier = (username || '').trim();
     if (!identifier || !password) return R.badRequest(res, 'Username and password required');
 
-    const normalizedPhone = normalizePhone(identifier);
-    const phoneVariants = Array.from(new Set([identifier, normalizedPhone]));
+    const variants = phoneVariants(identifier);
 
     const user = await prisma.user.findFirst({
       where: {
         OR: [
           { email: identifier },
-          ...phoneVariants.map(p => ({ phone: p })),
+          ...variants.map(p => ({ phone: p })),
         ],
       },
       include: { ownerAccount: true },
