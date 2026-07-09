@@ -351,7 +351,7 @@ model User {
   email          String?      @unique
   passwordHash   String
   fullName       String
-  phone          String?
+  phone          String?      @unique
   avatarUrl      String?
   role           UserRole     @default(CASHIER)
   twoFaSecret    String?

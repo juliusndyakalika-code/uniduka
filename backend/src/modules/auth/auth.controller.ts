@@ -76,7 +76,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 
     const variants = phoneVariants(identifier);
 
-    const user = await prisma.user.findFirst({
+    const matches = await prisma.user.findMany({
       where: {
         OR: [
           { email: identifier },
@@ -85,6 +85,17 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       },
       include: { ownerAccount: true },
     });
+
+    let user = matches.length === 1 ? matches[0] : null;
+    if (matches.length > 1) {
+      // Prefer exact email match to resolve ambiguity
+      const byEmail = matches.find(u => u.email === identifier);
+      if (byEmail) {
+        user = byEmail;
+      } else {
+        return R.badRequest(res, 'Multiple accounts share this phone number. Please sign in with your email address instead.');
+      }
+    }
     if (!user || !user.isActive) return R.unauthorized(res, 'Invalid credentials');
 
     const valid = await bcrypt.compare(password, user.passwordHash);
