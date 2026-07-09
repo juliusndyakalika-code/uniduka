@@ -7,7 +7,7 @@ import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import LanguageToggle from '../../components/ui/LanguageToggle';
 
-interface Form { email: string; password: string; totp?: string; }
+interface Form { username: string; password: string; totp?: string; }
 
 export default function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm<Form>();
@@ -64,12 +64,12 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
-              <label className="label">{t('auth.email')}</label>
+              <label className="label">Email or Phone Number</label>
               <input
-                {...register('email', { required: t('auth.emailRequired'), pattern: { value: /\S+@\S+\.\S+/, message: t('auth.invalidEmail') } })}
-                type="email" className="input" placeholder={t('auth.emailPlaceholder')} autoComplete="email"
+                {...register('username', { required: 'Email or phone number is required' })}
+                type="text" className="input" placeholder="your@email.com or +255..." autoComplete="username"
               />
-              {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
+              {errors.username && <p className="mt-1 text-xs text-red-600">{errors.username.message}</p>}
             </div>
 
             <div>

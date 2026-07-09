@@ -68,10 +68,14 @@ export async function register(req: Request, res: Response, next: NextFunction) 
 // POST /api/v1/auth/login
 export async function login(req: Request, res: Response, next: NextFunction) {
   try {
-    const { email, password, totp } = req.body;
-    if (!email || !password) return R.badRequest(res, 'Email and password required');
+    const { username, password, totp } = req.body;
+    const identifier = (username || '').trim();
+    if (!identifier || !password) return R.badRequest(res, 'Username and password required');
 
-    const user = await prisma.user.findUnique({ where: { email }, include: { ownerAccount: true } });
+    const user = await prisma.user.findFirst({
+      where: { OR: [{ email: identifier }, { phone: identifier }] },
+      include: { ownerAccount: true },
+    });
     if (!user || !user.isActive) return R.unauthorized(res, 'Invalid credentials');
 
     const valid = await bcrypt.compare(password, user.passwordHash);
