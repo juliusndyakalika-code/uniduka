@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 import { prisma } from '../../core/prisma';
 import { AuthRequest, JwtPayload } from '../../types';
 import * as R from '../../utils/response';
+import { normalizePhone } from '../../utils/phone';
 
 const SECRET      = process.env.JWT_SECRET         || 'uniduka-secret-change-in-prod';
 const REFRESH_KEY = process.env.JWT_REFRESH_SECRET || 'uniduka-refresh-secret';
@@ -22,12 +23,13 @@ function signRefresh(userId: string) {
 // POST /api/v1/auth/register — creates owner account + first user
 export async function register(req: Request, res: Response, next: NextFunction) {
   try {
-    const { email, password, fullName, legalName, phone } = req.body;
+    const { email, password, fullName, legalName, phone: rawPhone } = req.body;
     if (!email || !password || !fullName || !legalName) return R.badRequest(res, 'Missing required fields');
 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return R.conflict(res, 'Email already registered');
 
+    const phone = rawPhone ? normalizePhone(rawPhone) : undefined;
     const passwordHash = await bcrypt.hash(password, 12);
 
     // STARTER plan → 30-day free trial; higher plans need admin activation
@@ -72,8 +74,16 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     const identifier = (username || '').trim();
     if (!identifier || !password) return R.badRequest(res, 'Username and password required');
 
+    const normalizedPhone = normalizePhone(identifier);
+    const phoneVariants = Array.from(new Set([identifier, normalizedPhone]));
+
     const user = await prisma.user.findFirst({
-      where: { OR: [{ email: identifier }, { phone: identifier }] },
+      where: {
+        OR: [
+          { email: identifier },
+          ...phoneVariants.map(p => ({ phone: p })),
+        ],
+      },
       include: { ownerAccount: true },
     });
     if (!user || !user.isActive) return R.unauthorized(res, 'Invalid credentials');
@@ -143,12 +153,13 @@ export async function me(req: AuthRequest, res: Response) {
 
 // PATCH /api/v1/auth/me
 export async function updateMe(req: AuthRequest, res: Response) {
-  const { fullName, email, phone } = req.body;
+  const { fullName, email, phone: rawPhone } = req.body;
+  const phone = rawPhone ? normalizePhone(rawPhone) : rawPhone;
   if (email !== undefined && email !== '') {
     const conflict = await prisma.user.findFirst({ where: { email, NOT: { id: req.user!.sub } } });
     if (conflict) return R.conflict(res, 'Email already in use');
   }
-  if (phone !== undefined && phone !== '') {
+  if (phone) {
     const conflict = await prisma.user.findFirst({ where: { phone, NOT: { id: req.user!.sub } } });
     if (conflict) return R.conflict(res, 'Phone number already in use');
   }
@@ -157,7 +168,7 @@ export async function updateMe(req: AuthRequest, res: Response) {
     data: {
       ...(fullName && { fullName }),
       ...(email !== undefined && { email: email || null }),
-      ...(phone !== undefined && { phone: phone || null }),
+      ...(rawPhone !== undefined && { phone: phone || null }),
     },
     select: { id: true, fullName: true, email: true, phone: true },
   });

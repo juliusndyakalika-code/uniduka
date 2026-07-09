@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
+import { normalizePhone } from '../../utils/phone';
 
 export async function listUsers(req: AuthRequest, res: Response) {
   const users = await prisma.user.findMany({
@@ -24,7 +25,8 @@ const ASSIGNABLE_ROLES: Record<string, string[]> = {
 };
 
 export async function createUser(req: AuthRequest, res: Response) {
-  const { email, password, fullName, phone, role, shopId, shopRole } = req.body;
+  const { email, password, fullName, role, shopId, shopRole } = req.body;
+  const phone = req.body.phone ? normalizePhone(req.body.phone) : undefined;
 
   const callerRole = req.user!.role;
   const allowed = ASSIGNABLE_ROLES[callerRole] ?? [];
@@ -52,7 +54,8 @@ export async function createUser(req: AuthRequest, res: Response) {
 }
 
 export async function updateUser(req: AuthRequest, res: Response) {
-  const { fullName, email, phone, role, isActive } = req.body;
+  const { fullName, email, role, isActive } = req.body;
+  const phone = req.body.phone ? normalizePhone(req.body.phone) : req.body.phone;
 
   if (email) {
     const conflict = await prisma.user.findFirst({ where: { email, NOT: { id: req.params.id } } });
