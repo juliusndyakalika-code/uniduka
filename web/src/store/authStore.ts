@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 interface ShopMeta { id: string; tradingName: string; businessType: string; }
-interface User { id: string; email: string; fullName: string; role: string; }
+interface User { id: string; email?: string | null; phone?: string | null; fullName: string; role: string; }
 interface Account {
   id: string; legalName: string; plan: string;
   subscriptionActive: boolean;

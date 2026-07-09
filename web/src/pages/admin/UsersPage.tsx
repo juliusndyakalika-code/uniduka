@@ -8,12 +8,12 @@ import { useAuthStore } from '../../store/authStore';
 import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 interface StaffUser {
-  id: string; fullName: string; email: string; role: string; isActive: boolean;
+  id: string; fullName: string; email?: string | null; phone?: string | null; role: string; isActive: boolean;
   shopAccess: { shopId: string; shop: { tradingName: string } }[];
 }
 interface ShopOption { id: string; tradingName: string; businessType: string; }
-interface InviteForm { fullName: string; email: string; password: string; role: string; shopId: string; }
-interface EditForm  { fullName: string; email: string; role: string; }
+interface InviteForm { fullName: string; email?: string; phone?: string; password: string; role: string; shopId: string; }
+interface EditForm  { fullName: string; email?: string; phone?: string; role: string; }
 
 const BASE_ROLES = ['CASHIER', 'INVENTORY_STAFF'];
 const HOTEL_ROLES = ['RECEPTIONIST', 'CASHIER'];
@@ -128,7 +128,7 @@ export default function UsersPage() {
 
   function openEdit(u: StaffUser) {
     setEditUser(u);
-    editForm.reset({ fullName: u.fullName, email: u.email, role: u.role });
+    editForm.reset({ fullName: u.fullName, email: u.email || '', phone: u.phone || '', role: u.role });
     setEditError('');
   }
 
@@ -219,7 +219,7 @@ export default function UsersPage() {
                           </div>
                           <div>
                             <p className="font-medium text-stone-900">{u.fullName}{isMe && <span className="ml-1.5 text-[10px] text-stone-400">(you)</span>}</p>
-                            <p className="text-xs text-stone-400">{u.email}</p>
+                            <p className="text-xs text-stone-400">{u.email || u.phone || '—'}</p>
                           </div>
                         </div>
                       </td>
@@ -319,14 +319,22 @@ export default function UsersPage() {
               <button onClick={() => setShowInvite(false)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
             {inviteError && <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{inviteError}</div>}
-            <form onSubmit={inviteForm.handleSubmit(d => invite(d))} className="space-y-4">
+            <form onSubmit={inviteForm.handleSubmit(d => {
+              if (!d.email && !d.phone) { setInviteError('Provide email or phone number (at least one required)'); return; }
+              setInviteError('');
+              invite(d);
+            })} className="space-y-4">
               <div>
                 <label className="label">{t('users.fullName')}</label>
                 <input {...inviteForm.register('fullName', { required: true })} className="input" placeholder="Staff member's name" />
               </div>
               <div>
-                <label className="label">{t('users.email')}</label>
-                <input {...inviteForm.register('email', { required: true })} type="email" className="input" placeholder="staff@yourbusiness.com" />
+                <label className="label">Email <span className="text-stone-400 font-normal text-[10px]">(or phone below)</span></label>
+                <input {...inviteForm.register('email')} type="email" className="input" placeholder="staff@yourbusiness.com" />
+              </div>
+              <div>
+                <label className="label">Phone Number <span className="text-stone-400 font-normal text-[10px]">(or email above)</span></label>
+                <input {...inviteForm.register('phone')} type="tel" className="input" placeholder="+255 7XX XXX XXX" />
               </div>
               <div>
                 <label className="label">Temporary Password</label>
@@ -370,7 +378,11 @@ export default function UsersPage() {
               </div>
               <div>
                 <label className="label">{t('users.email')}</label>
-                <input {...editForm.register('email', { required: true })} type="email" className="input" />
+                <input {...editForm.register('email')} type="email" className="input" placeholder="staff@yourbusiness.com" />
+              </div>
+              <div>
+                <label className="label">Phone Number</label>
+                <input {...editForm.register('phone')} type="tel" className="input" placeholder="+255 7XX XXX XXX" />
               </div>
               {editUser.role !== 'ACCOUNT_OWNER' && (
                 <div>

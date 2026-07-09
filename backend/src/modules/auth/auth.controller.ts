@@ -141,6 +141,29 @@ export async function me(req: AuthRequest, res: Response) {
   return R.ok(res, user);
 }
 
+// PATCH /api/v1/auth/me
+export async function updateMe(req: AuthRequest, res: Response) {
+  const { fullName, email, phone } = req.body;
+  if (email !== undefined && email !== '') {
+    const conflict = await prisma.user.findFirst({ where: { email, NOT: { id: req.user!.sub } } });
+    if (conflict) return R.conflict(res, 'Email already in use');
+  }
+  if (phone !== undefined && phone !== '') {
+    const conflict = await prisma.user.findFirst({ where: { phone, NOT: { id: req.user!.sub } } });
+    if (conflict) return R.conflict(res, 'Phone number already in use');
+  }
+  const updated = await prisma.user.update({
+    where: { id: req.user!.sub },
+    data: {
+      ...(fullName && { fullName }),
+      ...(email !== undefined && { email: email || null }),
+      ...(phone !== undefined && { phone: phone || null }),
+    },
+    select: { id: true, fullName: true, email: true, phone: true },
+  });
+  return R.ok(res, updated);
+}
+
 // PUT /api/v1/auth/password
 export async function changePassword(req: AuthRequest, res: Response) {
   const { currentPassword, newPassword } = req.body;

@@ -348,7 +348,7 @@ model User {
   ownerAccountId String
   ownerAccount   OwnerAccount @relation(fields: [ownerAccountId], references: [id], onDelete: Cascade)
 
-  email          String       @unique
+  email          String?      @unique
   passwordHash   String
   fullName       String
   phone          String?

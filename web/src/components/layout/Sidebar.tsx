@@ -351,12 +351,17 @@ export default function Sidebar({ open, onClose }: Props) {
 
         {/* User footer */}
         <div className="border-t border-stone-200 px-3 py-3 flex-shrink-0">
-          <div className="px-3 py-2 mb-1">
-            <p className="text-xs font-semibold text-stone-900 truncate">{user?.fullName}</p>
-            <p className="text-[10px] uppercase tracking-widest text-stone-400">
-              {isOwner ? `${account?.plan} · ` : ''}{role.replace(/_/g, ' ')}
-            </p>
-          </div>
+          <NavLink to="/account" className="flex items-center gap-2.5 px-3 py-2 mb-1 rounded-lg hover:bg-stone-100 transition-colors group">
+            <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center shrink-0">
+              {user?.fullName?.charAt(0).toUpperCase() ?? '?'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-stone-900 truncate group-hover:text-primary-700">{user?.fullName}</p>
+              <p className="text-[10px] uppercase tracking-widest text-stone-400">
+                {isOwner ? `${account?.plan} · ` : ''}{role.replace(/_/g, ' ')}
+              </p>
+            </div>
+          </NavLink>
 
           {/* Language toggle */}
           <button

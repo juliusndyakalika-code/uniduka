@@ -8,7 +8,7 @@ export async function listUsers(req: AuthRequest, res: Response) {
   const users = await prisma.user.findMany({
     where: { ownerAccountId: req.user!.accountId },
     select: {
-      id: true, fullName: true, email: true, role: true, isActive: true, lastLoginAt: true,
+      id: true, fullName: true, email: true, phone: true, role: true, isActive: true, lastLoginAt: true,
       shopAccess: {
         select: { shopId: true, shop: { select: { tradingName: true } } },
         take: 1,
@@ -32,11 +32,18 @@ export async function createUser(req: AuthRequest, res: Response) {
     return R.forbidden(res, `${callerRole} cannot assign role ${role}`);
   }
 
-  const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) return R.conflict(res, 'Email already in use');
+  if (!email && !phone) return R.badRequest(res, 'Email or phone number is required');
+  if (email) {
+    const exists = await prisma.user.findFirst({ where: { email } });
+    if (exists) return R.conflict(res, 'Email already in use');
+  }
+  if (phone) {
+    const exists = await prisma.user.findFirst({ where: { phone } });
+    if (exists) return R.conflict(res, 'Phone number already in use');
+  }
   const hash = await bcrypt.hash(password || 'changeme123', 12);
   const user = await prisma.user.create({
-    data: { email, passwordHash: hash, fullName, phone, role, ownerAccountId: req.user!.accountId },
+    data: { email: email || null, passwordHash: hash, fullName, phone: phone || null, role, ownerAccountId: req.user!.accountId },
   });
   if (shopId) {
     await prisma.userShopAccess.create({ data: { userId: user.id, shopId, role: shopRole || role } });
@@ -50,6 +57,10 @@ export async function updateUser(req: AuthRequest, res: Response) {
   if (email) {
     const conflict = await prisma.user.findFirst({ where: { email, NOT: { id: req.params.id } } });
     if (conflict) return R.conflict(res, 'Email already in use');
+  }
+  if (phone) {
+    const conflict = await prisma.user.findFirst({ where: { phone, NOT: { id: req.params.id } } });
+    if (conflict) return R.conflict(res, 'Phone number already in use');
   }
 
   await prisma.user.updateMany({

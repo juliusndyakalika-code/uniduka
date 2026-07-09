@@ -51,6 +51,7 @@ import UsersPage from './pages/admin/UsersPage';
 import BusinessSettingsPage from './pages/admin/BusinessSettingsPage';
 import ShopSettingsPage from './pages/admin/ShopSettingsPage';
 import TaxRulesPage from './pages/admin/TaxRulesPage';
+import MyAccountPage from './pages/account/MyAccountPage';
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -90,6 +91,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/account" element={<MyAccountPage />} />
             <Route path="/pos" element={<PosPage />} />
 
             <Route path="/inventory" element={<InventoryDashboard />} />
