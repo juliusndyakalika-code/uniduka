@@ -75,7 +75,6 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     if (!identifier || !password) return R.badRequest(res, 'Username and password required');
 
     const variants = phoneVariants(identifier);
-    console.log('[login] identifier:', identifier, 'variants:', variants);
 
     const user = await prisma.user.findFirst({
       where: {
@@ -86,7 +85,6 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       },
       include: { ownerAccount: true },
     });
-    console.log('[login] user found:', user ? `${user.email ?? '(no email)'} phone=${user.phone ?? 'null'}` : 'NOT FOUND');
     if (!user || !user.isActive) return R.unauthorized(res, 'Invalid credentials');
 
     const valid = await bcrypt.compare(password, user.passwordHash);
