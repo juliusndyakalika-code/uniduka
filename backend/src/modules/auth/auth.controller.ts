@@ -10,7 +10,7 @@ import { normalizePhone, phoneVariants } from '../../utils/phone';
 
 const SECRET      = process.env.JWT_SECRET         || 'uniduka-secret-change-in-prod';
 const REFRESH_KEY = process.env.JWT_REFRESH_SECRET || 'uniduka-refresh-secret';
-const ACCESS_TTL  = '15m';
+const ACCESS_TTL  = '20m';
 const REFRESH_TTL = '7d';
 
 function signAccess(payload: Omit<JwtPayload, 'iat' | 'exp'>) {
