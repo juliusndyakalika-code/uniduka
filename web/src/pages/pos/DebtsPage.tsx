@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Clock, CheckCircle, X, Banknote, Smartphone, CreditCard, User, ChevronDown, ChevronRight, Printer } from 'lucide-react';
+import { Clock, CheckCircle, X, Banknote, Smartphone, CreditCard, User, ChevronDown, ChevronRight, Printer, Trash2, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -25,7 +25,7 @@ const PAY_METHODS = [
   { key: 'CARD',         label: 'Card',   icon: CreditCard },
 ];
 
-function DebtRow({ debt, onSettle }: { debt: Debt; onSettle: (d: Debt) => void }) {
+function DebtRow({ debt, onSettle, onVoid, isOwner }: { debt: Debt; onSettle: (d: Debt) => void; onVoid: (d: Debt) => void; isOwner: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const customerDisplay = debt.customer?.fullName ?? debt.customerName ?? 'Unknown';
 
@@ -63,14 +63,25 @@ function DebtRow({ debt, onSettle }: { debt: Debt; onSettle: (d: Debt) => void }
             : <span className="font-bold text-red-600">{fmt(debt.outstanding)}</span>}
         </td>
         <td>
-          {!debt.isSettled && (
-            <button
-              onClick={e => { e.stopPropagation(); onSettle(debt); }}
-              className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-800 transition-colors"
-            >
-              <Clock size={12} /> Settle
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {!debt.isSettled && (
+              <button
+                onClick={e => { e.stopPropagation(); onSettle(debt); }}
+                className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-800 transition-colors"
+              >
+                <Clock size={12} /> Settle
+              </button>
+            )}
+            {isOwner && (
+              <button
+                onClick={e => { e.stopPropagation(); onVoid(debt); }}
+                className="flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700 transition-colors"
+                title="Void this transaction"
+              >
+                <Trash2 size={12} /> Void
+              </button>
+            )}
+          </div>
         </td>
       </tr>
 
@@ -126,7 +137,8 @@ function DebtRow({ debt, onSettle }: { debt: Debt; onSettle: (d: Debt) => void }
 
 export default function DebtsPage() {
   const { t } = useTranslation();
-  const { shopId } = useAuthStore();
+  const { shopId, user } = useAuthStore();
+  const isOwner = user?.role === 'ACCOUNT_OWNER';
   const qc = useQueryClient();
   const [tab, setTab] = useState<'outstanding' | 'settled' | 'all'>('outstanding');
 
@@ -136,6 +148,21 @@ export default function DebtsPage() {
   const [reference, setReference]             = useState('');
   const [settleError, setSettleError]         = useState('');
   const [lastSettlement, setLastSettlement]   = useState<{ debt: Debt; paid: number; method: string; ref: string; remaining: number } | null>(null);
+
+  const [voidingDebt, setVoidingDebt]         = useState<Debt | null>(null);
+  const [voidReason, setVoidReason]           = useState('');
+  const [voidError, setVoidError]             = useState('');
+
+  const { mutate: doVoid, isPending: voiding } = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      api.post(`/pos/transactions/${id}/void`, { reason }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['debts'] });
+      setVoidingDebt(null); setVoidReason(''); setVoidError('');
+    },
+    onError: (e: unknown) =>
+      setVoidError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to void'),
+  });
 
   const { data: allDebts = [], isLoading } = useQuery<Debt[]>({
     queryKey: ['debts', shopId],
@@ -255,7 +282,10 @@ export default function DebtsPage() {
               </thead>
               <tbody>
                 {debtsTable.view.map(debt => (
-                  <DebtRow key={debt.id} debt={debt} onSettle={d => { setSettlingDebt(d); setAmount(String(d.outstanding)); setSettleError(''); }} />
+                  <DebtRow key={debt.id} debt={debt} isOwner={isOwner}
+                    onSettle={d => { setSettlingDebt(d); setAmount(String(d.outstanding)); setSettleError(''); }}
+                    onVoid={d => { setVoidingDebt(d); setVoidReason(''); setVoidError(''); }}
+                  />
                 ))}
                 {debtsTable.total === 0 && (
                   <tr><td colSpan={7} className="text-center text-stone-400 py-8">{t('common.noData')}</td></tr>
@@ -353,6 +383,59 @@ export default function DebtsPage() {
                   {settling ? t('common.saving') : `Record ${amount ? fmt(Number(amount)) : 'Payment'}`}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Void confirmation modal */}
+      {voidingDebt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="card p-6 w-full max-w-sm">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                <AlertTriangle size={18} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-stone-900">Void Transaction</h3>
+                <p className="text-xs text-stone-500 mt-0.5 font-mono">{voidingDebt.receiptNo}</p>
+              </div>
+              <button onClick={() => setVoidingDebt(null)} className="ml-auto text-stone-400 hover:text-stone-700"><X size={18} /></button>
+            </div>
+
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-xs text-red-700 space-y-1">
+              <p className="font-semibold">This will:</p>
+              <p>• Mark the sale as voided (removed from revenue)</p>
+              <p>• Restore all items back to stock</p>
+              {voidingDebt.paidAmount > 0 && (
+                <p className="font-semibold mt-1 text-amber-700">
+                  ⚠ This debt has partial payments recorded. Voiding will NOT automatically reverse those payments — handle manually.
+                </p>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label className="label">Reason for voiding</label>
+              <input
+                className="input"
+                placeholder="e.g. Wrong customer, wrong item…"
+                value={voidReason}
+                onChange={e => setVoidReason(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            {voidError && <p className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5">{voidError}</p>}
+
+            <div className="flex gap-3">
+              <button className="btn-secondary flex-1" onClick={() => setVoidingDebt(null)}>Cancel</button>
+              <button
+                disabled={voiding || !voidReason.trim()}
+                onClick={() => doVoid({ id: voidingDebt.id, reason: voidReason.trim() })}
+                className="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-40 transition-colors"
+              >
+                {voiding ? 'Voiding…' : 'Void Transaction'}
+              </button>
             </div>
           </div>
         </div>
