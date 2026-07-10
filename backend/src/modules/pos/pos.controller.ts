@@ -193,6 +193,7 @@ export async function listDebts(req: AuthRequest, res: Response) {
     include: {
       payments: true,
       customer: { select: { id: true, fullName: true, phone: true } },
+      items: { select: { name: true, quantity: true, unitPrice: true, lineTotal: true, unitLabel: true } },
     },
     orderBy: { createdAt: 'desc' },
   });

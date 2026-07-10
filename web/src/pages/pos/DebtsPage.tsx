@@ -1,18 +1,20 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Clock, CheckCircle, X, Banknote, Smartphone, CreditCard, User, ChevronDown, ChevronRight, Printer, Trash2, AlertTriangle } from 'lucide-react';
+import { Clock, CheckCircle, X, Banknote, Smartphone, CreditCard, ChevronDown, ChevronRight, Printer, Trash2, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { TableSearch } from '../../components/ui/DataTable';
 
 interface Settlement { method: string; amount: number; reference?: string; providerName?: string; createdAt: string; }
+interface DebtItem { name: string; quantity: number; unitPrice: number; lineTotal: number; unitLabel?: string; }
 interface Debt {
   id: string; receiptNo: string; total: number; paidAmount: number; outstanding: number;
   isSettled: boolean; createdAt: string;
   customer?: { id: string; fullName: string; phone?: string } | null;
   customerName?: string;
   settlements: Settlement[];
+  items: DebtItem[];
 }
 interface CustomerGroup {
   key: string; name: string; phone?: string;
@@ -97,8 +99,10 @@ export default function DebtsPage() {
     const map = new Map<string, CustomerGroup>();
     const q = search.toLowerCase();
     for (const d of displayed) {
-      const key  = d.customer?.id ?? d.customerName ?? '__unknown__';
-      const name = d.customer?.fullName ?? d.customerName ?? 'Unknown Customer';
+      const rawName = d.customer?.fullName ?? d.customerName ?? '';
+      // Normalize key: use linked customer ID if available, otherwise lowercase-trimmed name
+      const key  = d.customer?.id ?? (rawName.trim().toLowerCase() || '__unknown__');
+      const name = rawName.trim() || 'Unknown Customer';
       const phone = d.customer?.phone;
       if (q && !name.toLowerCase().includes(q) && !d.receiptNo.toLowerCase().includes(q) && !(phone ?? '').includes(q)) continue;
       if (!map.has(key)) map.set(key, { key, name, phone, debts: [], totalOutstanding: 0, totalDebt: 0 });
@@ -252,6 +256,15 @@ export default function DebtsPage() {
                                   <span className="text-emerald-600">Paid: <span className="font-medium">{fmt(debt.paidAmount)}</span></span>
                                 )}
                               </div>
+                              {debt.items?.length > 0 && (
+                                <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                                  {debt.items.map((item, i) => (
+                                    <span key={i} className="text-[11px] text-stone-500">
+                                      {item.quantity} × <span className="text-stone-700">{item.name}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
 
                             {/* Status + amount */}
