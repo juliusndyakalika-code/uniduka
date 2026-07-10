@@ -111,8 +111,10 @@ export async function getTransaction(req: AuthRequest, res: Response) {
 
 export async function voidTransaction(req: AuthRequest, res: Response) {
   const { reason } = req.body;
-  const tx = await prisma.transaction.findFirst({ where: { id: req.params.id, shopId: shop(req), status: 'COMPLETED' }, include: { items: true } });
+  const tx = await prisma.transaction.findFirst({ where: { id: req.params.id, shopId: shop(req), status: 'COMPLETED' }, include: { items: true, payments: true } });
   if (!tx) return R.notFound(res, 'Transaction not found or already voided');
+  const amountSettled = tx.payments.filter(p => p.method !== 'DEBIT').reduce((s, p) => s + p.amount, 0);
+  if (amountSettled > 0) return R.badRequest(res, 'Cannot void: this debt has partial payments recorded. Reverse those payments first.');
   await prisma.transaction.update({ where: { id: tx.id }, data: { status: 'VOIDED', note: reason } });
   for (const item of tx.items) {
     // Log the stock movement

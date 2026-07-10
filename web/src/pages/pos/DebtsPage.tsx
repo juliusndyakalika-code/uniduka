@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Clock, CheckCircle, X, Banknote, Smartphone, CreditCard, User, ChevronDown, ChevronRight, Printer, Trash2, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
-import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
+import { TableSearch } from '../../components/ui/DataTable';
 
 interface Settlement { method: string; amount: number; reference?: string; providerName?: string; createdAt: string; }
 interface Debt {
@@ -13,6 +13,11 @@ interface Debt {
   customer?: { id: string; fullName: string; phone?: string } | null;
   customerName?: string;
   settlements: Settlement[];
+}
+interface CustomerGroup {
+  key: string; name: string; phone?: string;
+  debts: Debt[];
+  totalOutstanding: number; totalDebt: number;
 }
 
 function fmt(n: number) {
@@ -25,144 +30,28 @@ const PAY_METHODS = [
   { key: 'CARD',         label: 'Card',   icon: CreditCard },
 ];
 
-function DebtRow({ debt, onSettle, onVoid, isOwner }: { debt: Debt; onSettle: (d: Debt) => void; onVoid: (d: Debt) => void; isOwner: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-  const customerDisplay = debt.customer?.fullName ?? debt.customerName ?? 'Unknown';
-
-  return (
-    <>
-      <tr
-        className={`cursor-pointer hover:bg-stone-50 transition-colors ${debt.isSettled ? 'opacity-60' : ''}`}
-        onClick={() => setExpanded(v => !v)}
-      >
-        <td>
-          <div className="flex items-center gap-2">
-            {expanded ? <ChevronDown size={13} className="text-stone-400 shrink-0" /> : <ChevronRight size={13} className="text-stone-400 shrink-0" />}
-            <span className="font-mono text-xs text-stone-700">{debt.receiptNo}</span>
-          </div>
-        </td>
-        <td>
-          <div className="flex items-center gap-1.5">
-            {(debt.customer || debt.customerName) && <User size={11} className="text-stone-400 shrink-0" />}
-            <div>
-              <p className={`text-sm ${debt.customer || debt.customerName ? 'font-medium text-stone-900' : 'text-stone-400'}`}>{customerDisplay}</p>
-              {debt.customer?.phone && <p className="text-[10px] text-stone-400">{debt.customer.phone}</p>}
-            </div>
-          </div>
-        </td>
-        <td className="hidden sm:table-cell text-xs text-stone-400 whitespace-nowrap">
-          {new Date(debt.createdAt).toLocaleString('en-TZ', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}
-        </td>
-        <td className="hidden sm:table-cell font-medium">{fmt(debt.total)}</td>
-        <td className="hidden sm:table-cell text-emerald-600">{debt.paidAmount > 0 ? fmt(debt.paidAmount) : '—'}</td>
-        <td>
-          {debt.isSettled
-            ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
-                <CheckCircle size={11} /> Settled
-              </span>
-            : <span className="font-bold text-red-600">{fmt(debt.outstanding)}</span>}
-        </td>
-        <td>
-          <div className="flex items-center gap-2">
-            {!debt.isSettled && (
-              <button
-                onClick={e => { e.stopPropagation(); onSettle(debt); }}
-                className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-800 transition-colors"
-              >
-                <Clock size={12} /> Settle
-              </button>
-            )}
-            {isOwner && (
-              <button
-                onClick={e => { e.stopPropagation(); onVoid(debt); }}
-                className="flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700 transition-colors"
-                title="Void this transaction"
-              >
-                <Trash2 size={12} /> Void
-              </button>
-            )}
-          </div>
-        </td>
-      </tr>
-
-      {/* Expanded settlement history */}
-      {expanded && debt.settlements.length > 0 && (
-        <tr>
-          <td colSpan={7} className="p-0">
-            <div className="bg-stone-50 border-t border-b border-stone-200 px-8 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Payment history</p>
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-stone-400 border-b border-stone-200">
-                    <th className="text-left py-1 pr-4 font-semibold">Date & Time</th>
-                    <th className="text-left py-1 pr-4 font-semibold">Method</th>
-                    <th className="text-left py-1 pr-4 font-semibold">Provider / Reference</th>
-                    <th className="text-right py-1 font-semibold">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {debt.settlements.map((s, i) => (
-                    <tr key={i} className="border-b border-stone-100 last:border-0">
-                      <td className="py-1.5 pr-4 text-stone-500 whitespace-nowrap">
-                        {s.createdAt
-                          ? new Date(s.createdAt).toLocaleString('en-TZ', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                          : '—'}
-                      </td>
-                      <td className="py-1.5 pr-4">
-                        <span className="badge badge-stone">{s.method.replace('_', ' ')}</span>
-                      </td>
-                      <td className="py-1.5 pr-4 text-stone-500">
-                        {s.providerName && <span className="mr-2">{s.providerName}</span>}
-                        {s.reference && <span className="font-mono text-stone-400">{s.reference}</span>}
-                        {!s.providerName && !s.reference && '—'}
-                      </td>
-                      <td className="py-1.5 text-right font-semibold text-emerald-600">{fmt(s.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-stone-200">
-                    <td colSpan={2} className="pt-1.5 text-stone-500 font-semibold">Total paid</td>
-                    <td className="pt-1.5 text-right font-bold text-emerald-600">{fmt(debt.paidAmount)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
 export default function DebtsPage() {
   const { t } = useTranslation();
   const { shopId, user } = useAuthStore();
   const isOwner = user?.role === 'ACCOUNT_OWNER';
   const qc = useQueryClient();
   const [tab, setTab] = useState<'outstanding' | 'settled' | 'all'>('outstanding');
+  const [search, setSearch] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [expandedTx, setExpandedTx] = useState<Set<string>>(new Set());
 
-  const [settlingDebt, setSettlingDebt]       = useState<Debt | null>(null);
-  const [method, setMethod]                   = useState('CASH');
-  const [amount, setAmount]                   = useState('');
-  const [reference, setReference]             = useState('');
-  const [settleError, setSettleError]         = useState('');
-  const [lastSettlement, setLastSettlement]   = useState<{ debt: Debt; paid: number; method: string; ref: string; remaining: number } | null>(null);
+  // Settle state
+  const [settlingDebt, setSettlingDebt]     = useState<Debt | null>(null);
+  const [method, setMethod]                 = useState('CASH');
+  const [amount, setAmount]                 = useState('');
+  const [reference, setReference]           = useState('');
+  const [settleError, setSettleError]       = useState('');
+  const [lastSettlement, setLastSettlement] = useState<{ debt: Debt; paid: number; method: string; ref: string; remaining: number } | null>(null);
 
-  const [voidingDebt, setVoidingDebt]         = useState<Debt | null>(null);
-  const [voidReason, setVoidReason]           = useState('');
-  const [voidError, setVoidError]             = useState('');
-
-  const { mutate: doVoid, isPending: voiding } = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      api.post(`/pos/transactions/${id}/void`, { reason }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['debts'] });
-      setVoidingDebt(null); setVoidReason(''); setVoidError('');
-    },
-    onError: (e: unknown) =>
-      setVoidError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to void'),
-  });
+  // Void state
+  const [voidingDebt, setVoidingDebt] = useState<Debt | null>(null);
+  const [voidReason, setVoidReason]   = useState('');
+  const [voidError, setVoidError]     = useState('');
 
   const { data: allDebts = [], isLoading } = useQuery<Debt[]>({
     queryKey: ['debts', shopId],
@@ -176,56 +65,91 @@ export default function DebtsPage() {
     onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ['debts'] });
       const data = res.data.data;
-      if (settlingDebt) {
-        setLastSettlement({ debt: settlingDebt, paid: vars.amt, method, ref: reference, remaining: data.remaining ?? 0 });
-      }
+      if (settlingDebt) setLastSettlement({ debt: settlingDebt, paid: vars.amt, method, ref: reference, remaining: data.remaining ?? 0 });
       setSettlingDebt(null); setAmount(''); setReference(''); setSettleError('');
     },
     onError: (e: unknown) =>
       setSettleError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
 
+  const { mutate: doVoid, isPending: voiding } = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      api.post(`/pos/transactions/${id}/void`, { reason }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['debts'] });
+      setVoidingDebt(null); setVoidReason(''); setVoidError('');
+    },
+    onError: (e: unknown) =>
+      setVoidError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to void'),
+  });
+
   const outstanding = allDebts.filter(d => !d.isSettled);
   const settled     = allDebts.filter(d => d.isSettled);
   const displayed   = tab === 'outstanding' ? outstanding : tab === 'settled' ? settled : allDebts;
 
-  const totalOutstanding = outstanding.reduce((s, d) => s + d.outstanding, 0);
-  const totalSettled     = settled.reduce((s, d) => s + d.total, 0);
+  const totalOutstanding   = outstanding.reduce((s, d) => s + d.outstanding, 0);
+  const totalSettled       = settled.reduce((s, d) => s + d.total, 0);
+  const partialDebts       = outstanding.filter(d => d.paidAmount > 0);
+  const totalPartialPaid   = partialDebts.reduce((s, d) => s + d.paidAmount, 0);
 
-  const debtsTable = useDataTable(displayed, {
-    searchable: d => [d.receiptNo, d.customer?.fullName ?? d.customerName, d.customer?.phone],
-    sortValues: {
-      receiptNo: d => d.receiptNo,
-      customer: d => d.customer?.fullName ?? d.customerName,
-      createdAt: d => new Date(d.createdAt),
-      total: d => d.total,
-      paidAmount: d => d.paidAmount,
-      outstanding: d => d.outstanding,
-    },
-    initialSort: { field: 'createdAt', dir: 'desc' },
-    pageSize: 20,
-  });
+  // Group by customer
+  const groups = useMemo<CustomerGroup[]>(() => {
+    const map = new Map<string, CustomerGroup>();
+    const q = search.toLowerCase();
+    for (const d of displayed) {
+      const key  = d.customer?.id ?? d.customerName ?? '__unknown__';
+      const name = d.customer?.fullName ?? d.customerName ?? 'Unknown Customer';
+      const phone = d.customer?.phone;
+      if (q && !name.toLowerCase().includes(q) && !d.receiptNo.toLowerCase().includes(q) && !(phone ?? '').includes(q)) continue;
+      if (!map.has(key)) map.set(key, { key, name, phone, debts: [], totalOutstanding: 0, totalDebt: 0 });
+      const g = map.get(key)!;
+      g.debts.push(d);
+      g.totalOutstanding += d.outstanding;
+      g.totalDebt += d.total;
+    }
+    return Array.from(map.values()).sort((a, b) => b.totalOutstanding - a.totalOutstanding);
+  }, [displayed, search]);
+
+  function toggleGroup(key: string) {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+  function toggleTx(id: string) {
+    setExpandedTx(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   return (
     <div className="space-y-6">
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('debts.title')}</h1>
-          <p className="page-subtitle">Track credit sales and settlements</p>
+          <p className="page-subtitle">Credit sales grouped by customer</p>
         </div>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="card p-5">
           <p className="stat-value text-red-600">{fmt(totalOutstanding)}</p>
           <p className="stat-label">Total outstanding</p>
-          <p className="text-xs text-stone-400 mt-1">{outstanding.length} debt{outstanding.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-stone-400 mt-1">{outstanding.length} transaction{outstanding.length !== 1 ? 's' : ''}</p>
+        </div>
+        <div className="card p-5">
+          <p className="stat-value text-amber-600">{fmt(totalPartialPaid)}</p>
+          <p className="stat-label">Partial payments</p>
+          <p className="text-xs text-stone-400 mt-1">{partialDebts.length} debt{partialDebts.length !== 1 ? 's' : ''} partly paid</p>
         </div>
         <div className="card p-5">
           <p className="stat-value text-emerald-600">{fmt(totalSettled)}</p>
           <p className="stat-label">Total settled</p>
-          <p className="text-xs text-stone-400 mt-1">{settled.length} payment{settled.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-stone-400 mt-1">{settled.length} transaction{settled.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="card p-5">
           <p className="stat-value">{fmt(totalOutstanding + totalSettled)}</p>
@@ -234,80 +158,194 @@ export default function DebtsPage() {
         </div>
       </div>
 
-      {/* Tab filter */}
-      <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1 w-fit">
-        {([
-          { key: 'outstanding', label: `Outstanding (${outstanding.length})` },
-          { key: 'settled',     label: `Settled (${settled.length})` },
-          { key: 'all',         label: `All (${allDebts.length})` },
-        ] as const).map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-1.5 text-xs rounded-md transition-colors font-medium ${
-              tab === t.key ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'
-            }`}>
-            {t.label}
-          </button>
-        ))}
+      {/* Tabs + search */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1">
+          {([
+            { key: 'outstanding', label: `Outstanding (${outstanding.length})` },
+            { key: 'settled',     label: `Settled (${settled.length})` },
+            { key: 'all',         label: `All (${allDebts.length})` },
+          ] as const).map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-4 py-1.5 text-xs rounded-md transition-colors font-medium ${
+                tab === t.key ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <TableSearch value={search} onChange={setSearch} placeholder="Search customer, receipt…" className="max-w-[16rem]" />
       </div>
 
-      {/* Table */}
-      <div className="card">
-        {isLoading ? (
-          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
-        ) : displayed.length === 0 ? (
-          <div className="p-12 text-center">
-            <CheckCircle size={32} className="text-emerald-400 mx-auto mb-3" />
-            <p className="text-stone-500 font-medium">
-              {tab === 'outstanding' ? t('debts.noDebts') : tab === 'settled' ? 'No settled debts yet' : 'No debit records'}
-            </p>
-          </div>
-        ) : (
-          <>
-          <div className="px-5 py-2.5 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[10px] text-stone-400">Click a row to see payment history</p>
-            <TableSearch value={debtsTable.search} onChange={debtsTable.setSearch} placeholder="Search receipt, customer…" className="max-w-[14rem]" />
-          </div>
-          <div className="table-wrapper overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <SortableTh field="receiptNo" sort={debtsTable.sort} onSort={debtsTable.toggleSort}>{t('debts.receiptNo')}</SortableTh>
-                  <SortableTh field="customer" sort={debtsTable.sort} onSort={debtsTable.toggleSort}>{t('debts.customer')}</SortableTh>
-                  <SortableTh field="createdAt" sort={debtsTable.sort} onSort={debtsTable.toggleSort} className="hidden sm:table-cell">{t('debts.date')}</SortableTh>
-                  <SortableTh field="total" sort={debtsTable.sort} onSort={debtsTable.toggleSort} className="hidden sm:table-cell">Sale Total</SortableTh>
-                  <SortableTh field="paidAmount" sort={debtsTable.sort} onSort={debtsTable.toggleSort} className="hidden sm:table-cell">Paid</SortableTh>
-                  <SortableTh field="outstanding" sort={debtsTable.sort} onSort={debtsTable.toggleSort}>{t('debts.amount')}</SortableTh>
-                  <th>{t('debts.collect')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {debtsTable.view.map(debt => (
-                  <DebtRow key={debt.id} debt={debt} isOwner={isOwner}
-                    onSettle={d => { setSettlingDebt(d); setAmount(String(d.outstanding)); setSettleError(''); }}
-                    onVoid={d => { setVoidingDebt(d); setVoidReason(''); setVoidError(''); }}
-                  />
-                ))}
-                {debtsTable.total === 0 && (
-                  <tr><td colSpan={7} className="text-center text-stone-400 py-8">{t('common.noData')}</td></tr>
+      {/* Grouped customer list */}
+      {isLoading ? (
+        <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>
+      ) : groups.length === 0 ? (
+        <div className="card p-12 text-center">
+          <CheckCircle size={32} className="text-emerald-400 mx-auto mb-3" />
+          <p className="text-stone-500 font-medium">
+            {tab === 'outstanding' ? t('debts.noDebts') : tab === 'settled' ? 'No settled debts' : 'No records'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {groups.map(group => {
+            const isOpen = expandedGroups.has(group.key);
+            return (
+              <div key={group.key} className="card overflow-hidden">
+                {/* Customer header */}
+                <button
+                  onClick={() => toggleGroup(group.key)}
+                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-stone-50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 text-sm font-bold flex items-center justify-center shrink-0">
+                      {group.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-stone-900 truncate">{group.name}</p>
+                      {group.phone && <p className="text-xs text-stone-400">{group.phone}</p>}
+                    </div>
+                    <div className="hidden sm:flex items-center gap-2 ml-2">
+                      <span className="text-xs text-stone-400">{group.debts.length} transaction{group.debts.length !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0 ml-4">
+                    {group.totalOutstanding > 0 && (
+                      <div className="text-right">
+                        <p className="text-xs text-stone-400">Outstanding</p>
+                        <p className="text-sm font-bold text-red-600">{fmt(group.totalOutstanding)}</p>
+                      </div>
+                    )}
+                    {group.totalOutstanding === 0 && (
+                      <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                        <CheckCircle size={11} /> All settled
+                      </span>
+                    )}
+                    {isOpen ? <ChevronDown size={16} className="text-stone-400" /> : <ChevronRight size={16} className="text-stone-400" />}
+                  </div>
+                </button>
+
+                {/* Individual transactions */}
+                {isOpen && (
+                  <div className="border-t border-stone-100 divide-y divide-stone-100">
+                    {group.debts.map(debt => {
+                      const txOpen = expandedTx.has(debt.id);
+                      const canVoid = isOwner && debt.paidAmount === 0;
+                      return (
+                        <div key={debt.id}>
+                          <div
+                            className="flex items-center gap-3 px-5 py-3 hover:bg-stone-50 cursor-pointer transition-colors"
+                            onClick={() => debt.settlements.length > 0 && toggleTx(debt.id)}
+                          >
+                            {/* Receipt + date */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono text-xs font-semibold text-stone-700">{debt.receiptNo}</span>
+                                <span className="text-[10px] text-stone-400">
+                                  {new Date(debt.createdAt).toLocaleString('en-TZ', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 mt-0.5 flex-wrap text-xs">
+                                <span className="text-stone-500">Total: <span className="font-medium text-stone-800">{fmt(debt.total)}</span></span>
+                                {debt.paidAmount > 0 && (
+                                  <span className="text-emerald-600">Paid: <span className="font-medium">{fmt(debt.paidAmount)}</span></span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Status + amount */}
+                            <div className="text-right shrink-0">
+                              {debt.isSettled ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                                  <CheckCircle size={10} /> Settled
+                                </span>
+                              ) : (
+                                <p className="text-sm font-bold text-red-600">{fmt(debt.outstanding)}</p>
+                              )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
+                              {!debt.isSettled && (
+                                <button
+                                  onClick={() => { setSettlingDebt(debt); setAmount(String(debt.outstanding)); setSettleError(''); }}
+                                  className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-800 transition-colors px-2 py-1 rounded hover:bg-primary-50"
+                                >
+                                  <Clock size={12} /> Settle
+                                </button>
+                              )}
+                              {isOwner && (
+                                canVoid ? (
+                                  <button
+                                    onClick={() => { setVoidingDebt(debt); setVoidReason(''); setVoidError(''); }}
+                                    className="flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700 transition-colors px-2 py-1 rounded hover:bg-red-50"
+                                    title="Void this transaction"
+                                  >
+                                    <Trash2 size={12} /> Void
+                                  </button>
+                                ) : debt.paidAmount > 0 && (
+                                  <span className="text-[10px] text-stone-400 px-1" title="Cannot void: has partial payments">
+                                    No void
+                                  </span>
+                                )
+                              )}
+                              {debt.settlements.length > 0 && (
+                                <button className="text-stone-400 hover:text-stone-600 p-1">
+                                  {txOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Payment history */}
+                          {txOpen && debt.settlements.length > 0 && (
+                            <div className="bg-stone-50 border-t border-stone-100 px-10 py-3">
+                              <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">Payment history</p>
+                              <table className="w-full text-xs">
+                                <tbody>
+                                  {debt.settlements.map((s, i) => (
+                                    <tr key={i} className="border-b border-stone-100 last:border-0">
+                                      <td className="py-1.5 pr-4 text-stone-400 whitespace-nowrap">
+                                        {s.createdAt ? new Date(s.createdAt).toLocaleString('en-TZ', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—'}
+                                      </td>
+                                      <td className="py-1.5 pr-4"><span className="badge badge-stone">{s.method.replace('_', ' ')}</span></td>
+                                      <td className="py-1.5 pr-4 text-stone-500">
+                                        {s.providerName && <span className="mr-1">{s.providerName}</span>}
+                                        {s.reference && <span className="font-mono text-stone-400">{s.reference}</span>}
+                                      </td>
+                                      <td className="py-1.5 text-right font-semibold text-emerald-600">{fmt(s.amount)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Customer total footer */}
+                    {group.debts.length > 1 && (
+                      <div className="flex items-center justify-between px-5 py-2.5 bg-stone-50 text-xs font-semibold text-stone-600">
+                        <span>{group.debts.length} transactions</span>
+                        <div className="flex items-center gap-4">
+                          {group.debts.some(d => d.paidAmount > 0) && (
+                            <span className="text-emerald-600">Paid: {fmt(group.debts.reduce((s, d) => s + d.paidAmount, 0))}</span>
+                          )}
+                          <span className={group.totalOutstanding > 0 ? 'text-red-600' : 'text-emerald-600'}>
+                            {group.totalOutstanding > 0 ? `Still owed: ${fmt(group.totalOutstanding)}` : 'Fully settled'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
-              </tbody>
-              {debtsTable.total > 1 && (
-                <tfoot>
-                  <tr className="border-t-2 border-stone-200 bg-stone-50">
-                    <td colSpan={2} className="font-semibold text-stone-700 py-2 px-3">Total</td>
-                    <td className="hidden sm:table-cell font-bold">{fmt(debtsTable.sorted.reduce((s, d) => s + d.total, 0))}</td>
-                    <td className="hidden sm:table-cell font-bold text-emerald-600">{fmt(debtsTable.sorted.reduce((s, d) => s + d.paidAmount, 0))}</td>
-                    <td className="font-bold text-red-600">{fmt(debtsTable.sorted.reduce((s, d) => s + d.outstanding, 0))}</td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
-          <TablePagination page={debtsTable.page} pageCount={debtsTable.pageCount} total={debtsTable.total} pageSize={debtsTable.pageSize} onPage={debtsTable.setPage} />
-          </>
-        )}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Settle modal */}
       {settlingDebt && (
@@ -332,7 +370,6 @@ export default function DebtsPage() {
               </div>
             </div>
 
-            {/* Previous payments */}
             {settlingDebt.settlements.length > 0 && (
               <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700">
                 <p className="font-semibold mb-1.5">Previously paid</p>
@@ -402,31 +439,18 @@ export default function DebtsPage() {
               </div>
               <button onClick={() => setVoidingDebt(null)} className="ml-auto text-stone-400 hover:text-stone-700"><X size={18} /></button>
             </div>
-
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-xs text-red-700 space-y-1">
               <p className="font-semibold">This will:</p>
-              <p>• Mark the sale as voided (removed from revenue)</p>
+              <p>• Remove the sale from revenue</p>
               <p>• Restore all items back to stock</p>
-              {voidingDebt.paidAmount > 0 && (
-                <p className="font-semibold mt-1 text-amber-700">
-                  ⚠ This debt has partial payments recorded. Voiding will NOT automatically reverse those payments — handle manually.
-                </p>
-              )}
+              <p>• Mark the transaction as voided</p>
             </div>
-
             <div className="mb-4">
               <label className="label">Reason for voiding</label>
-              <input
-                className="input"
-                placeholder="e.g. Wrong customer, wrong item…"
-                value={voidReason}
-                onChange={e => setVoidReason(e.target.value)}
-                autoFocus
-              />
+              <input className="input" placeholder="e.g. Wrong customer, wrong item…"
+                value={voidReason} onChange={e => setVoidReason(e.target.value)} autoFocus />
             </div>
-
             {voidError && <p className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5">{voidError}</p>}
-
             <div className="flex gap-3">
               <button className="btn-secondary flex-1" onClick={() => setVoidingDebt(null)}>Cancel</button>
               <button
@@ -441,7 +465,7 @@ export default function DebtsPage() {
         </div>
       )}
 
-      {/* Settlement success + receipt modal */}
+      {/* Settlement success receipt */}
       {lastSettlement && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-6 w-full max-w-xs text-center">
@@ -450,7 +474,6 @@ export default function DebtsPage() {
             </div>
             <h3 className="text-lg font-bold text-stone-900 mb-1">Payment Recorded</h3>
             <p className="font-mono text-xs text-stone-400 mb-4">{lastSettlement.debt.receiptNo}</p>
-
             <div className="bg-stone-50 rounded-lg p-4 text-left space-y-2 mb-5 text-sm">
               <div className="flex justify-between">
                 <span className="text-stone-500">Customer</span>
@@ -476,27 +499,23 @@ export default function DebtsPage() {
                 </div>
               )}
             </div>
-
             <div className="flex gap-2">
               <button className="btn-secondary flex-1 text-xs" onClick={() => setLastSettlement(null)}>{t('common.close')}</button>
-              <button
-                className="btn-primary flex-1 text-xs"
-                onClick={() => {
-                  const s = lastSettlement;
-                  const w = window.open('', '_blank', 'width=380,height=600');
-                  if (!w) return;
-                  const now = new Date();
-                  const pad = (n: number) => String(n).padStart(2, '0');
-                  const dateStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
-                  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-                  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Settlement Receipt</title>
+              <button className="btn-primary flex-1 text-xs" onClick={() => {
+                const s = lastSettlement;
+                const w = window.open('', '_blank', 'width=380,height=600');
+                if (!w) return;
+                const now = new Date();
+                const pad = (n: number) => String(n).padStart(2, '0');
+                const dateStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+                const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+                w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Settlement Receipt</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Courier New',monospace;font-size:11.5px;width:80mm;padding:4mm 5mm}
 .bold{font-weight:bold}.r{text-align:right}.center{text-align:center}
 .hdr{font-size:14px;font-weight:bold;text-align:center}
 .sep{border:none;border-top:1px dashed #000;margin:5px 0}
 .sep2{border:none;border-top:2px solid #000;margin:5px 0}
 table{width:100%;border-collapse:collapse}td{padding:2px 1px;font-size:11px}
-.total td{font-weight:bold;font-size:12.5px;border-top:1px solid #000;padding-top:4px}
 .footer{font-size:9.5px;text-align:center;color:#555;margin-top:5px}
 .footer-msg{font-size:10px;text-align:center;font-weight:bold;margin:4px 0}
 @media print{@page{margin:0;size:80mm auto}body{padding:2mm 4mm}}</style></head><body>
@@ -521,9 +540,8 @@ ${s.remaining > 0 ? `<tr><td>Still Outstanding</td><td class="r bold" style="col
 <p class="footer">Powered by MauzoSmart</p>
 <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
 </body></html>`);
-                  w.document.close();
-                }}
-              >
+                w.document.close();
+              }}>
                 <Printer size={13} className="mr-1.5" /> {t('common.print')}
               </button>
             </div>
