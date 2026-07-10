@@ -312,7 +312,7 @@ export default function PosPage() {
       discountAmount: orderDiscount,
       cashReceived:   paymentMethod === 'CASH' ? Number(cashReceived) : undefined,
       customerId:    selectedCustomer?.id,
-      customerName:  selectedCustomer ? undefined : (customerQuery.trim() || undefined),
+      customerName:  selectedCustomer ? undefined : (paymentMethod === 'DEBIT' ? undefined : customerQuery.trim() || undefined),
       customerTin:   customerTin.trim() || undefined,
     }),
     onSuccess: (res) => {
@@ -393,8 +393,9 @@ export default function PosPage() {
   });
 
   const hasCustomer = !!(selectedCustomer || customerQuery.trim());
+  // DEBIT requires a proper CRM-linked customer, not just free-typed text
   const canCheckout = cart.length > 0 && !isPending &&
-    (paymentMethod !== 'DEBIT' || hasCustomer) &&   // DEBIT requires customer
+    (paymentMethod !== 'DEBIT' || !!selectedCustomer) &&
     (paymentMethod !== 'CASH'  || (!!cashReceived && Number(cashReceived) >= total));
 
   return (
@@ -782,9 +783,9 @@ export default function PosPage() {
                   : 'bg-red-50 border border-red-300 text-red-700'
               }`}>
                 <AlertTriangle size={12} className="mt-0.5 shrink-0" />
-                {hasCustomer
-                  ? <span>Sale recorded as debt for <strong>{selectedCustomer?.fullName ?? customerQuery.trim()}</strong>. Customer pays later.</span>
-                  : <span><strong>Customer required</strong> — enter or select a customer name above to record a debit sale.</span>}
+                {selectedCustomer
+                  ? <span>Sale recorded as debt for <strong>{selectedCustomer.fullName}</strong>. Customer pays later.</span>
+                  : <span><strong>Customer required</strong> — search and select a customer from the list, or click <strong>New</strong> to add one. Free-typed names are not accepted for credit sales.</span>}
               </div>
             )}
 
