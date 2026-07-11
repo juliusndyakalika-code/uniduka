@@ -317,7 +317,10 @@
     "email": "Email",
     "notes": "Notes (optional)",
     "addTitle": "Add Customer",
-    "saveFailed": "Failed to save customer"
+    "saveFailed": "Failed to save customer",
+    "editTitle": "Edit Customer",
+    "deleteTitle": "Delete Customer",
+    "deleteWarning": "This permanently removes the customer. Their past sales stay in reports. This cannot be undone."
   },
   "loyalty": {
     "title": "Loyalty Programme",

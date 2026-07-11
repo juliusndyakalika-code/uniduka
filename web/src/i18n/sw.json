@@ -317,7 +317,10 @@
     "email": "Barua Pepe",
     "notes": "Maelezo (si lazima)",
     "addTitle": "Ongeza Mteja",
-    "saveFailed": "Imeshindwa kuhifadhi mteja"
+    "saveFailed": "Imeshindwa kuhifadhi mteja",
+    "editTitle": "Hariri Mteja",
+    "deleteTitle": "Futa Mteja",
+    "deleteWarning": "Hii inaondoa mteja kabisa. Mauzo yao ya awali yatabaki kwenye ripoti. Haiwezi kutenduliwa."
   },
   "loyalty": {
     "title": "Zawadi za Uaminifu",

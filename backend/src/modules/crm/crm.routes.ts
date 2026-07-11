@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { listCustomers, getCustomer, createCustomer, updateCustomer, deleteCustomer, getCustomerHistory } from './crm.controller';
-import { authenticate } from '../../middleware/auth';
+import { authenticate, authorize } from '../../middleware/auth';
 const router = Router();
 router.use(authenticate);
 router.get('/',           listCustomers);
 router.post('/',          createCustomer);
 router.get('/:id',        getCustomer);
-router.put('/:id',        updateCustomer);
-router.delete('/:id',     deleteCustomer);
+router.put('/:id',        authorize('ACCOUNT_OWNER'), updateCustomer);
+router.delete('/:id',     authorize('ACCOUNT_OWNER'), deleteCustomer);
 router.get('/:id/history', getCustomerHistory);
 export default router;
