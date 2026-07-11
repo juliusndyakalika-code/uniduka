@@ -4,12 +4,12 @@ import { authenticate, requireShop, authorize } from '../../middleware/auth';
 
 const router = Router();
 
-// Expenses feed net-profit reporting — owner-only, like other financial management screens
-router.use(authenticate, requireShop, authorize('ACCOUNT_OWNER'));
+router.use(authenticate, requireShop);
 
-router.get('/',       listExpenses);
-router.post('/',      createExpense);
-router.put('/:id',    updateExpense);
-router.delete('/:id', deleteExpense);
+// Sellers (cashiers) can record and edit expenses; only owners may delete them.
+router.get('/',       authorize('ACCOUNT_OWNER', 'CASHIER'), listExpenses);
+router.post('/',      authorize('ACCOUNT_OWNER', 'CASHIER'), createExpense);
+router.put('/:id',    authorize('ACCOUNT_OWNER', 'CASHIER'), updateExpense);
+router.delete('/:id', authorize('ACCOUNT_OWNER'),            deleteExpense);
 
 export default router;

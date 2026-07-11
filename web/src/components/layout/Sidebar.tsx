@@ -254,6 +254,7 @@ export default function Sidebar({ open, onClose }: Props) {
               {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
                 <NavItem to="/consignment" icon={<Handshake size={16} />} label={t('nav.consignment')} />
               )}
+              <NavItem to="/expenses" icon={<Wallet size={16} />} label={t('nav.expenses')} />
               <NavItem to="/timeclock" icon={<Clock size={16} />} label={t('nav.timeclock')} />
             </>
           )}

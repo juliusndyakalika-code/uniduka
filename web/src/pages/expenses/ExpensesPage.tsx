@@ -53,7 +53,8 @@ const emptyForm = (): FormState => ({
 });
 
 export default function ExpensesPage() {
-  const { shopId } = useAuthStore();
+  const { shopId, user } = useAuthStore();
+  const isOwner = user?.role === 'ACCOUNT_OWNER';
   const qc = useQueryClient();
 
   const [from, setFrom]         = useState(() => ymd(new Date(new Date().getFullYear(), new Date().getMonth(), 1)));
@@ -221,9 +222,11 @@ export default function ExpensesPage() {
                         <button onClick={() => openEdit(x)} className="p-1 rounded text-stone-400 hover:text-primary-600 hover:bg-primary-50" title="Edit">
                           <Pencil size={13} />
                         </button>
-                        <button onClick={() => setDeletingId(x.id)} className="p-1 rounded text-stone-400 hover:text-red-600 hover:bg-red-50" title="Delete">
-                          <Trash2 size={13} />
-                        </button>
+                        {isOwner && (
+                          <button onClick={() => setDeletingId(x.id)} className="p-1 rounded text-stone-400 hover:text-red-600 hover:bg-red-50" title="Delete">
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

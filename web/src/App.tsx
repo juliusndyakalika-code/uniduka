@@ -116,9 +116,13 @@ export default function App() {
             <Route path="/repairs/work-orders" element={<WorkOrdersPage />} />
             <Route path="/hotel" element={<HotelPage />} />
 
+            {/* Sellers (cashiers) can record & edit expenses; only owners can delete */}
+            <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER', 'CASHIER']} />}>
+              <Route path="/expenses"       element={<ExpensesPage />} />
+            </Route>
+
             {/* Owner-only management routes */}
             <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER']} />}>
-              <Route path="/expenses"       element={<ExpensesPage />} />
               <Route path="/admin/users"    element={<UsersPage />} />
               <Route path="/admin/shops"    element={<ShopsPage />} />
               <Route path="/admin/shop"     element={<ShopSettingsPage />} />
