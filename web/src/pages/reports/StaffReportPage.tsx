@@ -236,13 +236,12 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
                           </td>
                           <td className="py-2 pr-3">
                             <div className="space-y-0.5">
-                              {tx.items.slice(0, 3).map((it, i) => (
+                              {tx.items.map((it, i) => (
                                 <div key={i} className="text-stone-600">
                                   {it.name}<span className="text-stone-400 ml-1">×{it.quantity} {it.unitLabel}</span>
                                   {it.discountPct > 0 && <span className="text-amber-600 ml-1">(-{it.discountPct}%)</span>}
                                 </div>
                               ))}
-                              {tx.items.length > 3 && <span className="text-stone-400">+{tx.items.length - 3} more</span>}
                             </div>
                           </td>
                           <td className="py-2 pr-3 text-right font-semibold text-stone-900">{fmt(tx.total)}</td>
