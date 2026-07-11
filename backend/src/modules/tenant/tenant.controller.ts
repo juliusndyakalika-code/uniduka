@@ -228,8 +228,31 @@ export async function getDashboard(req: AuthRequest, res: Response) {
   dailyTx.forEach(tx => { const k = tx.createdAt.toISOString().split('T')[0]; if (chartMap[k] !== undefined) chartMap[k] += tx.total; });
   const salesChart = Object.entries(chartMap).map(([date, revenue]) => ({ label: date.slice(5), revenue }));
 
+  // ── Net profit this month (products + consignment − expenses) ──────────────
+  const [monthProfitTx, consignMonthAgg, expenseMonthAgg] = await Promise.all([
+    prisma.transaction.findMany({
+      where: { shopId, status: 'COMPLETED', createdAt: { gte: startOfMonth } },
+      select: { total: true, items: { select: { quantity: true, product: { select: { costPrice: true } } } } },
+    }),
+    prisma.consignmentSale.aggregate({ where: { shopId, soldAt: { gte: startOfMonth } }, _sum: { profit: true } }),
+    prisma.expense.aggregate({ where: { shopId, incurredAt: { gte: startOfMonth } }, _sum: { amount: true } }),
+  ]);
+  const monthGrossProfit = monthProfitTx.reduce((s, t) => {
+    const cost = t.items.reduce((cs, i) => cs + (i.product?.costPrice ?? 0) * i.quantity, 0);
+    return s + t.total - cost;
+  }, 0);
+  const monthConsignmentProfit = consignMonthAgg._sum.profit ?? 0;
+  const monthExpenses = expenseMonthAgg._sum.amount ?? 0;
+  const monthNetProfit = monthGrossProfit + monthConsignmentProfit - monthExpenses;
+
   return R.ok(res, {
     revenue: { today: todayAgg._sum.total ?? 0, week: weekAgg._sum.total ?? 0, month: monthAgg._sum.total ?? 0 },
+    netProfit: {
+      month: monthNetProfit,
+      grossProfit: monthGrossProfit,
+      consignmentProfit: monthConsignmentProfit,
+      expenses: monthExpenses,
+    },
     transactions: { today: todayTx, week: weekTx },
     customers: { total: totalCustomers, new: newCustomers },
     lowStock,

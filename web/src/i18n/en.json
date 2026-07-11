@@ -168,7 +168,8 @@
     "printReceipt": "Reprint receipt",
     "reprintTitle": "Reprint Receipt",
     "managePlan": "Manage",
-    "plan": "{{plan}} plan"
+    "plan": "{{plan}} plan",
+    "netProfitMonth": "Net Profit (This Month)"
   },
   "pos": {
     "title": "Point of Sale",
@@ -369,7 +370,10 @@
     "consignmentSales": "Consignment Sales",
     "consignmentRevenue": "Consignment Revenue",
     "consignmentProfit": "Consignment Profit",
-    "consignmentNote": "Goods sold on behalf of partners"
+    "consignmentNote": "Goods sold on behalf of partners",
+    "totalNetProfit": "Total Net Profit",
+    "totalNetProfitNote": "Gross profit + consignment − expenses",
+    "totalNetProfitNoteHotel": "Revenue + consignment − expenses"
   },
   "timeclock": {
     "title": "Staff Timeclock",

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Store, CreditCard, Printer, X } from 'lucide-react';
+import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Store, CreditCard, Printer, X, Wallet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -11,6 +11,7 @@ import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../co
 
 interface DashboardData {
   revenue: { today: number; week: number; month: number };
+  netProfit?: { month: number; grossProfit: number; consignmentProfit: number; expenses: number };
   transactions: { today: number; week: number };
   customers: { total: number; new: number };
   lowStock: number;
@@ -170,6 +171,12 @@ export default function Dashboard() {
         <StatCard icon={Package} label={isHotel ? 'Rooms Available' : t('dashboard.lowStockAlerts')} value={String(data?.lowStock ?? 0)}
           color={isHotel ? 'bg-emerald-50 text-emerald-600' : (data?.lowStock ? 'bg-red-50 text-red-600' : 'bg-stone-50 text-stone-500')}
           to={isHotel ? '/hotel' : '/inventory/stock'} />
+        {data?.netProfit && (
+          <StatCard icon={Wallet} label={t('dashboard.netProfitMonth')} value={fmt(data.netProfit.month)}
+            sub={data.netProfit.consignmentProfit > 0 ? `incl. ${fmt(data.netProfit.consignmentProfit)} consignment` : `after ${fmt(data.netProfit.expenses)} expenses`}
+            color={data.netProfit.month >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}
+            to="/reports/sales" />
+        )}
       </div>
 
       {/* Charts + top products */}

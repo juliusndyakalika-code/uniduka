@@ -86,6 +86,15 @@ async function hotelSalesReport(req: AuthRequest, res: Response, range: { gte: D
   const grossProfit = revenue; // no product cost for room stays
   const netProfit = grossProfit - expenses;
 
+  // Consignment profit for the same period (kept for parity with the POS report)
+  const consignAgg = await prisma.consignmentSale.aggregate({
+    where: { shopId: shop(req), soldAt: range },
+    _sum: { profit: true },
+  });
+  const consignmentProfit = consignAgg._sum.profit ?? 0;
+  const totalGrossProfit  = grossProfit + consignmentProfit;
+  const totalNetProfit    = totalGrossProfit - expenses;
+
   return R.ok(res, {
     summary: {
       revenue, transactions: folioCount,
@@ -94,6 +103,7 @@ async function hotelSalesReport(req: AuthRequest, res: Response, range: { gte: D
       debtAmount: unpaid,        // unpaid folios (guests not yet settled)
       debtGrossProfit: unpaid,   // no COGS on rooms, so unpaid profit == unpaid revenue
       expenses, netProfit,
+      consignmentProfit, totalGrossProfit, totalNetProfit,
     },
     byDay:           Object.values(grouped),
     byPaymentMethod,
@@ -162,6 +172,16 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
     const expenses  = expenseAgg._sum.amount ?? 0;
     const netProfit = grossProfit - expenses;
 
+    // Consignment profit for the same period (goods sold on behalf of partners).
+    // Expenses are deducted once against the combined pool → total net profit.
+    const consignAgg = await prisma.consignmentSale.aggregate({
+      where: { shopId: shop(req), soldAt: range },
+      _sum: { profit: true },
+    });
+    const consignmentProfit = consignAgg._sum.profit ?? 0;
+    const totalGrossProfit  = grossProfit + consignmentProfit;
+    const totalNetProfit    = totalGrossProfit - expenses;
+
     // Group by period → byDay
     const grouped: Record<string, { date: string; revenue: number; txCount: number; grossProfit: number }> = {};
     for (const tx of transactions) {
@@ -206,7 +226,7 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
     const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
 
     return R.ok(res, {
-      summary: { revenue, transactions: txCount, avgTicket, grossProfit, debtAmount, debtGrossProfit, expenses, netProfit },
+      summary: { revenue, transactions: txCount, avgTicket, grossProfit, debtAmount, debtGrossProfit, expenses, netProfit, consignmentProfit, totalGrossProfit, totalNetProfit },
       byDay:           Object.values(grouped),
       byPaymentMethod: Object.values(pmMap),
       topProducts,

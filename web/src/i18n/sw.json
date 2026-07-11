@@ -168,7 +168,8 @@
     "printReceipt": "Chapisha Risiti",
     "reprintTitle": "Chapisha Risiti Tena",
     "managePlan": "Simamia",
-    "plan": "Mpango {{plan}}"
+    "plan": "Mpango {{plan}}",
+    "netProfitMonth": "Faida Halisi (Mwezi Huu)"
   },
   "pos": {
     "title": "Mauzo (POS)",
@@ -369,7 +370,10 @@
     "consignmentSales": "Mauzo ya Amana",
     "consignmentRevenue": "Mapato ya Amana",
     "consignmentProfit": "Faida ya Amana",
-    "consignmentNote": "Bidhaa zilizouzwa kwa niaba ya washirika"
+    "consignmentNote": "Bidhaa zilizouzwa kwa niaba ya washirika",
+    "totalNetProfit": "Faida Halisi Jumla",
+    "totalNetProfitNote": "Faida ghafi + amana − matumizi",
+    "totalNetProfitNoteHotel": "Mapato + amana − matumizi"
   },
   "timeclock": {
     "title": "Saa za Kazi za Wafanyakazi",

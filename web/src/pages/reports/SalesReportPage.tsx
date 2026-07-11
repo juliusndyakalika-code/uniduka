@@ -20,6 +20,7 @@ interface SalesReport {
   summary: {
     revenue: number; transactions: number; avgTicket: number; grossProfit: number;
     debtAmount?: number; debtGrossProfit?: number; expenses?: number; netProfit?: number;
+    consignmentProfit?: number; totalGrossProfit?: number; totalNetProfit?: number;
   };
   byDay: { date: string; revenue: number; txCount: number; grossProfit: number }[];
   byPaymentMethod: { method: string; label: string; total: number; count: number }[];
@@ -653,8 +654,11 @@ export default function SalesReportPage() {
             const debtGP     = sm?.debtGrossProfit ?? 0;
             const expenses   = sm?.expenses ?? 0;
             const netProfit  = sm?.netProfit ?? (grossProfit - expenses);
+            // Combined profit: products + consignment, with expenses deducted once
+            const consignmentProfit = sm?.consignmentProfit ?? consignment.profit;
+            const totalNetProfit    = sm?.totalNetProfit ?? (grossProfit + consignmentProfit - expenses);
 
-            type Card = { label: string; value: string; note?: string; noteClass?: string; valueClass?: string };
+            type Card = { label: string; value: string; note?: string; noteClass?: string; valueClass?: string; highlight?: boolean };
             const cards: Card[] = isHotel
               ? [
                   { label: t('reports.totalRevenue'), value: fmt(revenue),
@@ -667,6 +671,8 @@ export default function SalesReportPage() {
                   { label: 'Expenses', value: fmt(expenses), valueClass: 'text-red-600' },
                   { label: 'Net Profit', value: fmt(netProfit), valueClass: netProfit >= 0 ? 'text-emerald-600' : 'text-red-600',
                     note: 'Revenue − expenses', noteClass: 'text-stone-400' },
+                  { label: t('reports.totalNetProfit'), value: fmt(totalNetProfit), valueClass: totalNetProfit >= 0 ? 'text-emerald-600' : 'text-red-600',
+                    note: t('reports.totalNetProfitNoteHotel'), noteClass: 'text-stone-400', highlight: true },
                 ]
               : [
                   { label: t('reports.totalRevenue'), value: fmt(revenue),
@@ -678,12 +684,14 @@ export default function SalesReportPage() {
                   { label: 'Expenses', value: fmt(expenses), valueClass: 'text-red-600' },
                   { label: 'Net Profit', value: fmt(netProfit), valueClass: netProfit >= 0 ? 'text-emerald-600' : 'text-red-600',
                     note: 'Gross profit − expenses', noteClass: 'text-stone-400' },
+                  { label: t('reports.totalNetProfit'), value: fmt(totalNetProfit), valueClass: totalNetProfit >= 0 ? 'text-emerald-600' : 'text-red-600',
+                    note: t('reports.totalNetProfitNote'), noteClass: 'text-stone-400', highlight: true },
                 ];
 
             return (
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 {cards.map(s => (
-                  <div key={s.label} className="card p-5">
+                  <div key={s.label} className={`card p-5 ${s.highlight ? 'border-l-4 border-l-primary-500 bg-primary-50/30' : ''}`}>
                     <p className={`stat-value ${s.valueClass ?? ''}`}>{s.value}</p>
                     <p className="stat-label">{s.label}</p>
                     {s.note && <p className={`text-[10px] mt-1 ${s.noteClass ?? 'text-stone-400'}`}>{s.note}</p>}
