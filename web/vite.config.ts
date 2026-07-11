@@ -15,7 +15,8 @@ export default defineConfig({
         theme_color: '#a66624',
         background_color: '#1C1A18',
         display: 'standalone',
-        orientation: 'portrait',
+        // 'any' lets the installed app follow the phone's rotation (portrait & landscape)
+        orientation: 'any',
         start_url: '/',
         scope: '/',
         icons: [
