@@ -287,6 +287,7 @@ export default function PosPage() {
   };
 
   // ── Totals ─────────────────────────────────────────────────────────────────
+  const totalItems    = cart.reduce((s, i) => s + i.qty, 0);
   const subtotal      = cart.reduce((s, i) => s + effectivePrice(i) * i.qty * (1 - i.discountPct / 100), 0);
   const orderDiscount = Math.min(Number(discount) || 0, subtotal);
   const total         = subtotal - orderDiscount;
@@ -418,7 +419,7 @@ export default function PosPage() {
           }`}
         >
           <ShoppingCart size={15} />
-          {`${t('pos.cart')}${cart.length > 0 ? ` (${cart.length})` : ''}`}
+          {`${t('pos.cart')}${totalItems > 0 ? ` (${totalItems})` : ''}`}
           {cart.length > 0 && mobileView === 'products' && (
             <span className="ml-1 text-xs font-bold text-emerald-400">{fmt(total)}</span>
           )}
@@ -551,7 +552,14 @@ export default function PosPage() {
 
           {/* Cart header */}
           <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-stone-800">{`${t('pos.cart')} ${cart.length > 0 ? `(${cart.length})` : ''}`}</h3>
+            <h3 className="text-sm font-semibold text-stone-800 flex items-center gap-2">
+              {t('pos.cart')}
+              {totalItems > 0 && (
+                <span className="text-[11px] font-medium text-primary-700 bg-primary-50 rounded-full px-2 py-0.5">
+                  {totalItems} {totalItems === 1 ? t('pos.item') : t('pos.items')}
+                </span>
+              )}
+            </h3>
             {cart.length > 0 && (
               <button onClick={clearCart} className="text-xs text-stone-400 hover:text-red-500 transition-colors">{t('common.clear')}</button>
             )}
