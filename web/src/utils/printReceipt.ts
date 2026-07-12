@@ -192,3 +192,36 @@ export function printReceipt(r: ReceiptData) {
   sessionStorage.setItem(RECEIPT_SESSION_KEY, JSON.stringify(r));
   window.location.href = '/print-receipt';
 }
+
+// Print without navigating away, via a hidden iframe. Safe to call from async
+// callbacks (e.g. after a checkout/settlement request) — iframes are not subject
+// to popup blockers the way window.open is. Used for automatic receipt printing.
+export function printHtmlInline(bodyHtml: string, cssText: string, wrapperClass = 'receipt') {
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  Object.assign(iframe.style, { position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: '0' });
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) { iframe.remove(); return; }
+
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>${cssText}</style></head><body><div class="${wrapperClass}">${bodyHtml}</div></body></html>`);
+  doc.close();
+
+  const win = iframe.contentWindow!;
+  let done = false;
+  const fire = () => {
+    if (done) return; done = true;
+    try { win.focus(); win.print(); } catch { /* printing unsupported / cancelled */ }
+    setTimeout(() => iframe.remove(), 1500);
+  };
+  // Fire after a short delay so layout/fonts settle; onload is a fallback.
+  win.onafterprint = () => setTimeout(() => iframe.remove(), 200);
+  setTimeout(fire, 400);
+}
+
+export function printReceiptInline(r: ReceiptData) {
+  const { bodyHtml, cssText } = buildReceiptContent(r);
+  printHtmlInline(bodyHtml, cssText);
+}

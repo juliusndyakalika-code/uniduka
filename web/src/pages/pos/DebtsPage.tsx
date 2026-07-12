@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { TableSearch } from '../../components/ui/DataTable';
+import { printHtmlInline } from '../../utils/printReceipt';
 
 interface Settlement { method: string; amount: number; reference?: string; providerName?: string; createdAt: string; }
 interface DebtItem { name: string; quantity: number; unitPrice: number; lineTotal: number; unitLabel?: string; }
@@ -26,6 +27,50 @@ function fmt(n: number) {
   return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
 }
 
+type SettlementInfo = { debt: Debt; paid: number; method: string; ref: string; remaining: number };
+
+// Build the 80mm settlement receipt (body + css) for inline/auto printing.
+function settlementReceipt(s: SettlementInfo): { body: string; css: string } {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const cust = s.debt.customer?.fullName ?? s.debt.customerName;
+  const css = `*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Courier New',monospace;font-size:11.5px;width:80mm;padding:4mm 5mm}
+.bold{font-weight:bold}.r{text-align:right}
+.hdr{font-size:14px;font-weight:bold;text-align:center}
+.sep{border:none;border-top:1px dashed #000;margin:5px 0}
+.sep2{border:none;border-top:2px solid #000;margin:5px 0}
+table{width:100%;border-collapse:collapse}td{padding:2px 1px;font-size:11px}
+.footer{font-size:9.5px;text-align:center;color:#555;margin-top:5px}
+.footer-msg{font-size:10px;text-align:center;font-weight:bold;margin:4px 0}
+@media print{@page{margin:0;size:80mm auto}body{padding:2mm 4mm}}`;
+  const body = `<p class="hdr">SETTLEMENT RECEIPT</p>
+<hr class="sep2"/>
+<table><tbody>
+<tr><td>Date:</td><td class="r">${dateStr}</td></tr>
+<tr><td>Time:</td><td class="r">${timeStr}</td></tr>
+<tr><td>Ref (original):</td><td class="r bold">${s.debt.receiptNo}</td></tr>
+${cust ? `<tr><td>Customer:</td><td class="r">${cust}</td></tr>` : ''}
+</tbody></table>
+<hr class="sep"/>
+<table><tbody>
+<tr><td>Sale Total</td><td class="r">${fmt(s.debt.total)}</td></tr>
+<tr><td>Payment Received</td><td class="r bold">${fmt(s.paid)}</td></tr>
+<tr><td>Method</td><td class="r">${s.method.replace('_', ' ')}${s.ref ? ' — ' + s.ref : ''}</td></tr>
+${s.remaining > 0 ? `<tr><td>Still Outstanding</td><td class="r bold" style="color:#b45309">${fmt(s.remaining)}</td></tr>` : ''}
+</tbody></table>
+<hr class="sep2"/>
+<p class="footer-msg">${s.remaining <= 0 ? 'FULLY SETTLED ✓' : 'PARTIAL PAYMENT'}</p>
+<hr class="sep"/>
+<p class="footer">Powered by MauzoSmart</p>`;
+  return { body, css };
+}
+function printSettlement(s: SettlementInfo) {
+  const { body, css } = settlementReceipt(s);
+  printHtmlInline(body, css, 'settlement');
+}
+
 const PAY_METHODS = [
   { key: 'CASH',         label: 'Cash',   icon: Banknote },
   { key: 'MOBILE_MONEY', label: 'Mobile', icon: Smartphone },
@@ -37,7 +82,7 @@ export default function DebtsPage() {
   const { shopId, user } = useAuthStore();
   const isOwner = user?.role === 'ACCOUNT_OWNER';
   const qc = useQueryClient();
-  const [tab, setTab] = useState<'outstanding' | 'settled' | 'all'>('outstanding');
+  const [tab, setTab] = useState<'outstanding' | 'partial' | 'settled' | 'all'>('outstanding');
   const [search, setSearch] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedTx, setExpandedTx] = useState<Set<string>>(new Set());
@@ -67,7 +112,11 @@ export default function DebtsPage() {
     onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ['debts'] });
       const data = res.data.data;
-      if (settlingDebt) setLastSettlement({ debt: settlingDebt, paid: vars.amt, method, ref: reference, remaining: data.remaining ?? 0 });
+      if (settlingDebt) {
+        const info: SettlementInfo = { debt: settlingDebt, paid: vars.amt, method, ref: reference, remaining: data.remaining ?? 0 };
+        setLastSettlement(info);
+        printSettlement(info);   // auto-print settlement receipt
+      }
       setSettlingDebt(null); setAmount(''); setReference(''); setSettleError('');
     },
     onError: (e: unknown) =>
@@ -87,12 +136,15 @@ export default function DebtsPage() {
 
   const outstanding = allDebts.filter(d => !d.isSettled);
   const settled     = allDebts.filter(d => d.isSettled);
-  const displayed   = tab === 'outstanding' ? outstanding : tab === 'settled' ? settled : allDebts;
+  const partial     = outstanding.filter(d => d.paidAmount > 0); // deposits: part-paid, balance owed
+  const displayed   = tab === 'outstanding' ? outstanding
+                    : tab === 'partial'     ? partial
+                    : tab === 'settled'     ? settled
+                    : allDebts;
 
   const totalOutstanding   = outstanding.reduce((s, d) => s + d.outstanding, 0);
   const totalSettled       = settled.reduce((s, d) => s + d.total, 0);
-  const partialDebts       = outstanding.filter(d => d.paidAmount > 0);
-  const totalPartialPaid   = partialDebts.reduce((s, d) => s + d.paidAmount, 0);
+  const totalPartialPaid   = partial.reduce((s, d) => s + d.paidAmount, 0);
 
   // Group by customer
   const groups = useMemo<CustomerGroup[]>(() => {
@@ -148,7 +200,7 @@ export default function DebtsPage() {
         <div className="card p-5">
           <p className="stat-value text-amber-600">{fmt(totalPartialPaid)}</p>
           <p className="stat-label">Partial payments</p>
-          <p className="text-xs text-stone-400 mt-1">{partialDebts.length} debt{partialDebts.length !== 1 ? 's' : ''} partly paid</p>
+          <p className="text-xs text-stone-400 mt-1">{partial.length} debt{partial.length !== 1 ? 's' : ''} partly paid</p>
         </div>
         <div className="card p-5">
           <p className="stat-value text-emerald-600">{fmt(totalSettled)}</p>
@@ -167,6 +219,7 @@ export default function DebtsPage() {
         <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1">
           {([
             { key: 'outstanding', label: `Outstanding (${outstanding.length})` },
+            { key: 'partial',     label: `Partial (${partial.length})` },
             { key: 'settled',     label: `Settled (${settled.length})` },
             { key: 'all',         label: `All (${allDebts.length})` },
           ] as const).map(t => (
@@ -274,7 +327,14 @@ export default function DebtsPage() {
                                   <CheckCircle size={10} /> Settled
                                 </span>
                               ) : (
-                                <p className="text-sm font-bold text-red-600">{fmt(debt.outstanding)}</p>
+                                <>
+                                  {debt.paidAmount > 0 && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 mb-0.5">
+                                      Partial
+                                    </span>
+                                  )}
+                                  <p className="text-sm font-bold text-red-600">{fmt(debt.outstanding)}</p>
+                                </>
                               )}
                             </div>
 
@@ -514,47 +574,7 @@ export default function DebtsPage() {
             </div>
             <div className="flex gap-2">
               <button className="btn-secondary flex-1 text-xs" onClick={() => setLastSettlement(null)}>{t('common.close')}</button>
-              <button className="btn-primary flex-1 text-xs" onClick={() => {
-                const s = lastSettlement;
-                const w = window.open('', '_blank', 'width=380,height=600');
-                if (!w) return;
-                const now = new Date();
-                const pad = (n: number) => String(n).padStart(2, '0');
-                const dateStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
-                const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-                w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Settlement Receipt</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Courier New',monospace;font-size:11.5px;width:80mm;padding:4mm 5mm}
-.bold{font-weight:bold}.r{text-align:right}.center{text-align:center}
-.hdr{font-size:14px;font-weight:bold;text-align:center}
-.sep{border:none;border-top:1px dashed #000;margin:5px 0}
-.sep2{border:none;border-top:2px solid #000;margin:5px 0}
-table{width:100%;border-collapse:collapse}td{padding:2px 1px;font-size:11px}
-.footer{font-size:9.5px;text-align:center;color:#555;margin-top:5px}
-.footer-msg{font-size:10px;text-align:center;font-weight:bold;margin:4px 0}
-@media print{@page{margin:0;size:80mm auto}body{padding:2mm 4mm}}</style></head><body>
-<p class="hdr">SETTLEMENT RECEIPT</p>
-<hr class="sep2"/>
-<table><tbody>
-<tr><td>Date:</td><td class="r">${dateStr}</td></tr>
-<tr><td>Time:</td><td class="r">${timeStr}</td></tr>
-<tr><td>Ref (original):</td><td class="r bold">${s.debt.receiptNo}</td></tr>
-${s.debt.customer?.fullName ?? s.debt.customerName ? `<tr><td>Customer:</td><td class="r">${s.debt.customer?.fullName ?? s.debt.customerName}</td></tr>` : ''}
-</tbody></table>
-<hr class="sep"/>
-<table><tbody>
-<tr><td>Sale Total</td><td class="r">${fmt(s.debt.total)}</td></tr>
-<tr><td>Payment Received</td><td class="r bold">${fmt(s.paid)}</td></tr>
-<tr><td>Method</td><td class="r">${s.method.replace('_',' ')}${s.ref ? ' — '+s.ref : ''}</td></tr>
-${s.remaining > 0 ? `<tr><td>Still Outstanding</td><td class="r bold" style="color:#b45309">${fmt(s.remaining)}</td></tr>` : ''}
-</tbody></table>
-<hr class="sep2"/>
-<p class="footer-msg">${s.remaining <= 0 ? 'FULLY SETTLED ✓' : 'PARTIAL PAYMENT'}</p>
-<hr class="sep"/>
-<p class="footer">Powered by MauzoSmart</p>
-<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
-</body></html>`);
-                w.document.close();
-              }}>
+              <button className="btn-primary flex-1 text-xs" onClick={() => printSettlement(lastSettlement)}>
                 <Printer size={13} className="mr-1.5" /> {t('common.print')}
               </button>
             </div>

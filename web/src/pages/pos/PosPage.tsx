@@ -8,7 +8,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
-import { printReceipt as doPrint } from '../../utils/printReceipt';
+import { printReceipt as doPrint, printReceiptInline, type ReceiptData } from '../../utils/printReceipt';
 import { saleFeedback } from '../../utils/saleFeedback';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import CameraScanner from '../../components/CameraScanner';
@@ -264,38 +264,39 @@ export default function PosPage() {
   };
 
   // ── Print receipt — delegates to shared utility ───────────────────────────
-  const printReceipt = (r: Receipt) => {
-    doPrint({
-      receiptNo:    r.receiptNo,
-      total:        r.total,
-      subtotal:     r.subtotal,
-      discount:     r.discount,
-      paymentMethod: r.paymentMethod,
-      cashReceived: r.cashReceived,
-      change:       r.change,
-      items:        r.items,
-      shop: {
-        tradingName:  r.shopName,
-        addressLine1: r.shopAddress,
-        city:         r.shopCity,
-        phone:        r.shopPhone,
-        tin:          r.tin,
-        vrn:          r.vrn,
-        taxMode:      r.taxMode,
-      },
-      customerName: r.customerName,
-      customerTin:  r.customerTin,
-      mmProvider:   r.mmProvider,
-      paymentRef:   r.paymentRef,
-      currency:     r.currency,
-      exchangeRate: r.exchangeRate,
-      printedAt:    r.printedAt,
-      payments:     r.payments,
-      amountPaid:   r.amountPaid,
-      balanceDue:   r.balanceDue,
-      isReprint:    false,
-    });
-  };
+  const receiptToData = (r: Receipt, isReprint = false): ReceiptData => ({
+    receiptNo:    r.receiptNo,
+    total:        r.total,
+    subtotal:     r.subtotal,
+    discount:     r.discount,
+    paymentMethod: r.paymentMethod,
+    cashReceived: r.cashReceived,
+    change:       r.change,
+    items:        r.items,
+    shop: {
+      tradingName:  r.shopName,
+      addressLine1: r.shopAddress,
+      city:         r.shopCity,
+      phone:        r.shopPhone,
+      tin:          r.tin,
+      vrn:          r.vrn,
+      taxMode:      r.taxMode,
+    },
+    customerName: r.customerName,
+    customerTin:  r.customerTin,
+    mmProvider:   r.mmProvider,
+    paymentRef:   r.paymentRef,
+    currency:     r.currency,
+    exchangeRate: r.exchangeRate,
+    printedAt:    r.printedAt,
+    payments:     r.payments,
+    amountPaid:   r.amountPaid,
+    balanceDue:   r.balanceDue,
+    isReprint,
+  });
+  // Manual reprint (navigates to the print page); auto-print stays in place via iframe.
+  const printReceipt     = (r: Receipt) => doPrint(receiptToData(r));
+  const autoPrintReceipt = (r: Receipt) => printReceiptInline(receiptToData(r));
 
   // ── Totals ─────────────────────────────────────────────────────────────────
   const totalItems    = cart.reduce((s, i) => s + i.qty, 0);
@@ -374,7 +375,7 @@ export default function PosPage() {
         unit:       i.product.unit,
       }));
       const now = new Date();
-      setReceipt({
+      const rcpt: Receipt = {
         receiptNo:    tx.receiptNo,
         total:        tx.total,
         subtotal,
@@ -402,7 +403,9 @@ export default function PosPage() {
           amountPaid: Math.min(splitPaid, tx.total),
           balanceDue: splitBalance,
         }),
-      });
+      };
+      setReceipt(rcpt);
+      autoPrintReceipt(rcpt);   // auto-print the receipt on checkout
       clearCart();
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       qc.invalidateQueries({ queryKey: ['pos-products'] });
