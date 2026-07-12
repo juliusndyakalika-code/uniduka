@@ -27,6 +27,10 @@ export interface ReceiptData {
   change: number;
   mmProvider?: string;
   paymentRef?: string;
+  // Split / partial payments: individual tenders + amount paid vs balance owed
+  payments?: { method: string; amount: number }[];
+  amountPaid?: number;
+  balanceDue?: number;
   items: ReceiptItem[];
   shop: ReceiptShop;
   customerName?: string;
@@ -120,15 +124,19 @@ export function buildReceiptContent(r: ReceiptData): { bodyHtml: string; cssText
     <hr class="sep"/>
     <p class="sh">PAYMENT</p>
     <table><tbody>
-      <tr><td>${payLabel[r.paymentMethod] ?? r.paymentMethod}</td><td class="r">${fA(r.total)}</td></tr>
-      ${r.paymentMethod === 'CASH' ? `
+      ${r.payments && r.payments.length
+        ? r.payments.filter(p => p.method !== 'DEBIT').map(p => `<tr><td>${payLabel[p.method] ?? p.method}</td><td class="r">${fA(p.amount)}</td></tr>`).join('')
+          + `<tr><td class="b">Paid</td><td class="r b">${fA(r.amountPaid ?? r.total)}</td></tr>`
+          + ((r.balanceDue ?? 0) > 0 ? `<tr><td class="b">Balance Due</td><td class="r b">${fA(r.balanceDue ?? 0)}</td></tr>` : '')
+        : `<tr><td>${payLabel[r.paymentMethod] ?? r.paymentMethod}</td><td class="r">${fA(r.total)}</td></tr>`
+          + (r.paymentMethod === 'CASH' ? `
       <tr><td>Cash Received</td><td class="r">${fA(r.cashReceived)}</td></tr>
-      <tr><td>Change</td><td class="r">${fA(r.change)}</td></tr>` : ''}
+      <tr><td>Change</td><td class="r">${fA(r.change)}</td></tr>` : '')}
       ${r.paymentRef ? `<tr><td>Ref:</td><td class="r mono">${r.paymentRef}</td></tr>` : ''}
       ${showUSD ? `<tr><td colspan="2" class="sm" style="color:#555">Rate: 1 USD = ${exchRate} TZS</td></tr>` : ''}
     </tbody></table>
     <hr class="sep2"/>
-    ${r.paymentMethod === 'DEBIT' ? '<p class="dw">*** PAYMENT PENDING ***</p><hr class="sep"/>' : ''}
+    ${(r.paymentMethod === 'DEBIT' || (r.balanceDue ?? 0) > 0) ? '<p class="dw">*** BALANCE PENDING ***</p><hr class="sep"/>' : ''}
     <p class="fm">ASANTE KWA KUNUNUA!</p>
     <hr class="sep"/>
     <p class="ft">Powered by MauzoSmart</p>

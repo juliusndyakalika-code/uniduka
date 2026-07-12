@@ -31,7 +31,10 @@ interface Receipt {
   currency: 'TZS' | 'USD'; exchangeRate: number;
   items: ReceiptItem[];
   printedAt: string;
+  payments?: { method: string; amount: number }[];
+  amountPaid?: number; balanceDue?: number;
 }
+interface Tender { method: string; amount: string; reference: string; providerName: string; }
 interface ShopDetail {
   id: string; tradingName: string; addressLine1?: string; city?: string;
   phone?: string; tin?: string; vrn?: string; taxMode?: string;
@@ -75,6 +78,10 @@ export default function PosPage() {
   const [paymentRef, setPaymentRef]         = useState('');
   const [cashReceived, setCashReceived]     = useState('');
   const [discount, setDiscount]             = useState('');
+  // Split / partial payments: when on, the cashier enters one or more tenders;
+  // any shortfall vs the total is booked as credit for the selected customer.
+  const [splitMode, setSplitMode]           = useState(false);
+  const [tenders, setTenders]               = useState<Tender[]>([{ method: 'CASH', amount: '', reference: '', providerName: '' }]);
   const [receipt, setReceipt]           = useState<Receipt | null>(null);
   const [customerTin, setCustomerTin]   = useState('');
   const [error, setError]               = useState('');
@@ -253,6 +260,7 @@ export default function PosPage() {
     setCart([]); setCashReceived(''); setDiscount(''); setCustomerTin('');
     setSelectedCustomer(null); setCustomerQuery(''); setError('');
     setMmProvider(''); setPaymentRef('');
+    setSplitMode(false); setTenders([{ method: 'CASH', amount: '', reference: '', providerName: '' }]);
   };
 
   // ── Print receipt — delegates to shared utility ───────────────────────────
@@ -282,6 +290,9 @@ export default function PosPage() {
       currency:     r.currency,
       exchangeRate: r.exchangeRate,
       printedAt:    r.printedAt,
+      payments:     r.payments,
+      amountPaid:   r.amountPaid,
+      balanceDue:   r.balanceDue,
       isReprint:    false,
     });
   };
@@ -294,6 +305,35 @@ export default function PosPage() {
   const change        = paymentMethod === 'CASH' ? Math.max(0, Number(cashReceived) - total) : 0;
   const cashShortfall = paymentMethod === 'CASH' && cashReceived ? Math.max(0, total - Number(cashReceived)) : 0;
 
+  // ── Split / partial payment derived values ─────────────────────────────────
+  const appliedTenders = tenders.filter(t => Number(t.amount) > 0);
+  const splitPaid      = appliedTenders.reduce((s, t) => s + Number(t.amount), 0);
+  const splitNonCash   = appliedTenders.filter(t => t.method !== 'CASH').reduce((s, t) => s + Number(t.amount), 0);
+  const splitBalance   = Math.max(0, total - splitPaid);   // owed → credit
+  const splitOverpay   = Math.max(0, splitPaid - total);   // cash change
+
+  const addTender    = () => setTenders(ts => [...ts, { method: 'CASH', amount: '', reference: '', providerName: '' }]);
+  const removeTender = (i: number) => setTenders(ts => ts.length > 1 ? ts.filter((_, idx) => idx !== i) : ts);
+  const updateTender = (i: number, patch: Partial<Tender>) =>
+    setTenders(ts => ts.map((t, idx) => idx === i ? { ...t, ...patch } : t));
+
+  // Amounts actually applied to the bill: cash change is trimmed off cash lines so
+  // the recorded tenders sum to at most the total (keeps payment-method reporting honest).
+  const splitPaymentRows = (() => {
+    let trim = splitOverpay;
+    const rows = appliedTenders.map(t => {
+      let amt = Number(t.amount);
+      if (trim > 0 && t.method === 'CASH') { const d = Math.min(trim, amt); amt -= d; trim -= d; }
+      return {
+        method:       t.method,
+        amount:       amt,
+        providerName: t.method === 'MOBILE_MONEY' ? (t.providerName || undefined) : undefined,
+        reference:    t.reference.trim() || undefined,
+      };
+    }).filter(r => r.amount > 0);
+    return rows;
+  })();
+
   // ── Checkout ───────────────────────────────────────────────────────────────
   const { mutate: checkout, isPending } = useMutation({
     mutationFn: () => api.post('/pos/transactions', {
@@ -304,16 +344,21 @@ export default function PosPage() {
         discountPct: i.discountPct,
         unitLabel:   i.product.unit,
       })),
-      payments: [{
-        method:       paymentMethod,
-        amount:       paymentMethod === 'DEBIT' ? 0 : total,
-        providerName: paymentMethod === 'MOBILE_MONEY' ? (mmProvider || undefined) : undefined,
-        reference:    paymentRef.trim() || undefined,
-      }],
+      payments: splitMode
+        ? [
+            ...splitPaymentRows,
+            ...(splitBalance > 0 ? [{ method: 'DEBIT', amount: 0 }] : []),
+          ]
+        : [{
+            method:       paymentMethod,
+            amount:       paymentMethod === 'DEBIT' ? 0 : total,
+            providerName: paymentMethod === 'MOBILE_MONEY' ? (mmProvider || undefined) : undefined,
+            reference:    paymentRef.trim() || undefined,
+          }],
       discountAmount: orderDiscount,
-      cashReceived:   paymentMethod === 'CASH' ? Number(cashReceived) : undefined,
+      cashReceived:   !splitMode && paymentMethod === 'CASH' ? Number(cashReceived) : undefined,
       customerId:    selectedCustomer?.id,
-      customerName:  selectedCustomer ? undefined : (paymentMethod === 'DEBIT' ? undefined : customerQuery.trim() || undefined),
+      customerName:  selectedCustomer ? undefined : ((splitMode ? splitBalance > 0 : paymentMethod === 'DEBIT') ? undefined : customerQuery.trim() || undefined),
       customerTin:   customerTin.trim() || undefined,
     }),
     onSuccess: (res) => {
@@ -334,11 +379,11 @@ export default function PosPage() {
         total:        tx.total,
         subtotal,
         discount:     orderDiscount,
-        paymentMethod,
-        mmProvider:   paymentMethod === 'MOBILE_MONEY' ? (mmProvider || undefined) : undefined,
-        paymentRef:   paymentRef.trim() || undefined,
-        cashReceived: paymentMethod === 'CASH' ? Number(cashReceived) : 0,
-        change:       paymentMethod === 'CASH' ? Math.max(0, Number(cashReceived) - tx.total) : 0,
+        paymentMethod: splitMode ? (appliedTenders[0]?.method ?? 'CASH') : paymentMethod,
+        mmProvider:   !splitMode && paymentMethod === 'MOBILE_MONEY' ? (mmProvider || undefined) : undefined,
+        paymentRef:   !splitMode ? (paymentRef.trim() || undefined) : undefined,
+        cashReceived: splitMode ? 0 : (paymentMethod === 'CASH' ? Number(cashReceived) : 0),
+        change:       splitMode ? splitOverpay : (paymentMethod === 'CASH' ? Math.max(0, Number(cashReceived) - tx.total) : 0),
         shopName,
         shopAddress:  shopDetail?.addressLine1,
         shopCity:     shopDetail?.city,
@@ -352,6 +397,11 @@ export default function PosPage() {
         exchangeRate,
         items:        cartSnapshot,
         printedAt:    now.toISOString(),
+        ...(splitMode && {
+          payments:   splitPaymentRows.map(r => ({ method: r.method, amount: r.amount })),
+          amountPaid: Math.min(splitPaid, tx.total),
+          balanceDue: splitBalance,
+        }),
       });
       clearCart();
       qc.invalidateQueries({ queryKey: ['dashboard'] });
@@ -394,10 +444,15 @@ export default function PosPage() {
   });
 
   const hasCustomer = !!(selectedCustomer || customerQuery.trim());
-  // DEBIT requires a proper CRM-linked customer, not just free-typed text
-  const canCheckout = cart.length > 0 && !isPending &&
-    (paymentMethod !== 'DEBIT' || !!selectedCustomer) &&
-    (paymentMethod !== 'CASH'  || (!!cashReceived && Number(cashReceived) >= total));
+  // DEBIT / any remaining balance requires a proper CRM-linked customer, not free-typed text
+  const canCheckout = cart.length > 0 && !isPending && (
+    splitMode
+      ? (appliedTenders.length > 0 &&
+         splitNonCash <= total + 0.5 &&           // card/mobile cannot exceed total
+         (splitBalance <= 0 || !!selectedCustomer)) // a credit balance needs a customer
+      : ((paymentMethod !== 'DEBIT' || !!selectedCustomer) &&
+         (paymentMethod !== 'CASH'  || (!!cashReceived && Number(cashReceived) >= total)))
+  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -737,6 +792,13 @@ export default function PosPage() {
                 placeholder="Customer TIN (optional)" className="input text-xs py-1.5 font-mono" />
             </div>
 
+            {/* Split / partial payment toggle */}
+            <button type="button" onClick={() => setSplitMode(m => !m)}
+              className={`w-full text-xs py-1.5 rounded-lg border font-medium transition-colors ${splitMode ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-stone-200 text-stone-500 hover:border-stone-300'}`}>
+              {splitMode ? '← Back to single payment' : 'Split / partial payment'}
+            </button>
+
+            {!splitMode && (<>
             {/* Payment methods */}
             <div className="grid grid-cols-4 gap-1">
               {PAYMENT_METHODS.map(({ key, label, icon: Icon }) => (
@@ -812,14 +874,68 @@ export default function PosPage() {
                 )}
               </div>
             )}
+            </>)}
+
+            {/* Split / partial tender editor */}
+            {splitMode && (
+              <div className="space-y-2">
+                {tenders.map((tn, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <select className="select text-xs py-1.5 w-24 shrink-0" value={tn.method}
+                        onChange={e => updateTender(i, { method: e.target.value })}>
+                        <option value="CASH">Cash</option>
+                        <option value="MOBILE_MONEY">Mobile</option>
+                        <option value="CARD">Card</option>
+                      </select>
+                      <input type="number" min="0" className="input text-xs py-1.5" placeholder="Amount"
+                        value={tn.amount} onChange={e => updateTender(i, { amount: e.target.value })} />
+                      {tenders.length > 1 && (
+                        <button type="button" onClick={() => removeTender(i)}
+                          className="p-1 text-stone-400 hover:text-red-500 shrink-0" title="Remove"><X size={14} /></button>
+                      )}
+                    </div>
+                    {(tn.method === 'MOBILE_MONEY' || tn.method === 'CARD') && (
+                      <input className="input text-xs py-1.5 ml-[6.5rem]" placeholder="Reference (optional)"
+                        value={tn.reference} onChange={e => updateTender(i, { reference: e.target.value })} />
+                    )}
+                  </div>
+                ))}
+                <button type="button" onClick={addTender}
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium">+ Add payment</button>
+
+                <div className="rounded-lg bg-stone-50 border border-stone-200 px-3 py-2 text-xs space-y-1">
+                  <div className="flex justify-between"><span className="text-stone-500">Paid</span><span className="font-semibold text-stone-900">{fmt(Math.min(splitPaid, total))}</span></div>
+                  {splitOverpay > 0 && <div className="flex justify-between text-emerald-600"><span>Change</span><span className="font-semibold">{fmt(splitOverpay)}</span></div>}
+                  {splitBalance > 0 && <div className="flex justify-between text-amber-700"><span>Balance (credit)</span><span className="font-bold">{fmt(splitBalance)}</span></div>}
+                </div>
+
+                {splitNonCash > total + 0.5 && (
+                  <div className="rounded-lg bg-red-50 border border-red-300 text-red-700 text-xs px-3 py-2 flex items-start gap-2">
+                    <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                    Card / mobile payments exceed the total. Only cash can be over-tendered.
+                  </div>
+                )}
+                {splitBalance > 0 && (
+                  <div className={`rounded-lg px-3 py-2 text-xs flex items-start gap-2 ${selectedCustomer ? 'bg-amber-50 border border-amber-200 text-amber-700' : 'bg-red-50 border border-red-300 text-red-700'}`}>
+                    <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                    {selectedCustomer
+                      ? <span><strong>{fmt(splitBalance)}</strong> will be recorded as credit for <strong>{selectedCustomer.fullName}</strong>, collected later.</span>
+                      : <span><strong>Customer required</strong> for the {fmt(splitBalance)} balance — select or add a customer above.</span>}
+                  </div>
+                )}
+              </div>
+            )}
 
             {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5">{error}</p>}
 
             <button className="btn-primary w-full text-sm py-2.5" disabled={!canCheckout}
               onClick={() => { setError(''); checkout(); }}>
               {isPending ? t('common.loading')
-                : paymentMethod === 'DEBIT' ? `Record Debt  ${fmt(total)}`
-                : `${t('pos.charge')}  ${fmt(total)}`}
+                : splitMode
+                  ? (splitBalance > 0 ? `Pay Deposit · ${fmt(splitBalance)} on credit` : `${t('pos.charge')}  ${fmt(Math.min(splitPaid, total))}`)
+                  : paymentMethod === 'DEBIT' ? `Record Debt  ${fmt(total)}`
+                  : `${t('pos.charge')}  ${fmt(total)}`}
             </button>
           </div>
         </div>
@@ -831,30 +947,49 @@ export default function PosPage() {
       {receipt && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card p-6 w-full max-w-xs">
-            <div className="text-center mb-5">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${receipt.paymentMethod === 'DEBIT' ? 'bg-amber-100' : 'bg-emerald-100'}`}>
-                {receipt.paymentMethod === 'DEBIT'
-                  ? <Clock className="w-6 h-6 text-amber-600" />
-                  : <Check className="w-6 h-6 text-emerald-600" />}
-              </div>
-              <h3 className="text-lg font-bold text-stone-900">
-                {receipt.paymentMethod === 'DEBIT' ? 'Debt Recorded' : 'Sale Complete'}
-              </h3>
-              <p className="font-mono text-xs text-stone-400 mt-1">{receipt.receiptNo}</p>
-              {receipt.customerName && <p className="text-xs text-stone-500 mt-1">{receipt.customerName}</p>}
-            </div>
-            <div className="bg-stone-50 rounded-lg p-4 space-y-2 mb-5">
-              <div className="flex justify-between text-sm">
-                <span className="text-stone-500">{receipt.paymentMethod === 'DEBIT' ? 'Amount owed' : 'Total charged'}</span>
-                <span className="font-bold text-stone-900">{fmt(receipt.total)}</span>
-              </div>
-              {receipt.change > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-stone-500">Change</span>
-                  <span className="font-bold text-emerald-600">{fmt(receipt.change)}</span>
+            {(() => {
+              const balance = receipt.balanceDue ?? 0;
+              const pending = receipt.paymentMethod === 'DEBIT' || balance > 0;
+              const isPartial = balance > 0 && receipt.paymentMethod !== 'DEBIT';
+              return (
+              <>
+              <div className="text-center mb-5">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${pending ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+                  {pending ? <Clock className="w-6 h-6 text-amber-600" /> : <Check className="w-6 h-6 text-emerald-600" />}
                 </div>
-              )}
-            </div>
+                <h3 className="text-lg font-bold text-stone-900">
+                  {receipt.paymentMethod === 'DEBIT' ? 'Debt Recorded' : isPartial ? 'Partial Payment' : 'Sale Complete'}
+                </h3>
+                <p className="font-mono text-xs text-stone-400 mt-1">{receipt.receiptNo}</p>
+                {receipt.customerName && <p className="text-xs text-stone-500 mt-1">{receipt.customerName}</p>}
+              </div>
+              <div className="bg-stone-50 rounded-lg p-4 space-y-2 mb-5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-stone-500">{receipt.paymentMethod === 'DEBIT' ? 'Amount owed' : 'Total'}</span>
+                  <span className="font-bold text-stone-900">{fmt(receipt.total)}</span>
+                </div>
+                {isPartial && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-stone-500">Paid now</span>
+                      <span className="font-bold text-emerald-600">{fmt(receipt.amountPaid ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-stone-500">Balance (credit)</span>
+                      <span className="font-bold text-amber-700">{fmt(balance)}</span>
+                    </div>
+                  </>
+                )}
+                {receipt.change > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-500">Change</span>
+                    <span className="font-bold text-emerald-600">{fmt(receipt.change)}</span>
+                  </div>
+                )}
+              </div>
+              </>
+              );
+            })()}
             <div className="flex gap-2">
               <button className="btn-secondary flex-1 text-xs" onClick={() => printReceipt(receipt)}>
                 <Printer size={12} className="mr-1.5" />{t('pos.printReceipt')}

@@ -27,6 +27,31 @@ export async function createTransaction(req: AuthRequest, res: Response) {
   const taxAmount = txItems.reduce((s, i) => s + i.taxAmount, 0);
   const total = subtotal - discountAmount + taxAmount;
 
+  // ── Payment validation (supports split tenders + partial/deposit on credit) ──
+  // A sale may carry several tenders (e.g. cash + mobile money). A remaining
+  // balance is booked as credit via a DEBIT marker line (amount 0); outstanding
+  // is later derived as total − sum(non-DEBIT amounts), matching the debts flow.
+  const EPS = 0.5; // TZS tolerance for float math
+  const paidTenders = (payments as { method: string; amount: number }[]).filter(p => p.method !== 'DEBIT');
+  const paidNonDebit = paidTenders.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const nonCashPaid  = paidTenders.filter(p => p.method !== 'CASH').reduce((s, p) => s + (Number(p.amount) || 0), 0);
+
+  if (nonCashPaid > total + EPS) {
+    return R.badRequest(res, 'Card / mobile payments exceed the sale total. Only cash may be over-tendered (for change).');
+  }
+
+  const isPartial = paidNonDebit < total - EPS;
+  const paymentsToSave = [...(payments as { method: string; amount: number; reference?: string; providerName?: string }[])];
+  if (isPartial) {
+    if (!customerId) {
+      return R.badRequest(res, 'A customer is required when a balance remains on credit.');
+    }
+    // Ensure a DEBIT marker so the outstanding balance surfaces on the debts page
+    if (!paymentsToSave.some(p => p.method === 'DEBIT')) {
+      paymentsToSave.push({ method: 'DEBIT', amount: 0 });
+    }
+  }
+
   const tx = await prisma.transaction.create({
     data: {
       shopId: shop(req), cashierId: req.user!.sub, customerId, registerId, tableNo, coverCount,
@@ -36,7 +61,7 @@ export async function createTransaction(req: AuthRequest, res: Response) {
       subtotal, discountAmount, taxAmount, total,
       receiptNo: receiptNo(), status: 'COMPLETED', type: 'SALE',
       items: { create: txItems },
-      payments: { create: payments.map((p: { method: string; amount: number; reference?: string; providerName?: string }) => ({ method: p.method, amount: p.amount, reference: p.reference, providerName: p.providerName })) },
+      payments: { create: paymentsToSave.map((p: { method: string; amount: number; reference?: string; providerName?: string }) => ({ method: p.method as never, amount: p.amount, reference: p.reference, providerName: p.providerName })) },
     },
     include: { items: true, payments: true, customer: true },
   });
