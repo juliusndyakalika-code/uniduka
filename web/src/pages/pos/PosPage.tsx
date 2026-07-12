@@ -39,6 +39,7 @@ interface ShopDetail {
   id: string; tradingName: string; addressLine1?: string; city?: string;
   phone?: string; tin?: string; vrn?: string; taxMode?: string;
   mobileMoneyProviders?: string[];
+  autoPrintReceipts?: boolean;
 }
 interface TxForVoid {
   id: string; receiptNo: string; total: number; createdAt: string;
@@ -405,7 +406,7 @@ export default function PosPage() {
         }),
       };
       setReceipt(rcpt);
-      autoPrintReceipt(rcpt);   // auto-print the receipt on checkout
+      if (shopDetail?.autoPrintReceipts !== false) autoPrintReceipt(rcpt);   // auto-print unless disabled in shop settings
       clearCart();
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       qc.invalidateQueries({ queryKey: ['pos-products'] });

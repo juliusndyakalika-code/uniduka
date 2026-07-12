@@ -12,6 +12,7 @@ interface ShopConfig {
   businessType: string; inventoryModel: string; pricingMode: string; taxMode: string;
   tin?: string; vrn?: string;
   mobileMoneyProviders?: string[];
+  autoPrintReceipts?: boolean;
   wizardCompleted: boolean; configScore?: number;
   shopModules: { moduleKey: string; enabled: boolean; required: boolean }[];
   unitProfiles: { id: string; name: string; abbreviation: string; dimension: string }[];
@@ -40,6 +41,8 @@ export default function ShopSettingsPage() {
   const [mmProviders, setMmProviders] = useState<string[]>([]);
   const [mmNew, setMmNew]       = useState('');
   const [mmSaving, setMmSaving] = useState(false);
+  const [autoPrint, setAutoPrint]     = useState(true);
+  const [autoPrintSaving, setAutoPrintSaving] = useState(false);
 
   const { register: reg, handleSubmit, reset } = useForm<ShopForm>();
   const { register: regTax, handleSubmit: handleTax, reset: resetTax } = useForm<TaxForm>({
@@ -63,6 +66,7 @@ export default function ShopSettingsPage() {
       });
       resetTra({ tin: config.tin ?? '', vrn: config.vrn ?? '' });
       setMmProviders(config.mobileMoneyProviders ?? ['M-Pesa', 'Airtel Money', 'Tigo Pesa', 'Halopesa']);
+      setAutoPrint(config.autoPrintReceipts !== false);
     }
   }, [config, reset, resetTra]);
 
@@ -265,6 +269,45 @@ export default function ShopSettingsPage() {
           >
             {mmSaving ? t('common.loading') : t('settings.saveChanges')}
           </button>
+        </div>
+      </div>
+
+      {/* Receipt printing */}
+      <div className="card p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Receipt size={16} className="text-primary-600" />
+          <h3 className="text-sm font-bold text-stone-900">Receipt Printing</h3>
+        </div>
+        <p className="text-xs text-stone-400 mb-5">
+          Automatically open the print dialog after each sale and debt settlement. Turn off to print only when you tap the print button.
+        </p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-stone-800">Auto-print receipts</p>
+            <p className="text-xs text-stone-400 mt-0.5">{autoPrint ? 'Receipts print automatically on checkout & settlement' : 'Receipts print only when you tap print'}</p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={autoPrint}
+              onClick={async () => {
+                const next = !autoPrint;
+                setAutoPrint(next);
+                setAutoPrintSaving(true);
+                try {
+                  await api.put(`/shops/${shopId}`, { autoPrintReceipts: next });
+                  qc.invalidateQueries({ queryKey: ['shop-config', shopId] });
+                  qc.invalidateQueries({ queryKey: ['shop-detail', shopId] });
+                } catch { setAutoPrint(!next); }
+                setAutoPrintSaving(false);
+              }}
+              disabled={autoPrintSaving}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoPrint ? 'bg-primary-600' : 'bg-stone-300'} ${autoPrintSaving ? 'opacity-60' : ''}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoPrint ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
         </div>
       </div>
 

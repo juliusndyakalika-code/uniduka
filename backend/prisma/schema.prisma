@@ -267,6 +267,9 @@ model Shop {
   // Hotel configuration
   hotelCheckoutHour Int        @default(12)  // hour of day (0-23) when a hotel "day" ends / checkout time
 
+  // POS: automatically print the receipt on checkout / debt settlement
+  autoPrintReceipts Boolean    @default(true)
+
   // Config Health Score 0-100
   configScore     Int          @default(0)
   isActive        Boolean      @default(true)

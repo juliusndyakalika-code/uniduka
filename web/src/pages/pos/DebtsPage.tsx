@@ -106,6 +106,13 @@ export default function DebtsPage() {
     enabled: !!shopId,
   });
 
+  const { data: shopDetail } = useQuery<{ autoPrintReceipts?: boolean }>({
+    queryKey: ['shop-detail', shopId],
+    queryFn: () => api.get(`/shops/${shopId}`).then(r => r.data.data),
+    enabled: !!shopId,
+    staleTime: 5 * 60_000,
+  });
+
   const { mutate: settle, isPending: settling } = useMutation({
     mutationFn: ({ id, amt }: { id: string; amt: number }) =>
       api.post(`/pos/transactions/${id}/settle`, { amount: amt, method, reference: reference || undefined }),
@@ -115,7 +122,7 @@ export default function DebtsPage() {
       if (settlingDebt) {
         const info: SettlementInfo = { debt: settlingDebt, paid: vars.amt, method, ref: reference, remaining: data.remaining ?? 0 };
         setLastSettlement(info);
-        printSettlement(info);   // auto-print settlement receipt
+        if (shopDetail?.autoPrintReceipts !== false) printSettlement(info);   // auto-print unless disabled in shop settings
       }
       setSettlingDebt(null); setAmount(''); setReference(''); setSettleError('');
     },
