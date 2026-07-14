@@ -49,11 +49,12 @@ export default function ShipmentImportModal({ onClose, onImported, initialPoId }
   const [importDone, setImportDone] = useState<{ imported: number; skipped: number } | null>(null);
   const [importErrors, setImportErrors] = useState<{ row: number; message: string }[]>([]);
 
-  // Load open IMPORT POs for the link dropdown
-  const { data: openPOs = [] } = useQuery<PO[]>({
+  // Load open IMPORT POs (DRAFT or SENT) for the link dropdown
+  const { data: openPOs = [], isLoading: posLoading } = useQuery<PO[]>({
     queryKey: ['purchase-orders-open-import', shopId],
-    queryFn: () => api.get('/inventory/po', { params: { status: 'DRAFT' } })
-      .then(r => (r.data.data as PO[]).filter((p: PO & { type?: string }) => (p as { type?: string }).type === 'IMPORT')),
+    queryFn: () => api.get('/inventory/po')
+      .then(r => (r.data.data as (PO & { type: string; status: string })[])
+        .filter(p => p.type === 'IMPORT' && ['DRAFT', 'SENT'].includes(p.status))),
     enabled: !!shopId,
   });
 
@@ -178,9 +179,13 @@ export default function ShipmentImportModal({ onClose, onImported, initialPoId }
             <div className="p-6 space-y-5">
 
               {/* PO link */}
-              {openPOs.length > 0 && (
-                <div>
-                  <label className="label flex items-center gap-1.5"><Link size={11} /> Link to Purchase Order (optional)</label>
+              <div>
+                <label className="label flex items-center gap-1.5"><Link size={11} /> Link to Purchase Order (optional)</label>
+                {posLoading ? (
+                  <p className="text-xs text-stone-400">Loading purchase orders…</p>
+                ) : openPOs.length === 0 ? (
+                  <p className="text-xs text-stone-400">No open import POs found. Create a PO first or proceed without linking.</p>
+                ) : (
                   <select className="input" value={selectedPoId} onChange={e => selectPO(e.target.value)}>
                     <option value="">— No linked PO —</option>
                     {openPOs.map(po => (
@@ -189,13 +194,13 @@ export default function ShipmentImportModal({ onClose, onImported, initialPoId }
                       </option>
                     ))}
                   </select>
-                  {selectedPoId && (
-                    <p className="mt-1.5 text-xs text-emerald-600">
-                      ✓ Costs and items pre-filled from PO. The PO will be marked Received after import.
-                    </p>
-                  )}
-                </div>
-              )}
+                )}
+                {selectedPoId && (
+                  <p className="mt-1.5 text-xs text-emerald-600">
+                    ✓ Costs and items pre-filled from PO. The PO will be marked Received after import.
+                  </p>
+                )}
+              </div>
 
               {/* Exchange rate + shared costs */}
               <div>
