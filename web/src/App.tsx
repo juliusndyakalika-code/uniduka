@@ -27,6 +27,7 @@ import StockPage from './pages/inventory/StockPage';
 import InventoryDashboard from './pages/inventory/InventoryDashboard';
 import RecipesPage from './pages/inventory/RecipesPage';
 import PurchaseOrdersPage from './pages/inventory/PurchaseOrdersPage';
+import SuppliersPage from './pages/inventory/SuppliersPage';
 
 import CustomersPage from './pages/crm/CustomersPage';
 import LoyaltyPage from './pages/crm/LoyaltyPage';
@@ -99,6 +100,7 @@ export default function App() {
             <Route path="/inventory/stock" element={<StockPage />} />
             <Route path="/inventory/recipes" element={<RecipesPage />} />
             <Route path="/inventory/purchase-orders" element={<PurchaseOrdersPage />} />
+            <Route path="/inventory/suppliers" element={<SuppliersPage />} />
 
             <Route path="/consignment" element={<ConsignmentPage />} />
             <Route path="/customers" element={<CustomersPage />} />
