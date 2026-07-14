@@ -42,11 +42,16 @@ export async function deletePartner(req: AuthRequest, res: Response) {
 // ── Sales ─────────────────────────────────────────────────────────────────────
 
 export async function listSales(req: AuthRequest, res: Response) {
-  const { partnerId } = req.query as Record<string, string>;
+  const { partnerId, from, to } = req.query as Record<string, string>;
+  const soldAtFilter: { gte?: Date; lte?: Date } = {};
+  if (from) soldAtFilter.gte = new Date(from);
+  if (to)   soldAtFilter.lte = new Date(new Date(to).setHours(23, 59, 59, 999));
+
   const sales = await prisma.consignmentSale.findMany({
     where: {
       shopId: shop(req),
       ...(partnerId && { partnerId }),
+      ...(Object.keys(soldAtFilter).length && { soldAt: soldAtFilter }),
     },
     include: {
       partner: { select: { id: true, name: true } },

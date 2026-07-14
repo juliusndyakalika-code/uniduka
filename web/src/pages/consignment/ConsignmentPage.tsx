@@ -48,6 +48,8 @@ function fmt(n: number) {
   return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
 }
 function date(s: string) { return new Date(s).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short', year: 'numeric' }); }
+function ymd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function todayYmd() { return ymd(new Date()); }
 
 // ── Forms ─────────────────────────────────────────────────────────────────────
 
@@ -65,6 +67,9 @@ export default function ConsignmentPage() {
   const [error, setError] = useState('');
   const [reportFrom, setReportFrom] = useState('');
   const [reportTo, setReportTo]     = useState('');
+  // Sales tab + summary cards are scoped to a date range, defaulting to today.
+  const [salesFrom, setSalesFrom] = useState(todayYmd);
+  const [salesTo, setSalesTo]     = useState(todayYmd);
 
   // modal state
   const [showPartnerForm, setShowPartnerForm] = useState(false);
@@ -83,8 +88,10 @@ export default function ConsignmentPage() {
   });
 
   const { data: sales = [], isLoading: salesLoading } = useQuery<Sale[]>({
-    queryKey: ['consignment-sales', shopId],
-    queryFn: () => api.get('/consignment/sales').then(r => r.data.data),
+    queryKey: ['consignment-sales', shopId, salesFrom, salesTo],
+    queryFn: () => api.get('/consignment/sales', {
+      params: { ...(salesFrom && { from: salesFrom }), ...(salesTo && { to: salesTo }) },
+    }).then(r => r.data.data),
     enabled: !!shopId,
   });
 
@@ -229,6 +236,38 @@ export default function ConsignmentPage() {
           <p className="text-xl font-bold text-stone-800">{fmt(totalRevenue)}</p>
         </div>
       </div>
+
+      {/* Date range — scopes the cards above and the Sales list below (default: today) */}
+      {tab === 'Sales' && (
+      <div className="card px-4 py-3 flex flex-wrap items-center gap-3">
+        <Calendar size={15} className="text-stone-400 shrink-0" />
+        {(() => {
+          const today = todayYmd();
+          const monthStart = ymd(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+          const weekStart = ymd(new Date(Date.now() - 6 * 864e5));
+          const presets = [
+            { label: t('common.today'), from: today, to: today },
+            { label: t('common.thisWeek'), from: weekStart, to: today },
+            { label: t('common.thisMonth'), from: monthStart, to: today },
+            { label: t('common.all'), from: '', to: '' },
+          ];
+          return presets.map(p => {
+            const active = salesFrom === p.from && salesTo === p.to;
+            return (
+              <button key={p.label} onClick={() => { setSalesFrom(p.from); setSalesTo(p.to); }}
+                className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${active ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-stone-200 text-stone-500 hover:border-stone-300'}`}>
+                {p.label}
+              </button>
+            );
+          });
+        })()}
+        <div className="flex items-center gap-2 ml-auto">
+          <input type="date" value={salesFrom} onChange={e => setSalesFrom(e.target.value)} className="input py-1.5 text-xs w-36" />
+          <span className="text-stone-400 text-xs">–</span>
+          <input type="date" value={salesTo} onChange={e => setSalesTo(e.target.value)} className="input py-1.5 text-xs w-36" />
+        </div>
+      </div>
+      )}
 
       {/* Tabs */}
       <div className="border-b border-stone-200">
