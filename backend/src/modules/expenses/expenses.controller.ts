@@ -30,7 +30,7 @@ export async function listExpenses(req: AuthRequest, res: Response) {
   };
 
   const [expenses, total, agg] = await Promise.all([
-    prisma.expense.findMany({ where, skip, take: Number(limit), orderBy: { incurredAt: 'desc' } }),
+    prisma.expense.findMany({ where, skip, take: Number(limit), orderBy: { incurredAt: 'desc' }, select: { id: true, category: true, description: true, amount: true, paymentMethod: true, reference: true, vendor: true, incurredAt: true, createdAt: true, recordedByName: true, recordedById: true } }),
     prisma.expense.count({ where }),
     prisma.expense.aggregate({ where, _sum: { amount: true } }),
   ]);

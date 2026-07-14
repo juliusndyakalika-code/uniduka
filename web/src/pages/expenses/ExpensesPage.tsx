@@ -220,7 +220,8 @@ export default function ExpensesPage() {
                   <SortableTh field="vendor" sort={expensesTable.sort} onSort={expensesTable.toggleSort}>Vendor</SortableTh>
                   <SortableTh field="paymentMethod" sort={expensesTable.sort} onSort={expensesTable.toggleSort}>Method</SortableTh>
                   <SortableTh field="amount" sort={expensesTable.sort} onSort={expensesTable.toggleSort} align="right" className="text-right">Amount</SortableTh>
-                  <th className="w-16 text-right">Actions</th>
+                  <th>Recorded by</th>
+                  {isOwner && <th className="w-16 text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -237,29 +238,31 @@ export default function ExpensesPage() {
                     <td className="text-stone-500 text-xs">{x.vendor || '—'}</td>
                     <td className="text-stone-500 text-xs">{x.paymentMethod ? x.paymentMethod.replace('_', ' ') : '—'}</td>
                     <td className="text-right font-bold text-red-600 whitespace-nowrap">{fmt(x.amount)}</td>
-                    <td className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openEdit(x)} className="p-1 rounded text-stone-400 hover:text-primary-600 hover:bg-primary-50" title="Edit">
-                          <Pencil size={13} />
-                        </button>
-                        {isOwner && (
+                    <td className="text-xs text-stone-500">{x.recordedByName || '—'}</td>
+                    {isOwner && (
+                      <td className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => openEdit(x)} className="p-1 rounded text-stone-400 hover:text-primary-600 hover:bg-primary-50" title="Edit">
+                            <Pencil size={13} />
+                          </button>
                           <button onClick={() => setDeletingId(x.id)} className="p-1 rounded text-stone-400 hover:text-red-600 hover:bg-red-50" title="Delete">
                             <Trash2 size={13} />
                           </button>
-                        )}
-                      </div>
-                    </td>
+                        </div>
+                      </td>
+                    )}
+                    {!isOwner && <td></td>}
                   </tr>
                 ))}
                 {expensesTable.total === 0 && (
-                  <tr><td colSpan={7} className="text-center text-stone-400 py-8">No matching expenses</td></tr>
+                  <tr><td colSpan={isOwner ? 8 : 7} className="text-center text-stone-400 py-8">No matching expenses</td></tr>
                 )}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-stone-200 bg-stone-50">
                   <td colSpan={5} className="font-semibold text-stone-700 py-2 px-3">Total</td>
                   <td className="text-right font-bold text-red-600">{fmt(expensesTable.sorted.reduce((s, x) => s + x.amount, 0))}</td>
-                  <td></td>
+                  <td colSpan={isOwner ? 2 : 1}></td>
                 </tr>
               </tfoot>
             </table>
