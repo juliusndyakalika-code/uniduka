@@ -574,20 +574,23 @@ model Supplier {
 // ─── PURCHASE ORDERS ─────────────────────────────────────────────────────────
 
 model PurchaseOrder {
-  id          String              @id @default(cuid())
-  shopId      String
-  shop        Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  supplierId  String?
-  supplier    Supplier?           @relation(fields: [supplierId], references: [id])
-  poNumber    String
-  status      PurchaseOrderStatus @default(DRAFT)
-  totalAmount Float               @default(0)
-  notes       String?
-  orderedAt   DateTime?
-  expectedAt  DateTime?
-  receivedAt  DateTime?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id           String              @id @default(cuid())
+  shopId       String
+  shop         Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  supplierId   String?
+  supplier     Supplier?           @relation(fields: [supplierId], references: [id])
+  poNumber     String
+  status       PurchaseOrderStatus @default(DRAFT)
+  type         String              @default("LOCAL")   // LOCAL | IMPORT
+  totalAmount  Float               @default(0)
+  exchangeRate Float?              // CNY→TZS for IMPORT POs
+  sharedCosts  Json?               // {shipping, clearance, transport, other}
+  notes        String?
+  orderedAt    DateTime?
+  expectedAt   DateTime?
+  receivedAt   DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   lines PurchaseOrderLine[]
 
@@ -595,16 +598,20 @@ model PurchaseOrder {
 }
 
 model PurchaseOrderLine {
-  id               String        @id @default(cuid())
-  purchaseOrderId  String
-  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  productId        String
-  orderedQty       Float
-  receivedQty      Float         @default(0)
-  unitCost         Float
-  batchNo          String?
-  lotNo            String?
-  expiryDate       DateTime?
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String?       // null for new-product lines (CSV workflow)
+  style           String?       // product name / style code
+  orderedQty      Float
+  receivedQty     Float         @default(0)
+  unitCost        Float         // TZS for LOCAL, CNY for IMPORT
+  sellingPrice    Float?
+  color           String?
+  sizeRange       String?
+  batchNo         String?
+  lotNo           String?
+  expiryDate      DateTime?
 
   @@map("purchase_order_lines")
 }

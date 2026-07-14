@@ -1,31 +1,37 @@
 import { useState, useRef } from 'react';
-import { X, Upload, ArrowRight, ArrowLeft, Download, AlertCircle, CheckCircle2, Package } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { X, Upload, ArrowRight, ArrowLeft, Download, AlertCircle, CheckCircle2, Package, Link } from 'lucide-react';
 import api from '../../api/client';
+import { useAuthStore } from '../../store/authStore';
 
 interface CostItem { style: string; qty: number; unitPriceCny: number; sellingPrice: number; color: string; sizeRange: string; supplier: string; costPerItem: number; extraPerItem: number; landedCost: number; profitPerItem: number | null; profitTotal: number | null; }
 interface Summary { totalPieces: number; totalSharedCosts: number; extraPerItem: number; totalLandingValue: number; exchangeRate: number; }
 interface ImportResult { items: CostItem[]; summary: Summary; errors: { row: number; message: string }[]; }
+
+interface POLine { style?: string; orderedQty: number; unitCost: number; sellingPrice?: number; color?: string; sizeRange?: string; }
+interface PO { id: string; poNumber: string; supplier?: { name: string } | null; lines: POLine[]; exchangeRate?: number; sharedCosts?: { shipping?: number; clearance?: number; transport?: number; other?: number }; }
 
 const fmt = (n: number) => new Intl.NumberFormat('sw-TZ', { maximumFractionDigits: 0 }).format(n);
 
 const TEMPLATE_CSV =
 `style,qty,unit_price_cny,selling_price,color,size_range,supplier
 102#,60,36,20000,,28-36,Yi Li Da Fashion
-6602#,290,35,20000,,,
-6603#,200,35,20000,,,`;
+6602#,290,35,20000,,,`;
 
 function downloadTemplate() {
-  const blob = new Blob([TEMPLATE_CSV], { type: 'text/csv' });
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'shipment_import_template.csv';
-  a.click();
+  a.href = URL.createObjectURL(new Blob([TEMPLATE_CSV], { type: 'text/csv' }));
+  a.download = 'shipment_import_template.csv'; a.click();
 }
 
 interface Props { onClose: () => void; onImported: () => void; }
 
 export default function ShipmentImportModal({ onClose, onImported }: Props) {
+  const { shopId } = useAuthStore();
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // PO link
+  const [selectedPoId, setSelectedPoId] = useState('');
 
   // Step 1 state
   const [file, setFile]             = useState<File | null>(null);
@@ -43,30 +49,59 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
   const [importDone, setImportDone] = useState<{ imported: number; skipped: number } | null>(null);
   const [importErrors, setImportErrors] = useState<{ row: number; message: string }[]>([]);
 
+  // Load open IMPORT POs for the link dropdown
+  const { data: openPOs = [] } = useQuery<PO[]>({
+    queryKey: ['purchase-orders-open-import', shopId],
+    queryFn: () => api.get('/inventory/po', { params: { status: 'DRAFT' } })
+      .then(r => (r.data.data as PO[]).filter((p: PO & { type?: string }) => (p as { type?: string }).type === 'IMPORT')),
+    enabled: !!shopId,
+  });
+
+  // When a PO is selected, pre-fill its stored costs
+  function selectPO(poId: string) {
+    setSelectedPoId(poId);
+    if (!poId) return;
+    const po = openPOs.find(p => p.id === poId);
+    if (!po) return;
+    if (po.exchangeRate)   setRate(String(po.exchangeRate));
+    if (po.sharedCosts?.shipping)  setShipping(String(po.sharedCosts.shipping));
+    if (po.sharedCosts?.clearance) setClearance(String(po.sharedCosts.clearance));
+    if (po.sharedCosts?.transport) setTransport(String(po.sharedCosts.transport));
+    if (po.sharedCosts?.other)     setOther(String(po.sharedCosts.other));
+
+    // Build CSV from PO lines and auto-load as file
+    if (po.lines.length > 0 && !file) {
+      const header = 'style,qty,unit_price_cny,selling_price,color,size_range';
+      const rows = po.lines.map(l =>
+        [l.style || '', l.orderedQty, l.unitCost, l.sellingPrice || '', l.color || '', l.sizeRange || ''].join(',')
+      );
+      const csvText = [header, ...rows].join('\n');
+      const blob = new Blob([csvText], { type: 'text/csv' });
+      const f = new File([blob], `${poId}-items.csv`, { type: 'text/csv' });
+      setFile(f);
+    }
+  }
+
   const sharedTotal = (parseFloat(shipping) || 0) + (parseFloat(clearance) || 0) + (parseFloat(transport) || 0) + (parseFloat(other) || 0);
   const canPreview  = !!file && parseFloat(exchangeRate) > 0;
 
   async function doPreview() {
     if (!file) return;
-    setPreviewing(true);
-    setPreviewError('');
+    setPreviewing(true); setPreviewError('');
     try {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('exchangeRate', exchangeRate);
-      fd.append('shipping',     shipping     || '0');
-      fd.append('clearance',    clearance    || '0');
-      fd.append('transport',    transport    || '0');
-      fd.append('other',        other        || '0');
-      fd.append('preview',      'true');
+      fd.append('shipping',  shipping  || '0');
+      fd.append('clearance', clearance || '0');
+      fd.append('transport', transport || '0');
+      fd.append('other',     other     || '0');
+      fd.append('preview',   'true');
       const res = await api.post('/inventory/products/import-shipment', fd);
       setPreview(res.data.data as ImportResult);
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setPreviewError(msg || 'Failed to parse file');
-    } finally {
-      setPreviewing(false);
-    }
+      setPreviewError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to parse file');
+    } finally { setPreviewing(false); }
   }
 
   async function doImport() {
@@ -76,32 +111,36 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('exchangeRate', exchangeRate);
-      fd.append('shipping',     shipping     || '0');
-      fd.append('clearance',    clearance    || '0');
-      fd.append('transport',    transport    || '0');
-      fd.append('other',        other        || '0');
+      fd.append('shipping',  shipping  || '0');
+      fd.append('clearance', clearance || '0');
+      fd.append('transport', transport || '0');
+      fd.append('other',     other     || '0');
+      if (selectedPoId) fd.append('purchaseOrderId', selectedPoId);
       const res = await api.post('/inventory/products/import-shipment', fd);
       const d = res.data.data;
       setImportDone({ imported: d.imported, skipped: d.skipped });
       setImportErrors(d.errors || []);
       onImported();
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setPreviewError(msg || 'Import failed');
-    } finally {
-      setImporting(false);
-    }
+      setPreviewError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Import failed');
+    } finally { setImporting(false); }
   }
 
   // ── Success screen ─────────────────────────────────────────────────────────
   if (importDone) {
+    const linkedPO = openPOs.find(p => p.id === selectedPoId);
     return (
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
         <div className="card p-8 w-full max-w-md text-center">
           <CheckCircle2 size={40} className="mx-auto mb-4 text-emerald-500" />
           <h3 className="text-lg font-bold text-stone-900 mb-1">Shipment imported!</h3>
           <p className="text-sm text-stone-500 mb-1">{importDone.imported} products added to inventory</p>
-          {importDone.skipped > 0 && <p className="text-xs text-amber-600 mb-4">{importDone.skipped} skipped (style already exists)</p>}
+          {importDone.skipped > 0 && <p className="text-xs text-amber-600 mb-2">{importDone.skipped} skipped (style already exists)</p>}
+          {linkedPO && (
+            <p className="text-xs text-emerald-600 font-medium mb-3">
+              ✓ PO {linkedPO.poNumber} marked as Received
+            </p>
+          )}
           {importErrors.filter(e => e.row === -1).map((e, i) => (
             <p key={i} className="text-xs text-red-600 mb-1">{e.message}</p>
           ))}
@@ -132,6 +171,26 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
           {!preview && (
             <div className="p-6 space-y-5">
 
+              {/* PO link */}
+              {openPOs.length > 0 && (
+                <div>
+                  <label className="label flex items-center gap-1.5"><Link size={11} /> Link to Purchase Order (optional)</label>
+                  <select className="input" value={selectedPoId} onChange={e => selectPO(e.target.value)}>
+                    <option value="">— No linked PO —</option>
+                    {openPOs.map(po => (
+                      <option key={po.id} value={po.id}>
+                        {po.poNumber}{po.supplier ? ` — ${po.supplier.name}` : ''} ({po.lines.length} lines)
+                      </option>
+                    ))}
+                  </select>
+                  {selectedPoId && (
+                    <p className="mt-1.5 text-xs text-emerald-600">
+                      ✓ Costs and items pre-filled from PO. The PO will be marked Received after import.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Exchange rate + shared costs */}
               <div>
                 <h4 className="text-xs font-bold text-stone-700 uppercase tracking-widest mb-3">Shipment Costs</h4>
@@ -144,27 +203,15 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
                         className="input pl-14" placeholder="365" />
                     </div>
                   </div>
-                  <div>
-                    <label className="label">Shipping (TZS)</label>
-                    <input value={shipping} onChange={e => setShipping(e.target.value)} type="number" min="0" className="input" placeholder="2,667,600" />
-                  </div>
-                  <div>
-                    <label className="label">Clearance (TZS)</label>
-                    <input value={clearance} onChange={e => setClearance(e.target.value)} type="number" min="0" className="input" placeholder="10,000" />
-                  </div>
-                  <div>
-                    <label className="label">Transport (TZS)</label>
-                    <input value={transport} onChange={e => setTransport(e.target.value)} type="number" min="0" className="input" placeholder="45,000" />
-                  </div>
-                  <div>
-                    <label className="label">Other Costs (TZS)</label>
-                    <input value={other} onChange={e => setOther(e.target.value)} type="number" min="0" className="input" placeholder="5,000" />
-                  </div>
+                  <div><label className="label">Shipping (TZS)</label><input value={shipping} onChange={e => setShipping(e.target.value)} type="number" min="0" className="input" placeholder="2,667,600" /></div>
+                  <div><label className="label">Clearance (TZS)</label><input value={clearance} onChange={e => setClearance(e.target.value)} type="number" min="0" className="input" placeholder="10,000" /></div>
+                  <div><label className="label">Transport (TZS)</label><input value={transport} onChange={e => setTransport(e.target.value)} type="number" min="0" className="input" placeholder="45,000" /></div>
+                  <div><label className="label">Other Costs (TZS)</label><input value={other} onChange={e => setOther(e.target.value)} type="number" min="0" className="input" placeholder="5,000" /></div>
                 </div>
                 {sharedTotal > 0 && (
                   <p className="mt-2 text-xs text-stone-500">
                     Total shared costs: <span className="font-semibold text-stone-800">TZS {fmt(sharedTotal)}</span>
-                    {' '}— will be divided equally across all pieces in the CSV
+                    {' '}— divided equally across all pieces
                   </p>
                 )}
               </div>
@@ -177,7 +224,6 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
                     <Download size={12} /> Download template
                   </button>
                 </div>
-
                 <div
                   onClick={() => fileRef.current?.click()}
                   onDragOver={e => e.preventDefault()}
@@ -195,13 +241,12 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
                   )}
                   <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setFile(f); }} />
                 </div>
-
-                {/* Inline example */}
+                {selectedPoId && file && (
+                  <p className="mt-1.5 text-xs text-stone-400">Pre-filled from PO — you can replace with a different file if quantities changed.</p>
+                )}
                 <div className="mt-3 bg-stone-50 rounded-lg p-3">
                   <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-widest mb-1.5">Example CSV</p>
-                  <pre className="text-[10px] text-stone-600 overflow-x-auto leading-relaxed">{`style,qty,unit_price_cny,selling_price,color,size_range,supplier
-102#,60,36,20000,,28-36,Yi Li Da Fashion
-6602#,290,35,20000,,,`}</pre>
+                  <pre className="text-[10px] text-stone-600 overflow-x-auto leading-relaxed">{`style,qty,unit_price_cny,selling_price,color,size_range\n102#,60,36,20000,,28-36\n6602#,290,35,20000,,`}</pre>
                 </div>
               </div>
 
@@ -216,7 +261,6 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
           {/* ── STEP 2: PREVIEW ─────────────────────────────────────────────── */}
           {preview && (
             <div className="p-6 space-y-4">
-              {/* Summary bar */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { label: 'Total Pieces',   value: fmt(preview.summary.totalPieces) },
@@ -230,8 +274,6 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
                   </div>
                 ))}
               </div>
-
-              {/* Products table */}
               <div className="border border-stone-200 rounded-xl overflow-hidden">
                 <table className="w-full text-xs">
                   <thead className="bg-stone-50 border-b border-stone-200">
@@ -245,9 +287,7 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
                     {preview.items.map((item, i) => (
                       <tr key={i} className="hover:bg-stone-50">
                         <td className="px-3 py-2 font-semibold text-stone-900">{item.style}</td>
-                        <td className="px-3 py-2 text-stone-500">
-                          {[item.color, item.sizeRange].filter(Boolean).join(' · ') || '—'}
-                        </td>
+                        <td className="px-3 py-2 text-stone-500">{[item.color, item.sizeRange].filter(Boolean).join(' · ') || '—'}</td>
                         <td className="px-3 py-2 text-stone-700">{fmt(item.qty)}</td>
                         <td className="px-3 py-2 text-stone-700">¥{item.unitPriceCny}</td>
                         <td className="px-3 py-2 text-stone-700">{fmt(item.costPerItem)}</td>
@@ -256,11 +296,7 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
                         <td className="px-3 py-2 text-stone-700">
                           {item.sellingPrice > 0 ? fmt(item.sellingPrice) : <span className="text-amber-500">not set</span>}
                         </td>
-                        <td className={`px-3 py-2 font-semibold ${
-                          item.profitPerItem === null ? 'text-stone-300'
-                          : item.profitPerItem >= 0   ? 'text-emerald-600'
-                          : 'text-red-600'
-                        }`}>
+                        <td className={`px-3 py-2 font-semibold ${item.profitPerItem === null ? 'text-stone-300' : item.profitPerItem >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                           {item.profitPerItem === null ? '—' : (item.profitPerItem >= 0 ? '+' : '') + fmt(item.profitPerItem)}
                         </td>
                       </tr>
@@ -268,8 +304,6 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
                   </tbody>
                 </table>
               </div>
-
-              {/* Parse errors */}
               {preview.errors.length > 0 && (
                 <div className="space-y-1">
                   {preview.errors.map((e, i) => (
@@ -298,7 +332,7 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
                 <ArrowLeft size={14} /> Back
               </button>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-stone-400">{preview.items.length} products ready to import</span>
+                <span className="text-xs text-stone-400">{preview.items.length} products ready</span>
                 <button onClick={doImport} disabled={importing} className="btn-primary flex items-center gap-2">
                   <Package size={14} />
                   {importing ? 'Importing…' : `Import ${preview.items.length} Products`}

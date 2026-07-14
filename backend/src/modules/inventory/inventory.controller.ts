@@ -289,6 +289,7 @@ export async function importShipment(req: AuthRequest, res: Response) {
   const transportCost = parseFloat(req.body.transport)     || 0;
   const otherCost     = parseFloat(req.body.other)         || 0;
   const isPreview     = req.body.preview === 'true';
+  const purchaseOrderId = req.body.purchaseOrderId || null;
 
   if (exchangeRate <= 0) return R.badRequest(res, 'Exchange rate must be greater than 0');
 
@@ -432,6 +433,14 @@ export async function importShipment(req: AuthRequest, res: Response) {
       note: `Exchange rate 1 = ${exchangeRate}; shared costs ${summary.totalSharedCosts.toLocaleString()}`,
     },
   });
+
+  // Mark linked PO as received
+  if (purchaseOrderId) {
+    await prisma.purchaseOrder.updateMany({
+      where: { id: purchaseOrderId, shopId },
+      data: { status: 'RECEIVED', receivedAt: new Date() },
+    });
+  }
 
   return R.created(res, { imported: imported.length, skipped: calculated.length - imported.length, items: calculated, summary, errors: rowErrors });
 }
@@ -644,7 +653,12 @@ export async function updateSupplier(req: AuthRequest, res: Response) {
 
 // ── Purchase Orders ───────────────────────────────────────────────────────────
 export async function listPOs(req: AuthRequest, res: Response) {
-  return R.ok(res, await prisma.purchaseOrder.findMany({ where: { shopId: shop(req) }, include: { supplier: true, lines: true }, orderBy: { createdAt: 'desc' } }));
+  const { status } = req.query as Record<string, string>;
+  return R.ok(res, await prisma.purchaseOrder.findMany({
+    where: { shopId: shop(req), ...(status && { status: status as never }) },
+    include: { supplier: true, lines: true },
+    orderBy: { createdAt: 'desc' },
+  }));
 }
 export async function getPO(req: AuthRequest, res: Response) {
   const po = await prisma.purchaseOrder.findFirst({ where: { id: req.params.id, shopId: shop(req) }, include: { supplier: true, lines: true } });
@@ -652,11 +666,27 @@ export async function getPO(req: AuthRequest, res: Response) {
   return R.ok(res, po);
 }
 export async function createPO(req: AuthRequest, res: Response) {
-  const { supplierId, lines, notes, expectedAt } = req.body;
+  const { supplierId, type = 'LOCAL', lines, notes, expectedAt, exchangeRate, sharedCosts } = req.body;
   const poNumber = `PO-${Date.now()}`;
+  const lineData = (lines || []).map((l: { style?: string; qty: number; unitCost: number; sellingPrice?: number; color?: string; sizeRange?: string }) => ({
+    style:        l.style || undefined,
+    orderedQty:   l.qty,
+    unitCost:     l.unitCost,
+    sellingPrice: l.sellingPrice || undefined,
+    color:        l.color || undefined,
+    sizeRange:    l.sizeRange || undefined,
+  }));
+  const total = lineData.reduce((s: number, l: { orderedQty: number; unitCost: number }) => s + l.orderedQty * l.unitCost, 0);
   const po = await prisma.purchaseOrder.create({
-    data: { shopId: shop(req), supplierId, poNumber, notes, expectedAt: expectedAt ? new Date(expectedAt) : undefined, lines: { create: lines || [] } },
-    include: { lines: true },
+    data: {
+      shopId: shop(req), supplierId: supplierId || undefined, poNumber, notes, type,
+      expectedAt: expectedAt ? new Date(expectedAt) : undefined,
+      exchangeRate: exchangeRate ? Number(exchangeRate) : undefined,
+      sharedCosts: sharedCosts || undefined,
+      totalAmount: total,
+      lines: { create: lineData },
+    },
+    include: { supplier: true, lines: true },
   });
   return R.created(res, po);
 }
@@ -665,15 +695,43 @@ export async function updatePO(req: AuthRequest, res: Response) {
   return R.ok(res, { message: 'PO updated' });
 }
 export async function receivePO(req: AuthRequest, res: Response) {
-  const { lines } = req.body; // [{lineId, receivedQty, batchNo, expiryDate}]
-  const po = await prisma.purchaseOrder.findFirst({ where: { id: req.params.id, shopId: shop(req) }, include: { lines: true } });
+  // Receives a LOCAL PO: for each line, find or create the product, add stock
+  const { lines } = req.body; // [{lineId, receivedQty, batchNo}]
+  const shopId = shop(req);
+  const userId = req.user!.sub;
+  const po = await prisma.purchaseOrder.findFirst({ where: { id: req.params.id, shopId }, include: { lines: true } });
   if (!po) return R.notFound(res);
-  for (const rl of lines) {
+
+  for (const rl of (lines as { lineId: string; receivedQty: number; batchNo?: string }[])) {
+    if (!rl.receivedQty || rl.receivedQty <= 0) continue;
     const poLine = po.lines.find(l => l.id === rl.lineId);
     if (!poLine) continue;
+
     await prisma.purchaseOrderLine.update({ where: { id: rl.lineId }, data: { receivedQty: rl.receivedQty } });
-    await prisma.inventoryItem.create({ data: { shopId: shop(req), productId: poLine.productId, quantity: rl.receivedQty, costPrice: poLine.unitCost, batchNo: rl.batchNo, expiryDate: rl.expiryDate ? new Date(rl.expiryDate) : undefined } });
-    await prisma.stockMovement.create({ data: { shopId: shop(req), productId: poLine.productId, type: 'PURCHASE', quantity: rl.receivedQty, unitCost: poLine.unitCost, batchNo: rl.batchNo, reference: po.id, userId: req.user!.sub } });
+
+    let productId = poLine.productId ?? undefined;
+
+    // If line has no linked product, find by SKU/name or create it
+    if (!productId && poLine.style) {
+      const existing = await prisma.product.findFirst({ where: { shopId, OR: [{ sku: poLine.style }, { name: poLine.style }] } });
+      if (existing) {
+        productId = existing.id;
+      } else {
+        const created = await prisma.product.create({
+          data: {
+            shopId, name: poLine.style, sku: poLine.style, type: 'PRODUCT' as never,
+            unit: 'pcs', sellPrice: poLine.sellingPrice ?? poLine.unitCost,
+            costPrice: poLine.unitCost, reorderPoint: 0,
+          },
+        });
+        productId = created.id;
+      }
+    }
+
+    if (!productId) continue;
+
+    await prisma.inventoryItem.create({ data: { shopId, productId, quantity: rl.receivedQty, costPrice: poLine.unitCost, batchNo: rl.batchNo } });
+    await prisma.stockMovement.create({ data: { shopId, productId, type: 'PURCHASE', quantity: rl.receivedQty, unitCost: poLine.unitCost, batchNo: rl.batchNo, reference: po.id, userId } });
   }
   await prisma.purchaseOrder.update({ where: { id: po.id }, data: { status: 'RECEIVED', receivedAt: new Date() } });
   return R.ok(res, { message: 'Stock received' });
