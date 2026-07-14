@@ -57,7 +57,7 @@ export default function ExpensesPage() {
   const isOwner = user?.role === 'ACCOUNT_OWNER';
   const qc = useQueryClient();
 
-  const [from, setFrom]         = useState(() => ymd(new Date(new Date().getFullYear(), new Date().getMonth(), 1)));
+  const [from, setFrom]         = useState(() => ymd(new Date()));   // default: today
   const [to, setTo]             = useState(() => ymd(new Date()));
   const [catFilter, setCatFilter] = useState('');
 
@@ -164,6 +164,26 @@ export default function ExpensesPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
+        {(() => {
+          const today = ymd(new Date());
+          const weekStart = ymd(new Date(Date.now() - 6 * 864e5));
+          const monthStart = ymd(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+          const presets = [
+            { label: 'Today', from: today, to: today },
+            { label: 'This week', from: weekStart, to: today },
+            { label: 'This month', from: monthStart, to: today },
+            { label: 'All', from: '', to: '' },
+          ];
+          return presets.map(p => {
+            const active = from === p.from && to === p.to;
+            return (
+              <button key={p.label} onClick={() => { setFrom(p.from); setTo(p.to); }}
+                className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${active ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-stone-200 text-stone-500 hover:border-stone-300'}`}>
+                {p.label}
+              </button>
+            );
+          });
+        })()}
         <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto text-xs" />
         <span className="text-stone-400 text-xs">to</span>
         <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto text-xs" />
