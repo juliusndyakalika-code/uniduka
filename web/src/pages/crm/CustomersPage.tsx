@@ -161,7 +161,7 @@ export default function CustomersPage() {
               </tbody>
             </table>
           </div>
-          <TablePagination page={custTable.page} pageCount={custTable.pageCount} total={custTable.total} pageSize={custTable.pageSize} onPage={custTable.setPage} />
+          <TablePagination page={custTable.page} pageCount={custTable.pageCount} total={custTable.total} pageSize={custTable.pageSize} onPage={custTable.setPage} onPageSize={custTable.setPageSize} />
           </>
         )}
       </div>

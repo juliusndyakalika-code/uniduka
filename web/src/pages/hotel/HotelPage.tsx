@@ -524,7 +524,7 @@ export default function HotelPage() {
             </tbody>
           </table>
         </div>
-        <TablePagination page={foliosTable.page} pageCount={foliosTable.pageCount} total={foliosTable.total} pageSize={foliosTable.pageSize} onPage={foliosTable.setPage} />
+        <TablePagination page={foliosTable.page} pageCount={foliosTable.pageCount} total={foliosTable.total} pageSize={foliosTable.pageSize} onPage={foliosTable.setPage} onPageSize={foliosTable.setPageSize} />
         </div>
       )}
 
@@ -573,7 +573,7 @@ export default function HotelPage() {
                 </tbody>
               </table>
               </div>
-              <TablePagination page={debtsTable.page} pageCount={debtsTable.pageCount} total={debtsTable.total} pageSize={debtsTable.pageSize} onPage={debtsTable.setPage} />
+              <TablePagination page={debtsTable.page} pageCount={debtsTable.pageCount} total={debtsTable.total} pageSize={debtsTable.pageSize} onPage={debtsTable.setPage} onPageSize={debtsTable.setPageSize} />
             </div>
           )}
         </div>

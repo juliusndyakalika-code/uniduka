@@ -869,7 +869,7 @@ export default function SalesReportPage() {
                   </tfoot>
                 </table>
               </div>
-              <TablePagination page={byDayTable.page} pageCount={byDayTable.pageCount} total={byDayTable.total} pageSize={byDayTable.pageSize} onPage={byDayTable.setPage} />
+              <TablePagination page={byDayTable.page} pageCount={byDayTable.pageCount} total={byDayTable.total} pageSize={byDayTable.pageSize} onPage={byDayTable.setPage} onPageSize={byDayTable.setPageSize} />
             </div>
           )}
 
@@ -900,7 +900,7 @@ export default function SalesReportPage() {
                 </tbody>
               </table>
             </div>
-            <TablePagination page={topProductsTable.page} pageCount={topProductsTable.pageCount} total={topProductsTable.total} pageSize={topProductsTable.pageSize} onPage={topProductsTable.setPage} />
+            <TablePagination page={topProductsTable.page} pageCount={topProductsTable.pageCount} total={topProductsTable.total} pageSize={topProductsTable.pageSize} onPage={topProductsTable.setPage} onPageSize={topProductsTable.setPageSize} />
           </div>
         </>
       )}

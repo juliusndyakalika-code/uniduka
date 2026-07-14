@@ -356,7 +356,7 @@ export default function ConsignmentPage() {
                 </tbody>
               </table>
             </div>
-            <TablePagination page={salesTable.page} pageCount={salesTable.pageCount} total={salesTable.total} pageSize={salesTable.pageSize} onPage={salesTable.setPage} />
+            <TablePagination page={salesTable.page} pageCount={salesTable.pageCount} total={salesTable.total} pageSize={salesTable.pageSize} onPage={salesTable.setPage} onPageSize={salesTable.setPageSize} />
             </>
           )}
         </div>
@@ -398,7 +398,7 @@ export default function ConsignmentPage() {
                 </tbody>
               </table>
             </div>
-            <TablePagination page={partnersTable.page} pageCount={partnersTable.pageCount} total={partnersTable.total} pageSize={partnersTable.pageSize} onPage={partnersTable.setPage} />
+            <TablePagination page={partnersTable.page} pageCount={partnersTable.pageCount} total={partnersTable.total} pageSize={partnersTable.pageSize} onPage={partnersTable.setPage} onPageSize={partnersTable.setPageSize} />
             </>
           )}
         </div>
@@ -468,7 +468,7 @@ export default function ConsignmentPage() {
                 </tbody>
               </table>
             </div>
-            <TablePagination page={sellerTable.page} pageCount={sellerTable.pageCount} total={sellerTable.total} pageSize={sellerTable.pageSize} onPage={sellerTable.setPage} />
+            <TablePagination page={sellerTable.page} pageCount={sellerTable.pageCount} total={sellerTable.total} pageSize={sellerTable.pageSize} onPage={sellerTable.setPage} onPageSize={sellerTable.setPageSize} />
             </>
           )}
         </div>
@@ -504,7 +504,7 @@ export default function ConsignmentPage() {
                 </tbody>
               </table>
             </div>
-            <TablePagination page={paymentTable.page} pageCount={paymentTable.pageCount} total={paymentTable.total} pageSize={paymentTable.pageSize} onPage={paymentTable.setPage} />
+            <TablePagination page={paymentTable.page} pageCount={paymentTable.pageCount} total={paymentTable.total} pageSize={paymentTable.pageSize} onPage={paymentTable.setPage} onPageSize={paymentTable.setPageSize} />
           </div>
         )}
         </>

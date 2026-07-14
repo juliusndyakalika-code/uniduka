@@ -184,7 +184,7 @@ export default function PlatformAccounts() {
             </tbody>
           </table>
         )}
-        {!isLoading && <TablePagination page={acctTable.page} pageCount={acctTable.pageCount} total={acctTable.total} pageSize={acctTable.pageSize} onPage={acctTable.setPage} />}
+        {!isLoading && <TablePagination page={acctTable.page} pageCount={acctTable.pageCount} total={acctTable.total} pageSize={acctTable.pageSize} onPage={acctTable.setPage} onPageSize={acctTable.setPageSize} />}
       </div>
 
       {/* Create account modal */}

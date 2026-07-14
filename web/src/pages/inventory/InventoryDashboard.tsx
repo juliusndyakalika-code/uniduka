@@ -355,7 +355,7 @@ export default function InventoryDashboard() {
               </tbody>
             </table>
           </div>
-          <TablePagination page={expiryTable.page} pageCount={expiryTable.pageCount} total={expiryTable.total} pageSize={expiryTable.pageSize} onPage={expiryTable.setPage} />
+          <TablePagination page={expiryTable.page} pageCount={expiryTable.pageCount} total={expiryTable.total} pageSize={expiryTable.pageSize} onPage={expiryTable.setPage} onPageSize={expiryTable.setPageSize} />
         </div>
       )}
     </div>

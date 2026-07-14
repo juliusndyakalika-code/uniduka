@@ -190,7 +190,7 @@ export default function ShopsPage() {
             </tbody>
           </table>
           </div>
-          <TablePagination page={shopsTable.page} pageCount={shopsTable.pageCount} total={shopsTable.total} pageSize={shopsTable.pageSize} onPage={shopsTable.setPage} />
+          <TablePagination page={shopsTable.page} pageCount={shopsTable.pageCount} total={shopsTable.total} pageSize={shopsTable.pageSize} onPage={shopsTable.setPage} onPageSize={shopsTable.setPageSize} />
         </div>
       )}
 

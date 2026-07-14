@@ -121,7 +121,7 @@ export default function PlatformUsers() {
             </tbody>
           </table>
         )}
-        {!isLoading && <TablePagination page={usersTable.page} pageCount={usersTable.pageCount} total={usersTable.total} pageSize={usersTable.pageSize} onPage={usersTable.setPage} />}
+        {!isLoading && <TablePagination page={usersTable.page} pageCount={usersTable.pageCount} total={usersTable.total} pageSize={usersTable.pageSize} onPage={usersTable.setPage} onPageSize={usersTable.setPageSize} />}
       </div>
     </div>
   );

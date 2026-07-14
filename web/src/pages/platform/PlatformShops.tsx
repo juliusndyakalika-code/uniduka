@@ -112,7 +112,7 @@ export default function PlatformShops() {
             </tbody>
           </table>
         )}
-        {!isLoading && <TablePagination page={shopsTable.page} pageCount={shopsTable.pageCount} total={shopsTable.total} pageSize={shopsTable.pageSize} onPage={shopsTable.setPage} />}
+        {!isLoading && <TablePagination page={shopsTable.page} pageCount={shopsTable.pageCount} total={shopsTable.total} pageSize={shopsTable.pageSize} onPage={shopsTable.setPage} onPageSize={shopsTable.setPageSize} />}
       </div>
     </div>
   );

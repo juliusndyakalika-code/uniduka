@@ -131,7 +131,7 @@ export default function VoidsPage() {
               </tfoot>
             </table>
           </div>
-          <TablePagination page={voidsTable.page} pageCount={voidsTable.pageCount} total={voidsTable.total} pageSize={voidsTable.pageSize} onPage={voidsTable.setPage} />
+          <TablePagination page={voidsTable.page} pageCount={voidsTable.pageCount} total={voidsTable.total} pageSize={voidsTable.pageSize} onPage={voidsTable.setPage} onPageSize={voidsTable.setPageSize} />
           </>
         )}
       </div>

@@ -235,7 +235,7 @@ export default function TimeclockPage() {
                 </tfoot>
               </table>
             </div>
-            <TablePagination page={summaryTable.page} pageCount={summaryTable.pageCount} total={summaryTable.total} pageSize={summaryTable.pageSize} onPage={summaryTable.setPage} />
+            <TablePagination page={summaryTable.page} pageCount={summaryTable.pageCount} total={summaryTable.total} pageSize={summaryTable.pageSize} onPage={summaryTable.setPage} onPageSize={summaryTable.setPageSize} />
           </div>
         )}
 

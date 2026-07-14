@@ -267,7 +267,7 @@ export default function ExpensesPage() {
               </tfoot>
             </table>
           </div>
-          <TablePagination page={expensesTable.page} pageCount={expensesTable.pageCount} total={expensesTable.total} pageSize={expensesTable.pageSize} onPage={expensesTable.setPage} />
+          <TablePagination page={expensesTable.page} pageCount={expensesTable.pageCount} total={expensesTable.total} pageSize={expensesTable.pageSize} onPage={expensesTable.setPage} onPageSize={expensesTable.setPageSize} />
           </>
         )}
       </div>

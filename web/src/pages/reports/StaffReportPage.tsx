@@ -454,7 +454,7 @@ export default function StaffReportPage() {
               )}
             </table>
           </div>
-          <TablePagination page={staffTable.page} pageCount={staffTable.pageCount} total={staffTable.total} pageSize={staffTable.pageSize} onPage={staffTable.setPage} />
+          <TablePagination page={staffTable.page} pageCount={staffTable.pageCount} total={staffTable.total} pageSize={staffTable.pageSize} onPage={staffTable.setPage} onPageSize={staffTable.setPageSize} />
           </>
         )}
       </div>

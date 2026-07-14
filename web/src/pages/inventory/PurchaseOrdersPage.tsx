@@ -130,7 +130,7 @@ export default function PurchaseOrdersPage() {
               </tbody>
             </table>
           </div>
-          <TablePagination page={poTable.page} pageCount={poTable.pageCount} total={poTable.total} pageSize={poTable.pageSize} onPage={poTable.setPage} />
+          <TablePagination page={poTable.page} pageCount={poTable.pageCount} total={poTable.total} pageSize={poTable.pageSize} onPage={poTable.setPage} onPageSize={poTable.setPageSize} />
           </>
         )}
       </div>

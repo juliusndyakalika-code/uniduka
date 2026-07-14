@@ -32,12 +32,14 @@ function compare(a: SortVal, b: SortVal): number {
 }
 
 export function useDataTable<T>(rows: T[], opts: UseDataTableOptions<T> = {}) {
-  const { searchable, sortValues, initialSort, pageSize = 10 } = opts;
+  const { searchable, sortValues, initialSort, pageSize: initialPageSize = 10 } = opts;
   const [search, setSearchRaw] = useState('');
   const [sort, setSort] = useState<DataTableSort | null>(initialSort ?? null);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSizeRaw] = useState(initialPageSize);
 
   const setSearch = (v: string) => { setSearchRaw(v); setPage(1); };
+  const setPageSize = (n: number) => { setPageSizeRaw(n); setPage(1); };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -77,7 +79,7 @@ export function useDataTable<T>(rows: T[], opts: UseDataTableOptions<T> = {}) {
 
   return {
     view, sorted, filtered, total,
-    page: safePage, setPage, pageCount, pageSize,
+    page: safePage, setPage, pageCount, pageSize, setPageSize,
     search, setSearch, sort, toggleSort,
   };
 }
@@ -132,16 +134,36 @@ export function SortableTh({ field, sort, onSort, children, className, align = '
   );
 }
 
-export function TablePagination({ page, pageCount, total, pageSize, onPage, className }: {
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+export function TablePagination({ page, pageCount, total, pageSize, onPage, onPageSize, className }: {
   page: number; pageCount: number; total: number; pageSize: number;
-  onPage: (p: number) => void; className?: string;
+  onPage: (p: number) => void;
+  onPageSize?: (n: number) => void;
+  className?: string;
 }) {
   if (total === 0) return null;
   const from = (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
   return (
     <div className={`flex items-center justify-between px-4 py-2.5 border-t border-stone-100 text-xs text-stone-500 ${className ?? ''}`}>
-      <span>{from}–{to} of {total.toLocaleString()}</span>
+      <div className="flex items-center gap-3">
+        <span>{from}–{to} of {total.toLocaleString()}</span>
+        {onPageSize && (
+          <label className="flex items-center gap-1.5">
+            Rows:
+            <select
+              value={pageSize}
+              onChange={e => onPageSize(Number(e.target.value))}
+              className="border border-stone-200 rounded px-1.5 py-0.5 text-xs bg-white text-stone-700 cursor-pointer"
+            >
+              {PAGE_SIZE_OPTIONS.map(n => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
       <div className="flex items-center gap-1">
         <button
           type="button"

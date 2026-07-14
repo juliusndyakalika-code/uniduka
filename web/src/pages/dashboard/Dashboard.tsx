@@ -273,7 +273,7 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
-        <TablePagination page={txTable.page} pageCount={txTable.pageCount} total={txTable.total} pageSize={txTable.pageSize} onPage={txTable.setPage} />
+        <TablePagination page={txTable.page} pageCount={txTable.pageCount} total={txTable.total} pageSize={txTable.pageSize} onPage={txTable.setPage} onPageSize={txTable.setPageSize} />
       </div>
 
       {/* Subscription info */}

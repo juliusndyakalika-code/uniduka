@@ -158,7 +158,7 @@ export default function InventoryReportPage() {
                   </tbody>
                 </table>
               </div>
-              <TablePagination page={lowStockTable.page} pageCount={lowStockTable.pageCount} total={lowStockTable.total} pageSize={lowStockTable.pageSize} onPage={lowStockTable.setPage} />
+              <TablePagination page={lowStockTable.page} pageCount={lowStockTable.pageCount} total={lowStockTable.total} pageSize={lowStockTable.pageSize} onPage={lowStockTable.setPage} onPageSize={lowStockTable.setPageSize} />
             </div>
 
             {/* Stock valuation */}
@@ -186,7 +186,7 @@ export default function InventoryReportPage() {
                   </tbody>
                 </table>
               </div>
-              <TablePagination page={valuationTable.page} pageCount={valuationTable.pageCount} total={valuationTable.total} pageSize={valuationTable.pageSize} onPage={valuationTable.setPage} />
+              <TablePagination page={valuationTable.page} pageCount={valuationTable.pageCount} total={valuationTable.total} pageSize={valuationTable.pageSize} onPage={valuationTable.setPage} onPageSize={valuationTable.setPageSize} />
             </div>
           </div>
 
@@ -221,7 +221,7 @@ export default function InventoryReportPage() {
                   </tbody>
                 </table>
               </div>
-              <TablePagination page={expiringTable.page} pageCount={expiringTable.pageCount} total={expiringTable.total} pageSize={expiringTable.pageSize} onPage={expiringTable.setPage} />
+              <TablePagination page={expiringTable.page} pageCount={expiringTable.pageCount} total={expiringTable.total} pageSize={expiringTable.pageSize} onPage={expiringTable.setPage} onPageSize={expiringTable.setPageSize} />
             </div>
           )}
         </>

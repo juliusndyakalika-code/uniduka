@@ -305,7 +305,7 @@ export default function UsersPage() {
               </tbody>
             </table>
           </div>
-          <TablePagination page={usersTable.page} pageCount={usersTable.pageCount} total={usersTable.total} pageSize={usersTable.pageSize} onPage={usersTable.setPage} />
+          <TablePagination page={usersTable.page} pageCount={usersTable.pageCount} total={usersTable.total} pageSize={usersTable.pageSize} onPage={usersTable.setPage} onPageSize={usersTable.setPageSize} />
           </>
         )}
       </div>
