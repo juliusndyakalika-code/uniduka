@@ -7,6 +7,7 @@ import {
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
+import ShipmentImportModal from './ShipmentImportModal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type POType = 'LOCAL' | 'IMPORT';
@@ -472,6 +473,7 @@ export default function PurchaseOrdersPage() {
   const qc = useQueryClient();
   const [showNew, setShowNew]         = useState(false);
   const [receiving, setReceiving]     = useState<PO | null>(null);
+  const [importingPO, setImportingPO] = useState<PO | null>(null);
   const [success, setSuccess]         = useState('');
 
   const { data: orders = [], isLoading } = useQuery<PO[]>({
@@ -572,7 +574,12 @@ export default function PurchaseOrdersPage() {
                           </button>
                         )}
                         {(po.status === 'DRAFT' || po.status === 'SENT') && po.type === 'IMPORT' && (
-                          <span className="text-xs text-stone-400 italic">Use Import Shipment</span>
+                          <button
+                            onClick={() => setImportingPO(po)}
+                            className="flex items-center gap-1 text-xs text-blue-600 hover:underline font-medium"
+                          >
+                            <Ship size={12} /> Import Shipment
+                          </button>
                         )}
                       </div>
                     </td>
@@ -601,6 +608,19 @@ export default function PurchaseOrdersPage() {
           po={receiving}
           onClose={() => setReceiving(null)}
           onDone={() => { setReceiving(null); setSuccess('Stock received and inventory updated.'); setTimeout(() => setSuccess(''), 4000); }}
+        />
+      )}
+
+      {importingPO && (
+        <ShipmentImportModal
+          initialPoId={importingPO.id}
+          onClose={() => setImportingPO(null)}
+          onImported={() => {
+            qc.invalidateQueries({ queryKey: ['purchase-orders'] });
+            setImportingPO(null);
+            setSuccess(`Shipment imported — PO ${importingPO.poNumber} marked as Received.`);
+            setTimeout(() => setSuccess(''), 5000);
+          }}
         />
       )}
     </div>

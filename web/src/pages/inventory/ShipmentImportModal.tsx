@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, Upload, ArrowRight, ArrowLeft, Download, AlertCircle, CheckCircle2, Package, Link } from 'lucide-react';
 import api from '../../api/client';
@@ -24,14 +24,14 @@ function downloadTemplate() {
   a.download = 'shipment_import_template.csv'; a.click();
 }
 
-interface Props { onClose: () => void; onImported: () => void; }
+interface Props { onClose: () => void; onImported: () => void; initialPoId?: string; }
 
-export default function ShipmentImportModal({ onClose, onImported }: Props) {
+export default function ShipmentImportModal({ onClose, onImported, initialPoId }: Props) {
   const { shopId } = useAuthStore();
   const fileRef = useRef<HTMLInputElement>(null);
 
   // PO link
-  const [selectedPoId, setSelectedPoId] = useState('');
+  const [selectedPoId, setSelectedPoId] = useState(initialPoId ?? '');
 
   // Step 1 state
   const [file, setFile]             = useState<File | null>(null);
@@ -56,6 +56,12 @@ export default function ShipmentImportModal({ onClose, onImported }: Props) {
       .then(r => (r.data.data as PO[]).filter((p: PO & { type?: string }) => (p as { type?: string }).type === 'IMPORT')),
     enabled: !!shopId,
   });
+
+  // Auto-select the initial PO once openPOs loads
+  useEffect(() => {
+    if (initialPoId && openPOs.length > 0) selectPO(initialPoId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openPOs.length]);
 
   // When a PO is selected, pre-fill its stored costs
   function selectPO(poId: string) {
