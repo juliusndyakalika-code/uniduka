@@ -599,6 +599,7 @@ export default function ProductsPage() {
         {isLoading ? (
           <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
         ) : (
+          <>
           <div className="table-wrapper">
             <table className="table">
               <thead>
@@ -693,7 +694,7 @@ export default function ProductsPage() {
               </tbody>
             </table>
           </div>
-          {!isLoading && (data?.total ?? 0) > 0 && (
+          {(data?.total ?? 0) > 0 && (
             <TablePagination
               page={page}
               pageCount={Math.max(1, Math.ceil((data?.total ?? 0) / pageSize))}
@@ -703,6 +704,7 @@ export default function ProductsPage() {
               onPageSize={n => { setPageSize(n); setPage(1); }}
             />
           )}
+          </>
         )}
       </div>
 
