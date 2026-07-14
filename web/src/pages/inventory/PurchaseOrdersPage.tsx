@@ -151,6 +151,14 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
   // Step 3: save
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [step1Error, setStep1Error] = useState('');
+
+  function goToStep2() {
+    if (!supplierId) { setStep1Error('Please select a supplier.'); return; }
+    if (poType === 'IMPORT' && !(parseFloat(exchangeRate) > 0)) { setStep1Error('Exchange rate is required for import orders.'); return; }
+    setStep1Error('');
+    setStep(2);
+  }
 
   const { data: suppliers = [] } = useQuery<{ id: string; name: string }[]>({
     queryKey: ['suppliers', shopId],
@@ -263,9 +271,9 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Supplier (optional)</label>
-                  <select className="input" value={supplierId} onChange={e => setSupplierId(e.target.value)}>
-                    <option value="">— No supplier —</option>
+                  <label className="label">Supplier <span className="text-red-500">*</span></label>
+                  <select className="input" value={supplierId} onChange={e => { setSupplierId(e.target.value); setStep1Error(''); }}>
+                    <option value="">— Select supplier —</option>
                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
@@ -280,10 +288,10 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
                   <h4 className="text-xs font-bold text-stone-600 uppercase tracking-widest mb-3">Estimated Costs (optional — update at import time)</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <div className="col-span-2 sm:col-span-1">
-                      <label className="label">Exchange Rate (¥ → TZS)</label>
+                      <label className="label">Exchange Rate (¥ → TZS) <span className="text-red-500">*</span></label>
                       <div className="relative">
                         <span className="absolute left-3 top-2.5 text-xs text-stone-400 font-semibold">¥1 =</span>
-                        <input value={exchangeRate} onChange={e => setExchangeRate(e.target.value)} type="number" min="1" className="input pl-14" placeholder="365" />
+                        <input value={exchangeRate} onChange={e => { setExchangeRate(e.target.value); setStep1Error(''); }} type="number" min="1" className="input pl-14" placeholder="365" />
                       </div>
                     </div>
                     <div><label className="label">Shipping (TZS)</label><input value={shipping} onChange={e => setShipping(e.target.value)} type="number" min="0" className="input" placeholder="0" /></div>
@@ -298,6 +306,12 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
                 <label className="label">Notes (optional)</label>
                 <textarea className="input" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Supplier reference, special instructions…" />
               </div>
+
+              {step1Error && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+                  <AlertCircle size={13} className="shrink-0" /> {step1Error}
+                </div>
+              )}
             </div>
           )}
 
@@ -427,7 +441,7 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
           {step === 1 && (
             <>
               <button onClick={onClose} className="btn-secondary">Cancel</button>
-              <button onClick={() => setStep(2)} className="btn-primary flex items-center gap-2">
+              <button onClick={goToStep2} className="btn-primary flex items-center gap-2">
                 Next — Upload CSV <ArrowRight size={14} />
               </button>
             </>
