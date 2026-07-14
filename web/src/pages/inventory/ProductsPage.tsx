@@ -436,6 +436,7 @@ export default function ProductsPage() {
     id: string; type: string; fileName?: string; imported: number; skipped: number;
     totalQty?: number; totalValue?: number; note?: string; createdAt: string;
     user?: { fullName: string } | null;
+    purchaseOrder?: { poNumber: string } | null;
   }
   const { data: importHistory = [], isLoading: loadingHistory } = useQuery<ImportRecord[]>({
     queryKey: ['inventory-imports', shopId],
@@ -942,6 +943,7 @@ export default function ProductsPage() {
                     <tr>
                       <th>{t('common.date')}</th>
                       <th>Type</th>
+                      <th>PO #</th>
                       <th>File</th>
                       <th>Imported</th>
                       <th>Skipped</th>
@@ -958,6 +960,7 @@ export default function ProductsPage() {
                             {imp.type === 'SHIPMENT' ? 'Shipment' : 'CSV'}
                           </span>
                         </td>
+                        <td className="font-mono text-xs text-stone-700">{imp.purchaseOrder?.poNumber ?? '—'}</td>
                         <td className="text-xs text-stone-500 max-w-[140px] truncate" title={imp.fileName ?? ''}>{imp.fileName || '—'}</td>
                         <td className="font-semibold text-emerald-600">{imp.imported}</td>
                         <td className={imp.skipped > 0 ? 'text-amber-600 font-medium' : 'text-stone-400'}>{imp.skipped}</td>

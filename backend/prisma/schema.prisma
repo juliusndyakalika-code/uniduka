@@ -503,16 +503,18 @@ model InventoryImport {
   id         String   @id @default(cuid())
   shopId     String
   shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  userId     String?
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  type       String   // 'CSV' | 'SHIPMENT'
-  fileName   String?
-  imported   Int      @default(0)
-  skipped    Int      @default(0)
-  totalQty   Float?   // shipment: total pieces received
-  totalValue Float?   // shipment: total landed value
-  note       String?  // free-text summary (e.g. exchange rate, errors)
-  createdAt  DateTime @default(now())
+  userId           String?
+  user             User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  purchaseOrderId  String?
+  purchaseOrder    PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  type             String   // 'CSV' | 'SHIPMENT'
+  fileName         String?
+  imported         Int      @default(0)
+  skipped          Int      @default(0)
+  totalQty         Float?   // shipment: total pieces received
+  totalValue       Float?   // shipment: total landed value
+  note             String?  // free-text summary (e.g. exchange rate, errors)
+  createdAt        DateTime @default(now())
 
   @@index([shopId, createdAt])
   @@map("inventory_imports")
@@ -592,7 +594,8 @@ model PurchaseOrder {
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 
-  lines PurchaseOrderLine[]
+  lines           PurchaseOrderLine[]
+  inventoryImports InventoryImport[]
 
   @@map("purchase_orders")
 }

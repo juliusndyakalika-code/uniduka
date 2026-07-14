@@ -427,6 +427,7 @@ export async function importShipment(req: AuthRequest, res: Response) {
   await prisma.inventoryImport.create({
     data: {
       shopId, userId, type: 'SHIPMENT',
+      purchaseOrderId: purchaseOrderId || null,
       fileName: req.file.originalname,
       imported: imported.length, skipped: calculated.length - imported.length,
       totalQty: summary.totalPieces, totalValue: summary.totalLandingValue,
@@ -768,7 +769,10 @@ export async function listMovements(req: AuthRequest, res: Response) {
 export async function listImports(req: AuthRequest, res: Response) {
   const imports = await prisma.inventoryImport.findMany({
     where: { shopId: shop(req) },
-    include: { user: { select: { fullName: true } } },
+    include: {
+      user: { select: { fullName: true } },
+      purchaseOrder: { select: { poNumber: true } },
+    },
     orderBy: { createdAt: 'desc' },
     take: 100,
   });
