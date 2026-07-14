@@ -265,6 +265,15 @@ export async function importProducts(req: AuthRequest, res: Response) {
     }
   }
 
+  await prisma.inventoryImport.create({
+    data: {
+      shopId: shop(req), userId: req.user!.sub, type: 'CSV',
+      fileName: req.file.originalname,
+      imported: imported.length, skipped: rowErrors.length,
+      note: rowErrors.length ? `${rowErrors.length} row(s) skipped` : undefined,
+    },
+  });
+
   return R.ok(res, { imported: imported.length, skipped: rowErrors.length, errors: rowErrors });
 }
 
@@ -413,6 +422,16 @@ export async function importShipment(req: AuthRequest, res: Response) {
       rowErrors.push({ row: -1, message: isDupe ? `Style "${p.style}" already exists — skipped (delete or update it first)` : msg });
     }
   }
+
+  await prisma.inventoryImport.create({
+    data: {
+      shopId, userId, type: 'SHIPMENT',
+      fileName: req.file.originalname,
+      imported: imported.length, skipped: calculated.length - imported.length,
+      totalQty: summary.totalPieces, totalValue: summary.totalLandingValue,
+      note: `Exchange rate 1 = ${exchangeRate}; shared costs ${summary.totalSharedCosts.toLocaleString()}`,
+    },
+  });
 
   return R.created(res, { imported: imported.length, skipped: calculated.length - imported.length, items: calculated, summary, errors: rowErrors });
 }
@@ -686,4 +705,14 @@ export async function listMovements(req: AuthRequest, res: Response) {
     prisma.stockMovement.count({ where }),
   ]);
   return R.ok(res, movements, { total, page: Number(page), limit: take, pages: Math.ceil(total / take) });
+}
+
+export async function listImports(req: AuthRequest, res: Response) {
+  const imports = await prisma.inventoryImport.findMany({
+    where: { shopId: shop(req) },
+    include: { user: { select: { fullName: true } } },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  });
+  return R.ok(res, imports);
 }

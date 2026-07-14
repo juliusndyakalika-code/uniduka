@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Trash2, Package, AlertTriangle, X, Upload, Download, CheckCircle2, FileWarning, ChevronUp, ChevronDown, ChevronsUpDown, Lock, PackagePlus, ArrowUpDown, ScanLine, Camera, Ship } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, AlertTriangle, X, Upload, Download, CheckCircle2, FileWarning, ChevronUp, ChevronDown, ChevronsUpDown, Lock, PackagePlus, ArrowUpDown, ScanLine, Camera, Ship, History } from 'lucide-react';
 import ShipmentImportModal from './ShipmentImportModal';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -353,6 +353,7 @@ export default function ProductsPage() {
   const [showForm, setShowForm]   = useState(false);
   const [showImport, setShowImport]           = useState(false);
   const [showShipmentImport, setShowShipmentImport] = useState(false);
+  const [showImportHistory, setShowImportHistory] = useState(false);
   const [editing, setEditing]     = useState<Product | null>(null);
   const [error, setError]         = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -428,6 +429,17 @@ export default function ProductsPage() {
     enabled: !!shopId,
   });
 
+  interface ImportRecord {
+    id: string; type: string; fileName?: string; imported: number; skipped: number;
+    totalQty?: number; totalValue?: number; note?: string; createdAt: string;
+    user?: { fullName: string } | null;
+  }
+  const { data: importHistory = [], isLoading: loadingHistory } = useQuery<ImportRecord[]>({
+    queryKey: ['inventory-imports', shopId],
+    queryFn: () => api.get('/inventory/imports').then(r => r.data.data),
+    enabled: !!shopId && showImportHistory,
+  });
+
   const { mutate: save, isPending } = useMutation({
     mutationFn: (d: Form) => editing
       ? api.patch(`/inventory/products/${editing.id}`, d)
@@ -485,6 +497,7 @@ export default function ProductsPage() {
       setImportResult(res.data.data);
       setImportFile(null);
       qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['inventory-imports'] });
     },
     onError: (e: unknown) => setImportError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Import failed'),
   });
@@ -549,6 +562,9 @@ export default function ProductsPage() {
           </button>
           <button className="btn-secondary" onClick={() => setShowShipmentImport(true)} title="Import Shipment">
             <Ship size={14} /> <span className="hidden sm:inline">Import Shipment</span>
+          </button>
+          <button className="btn-secondary" onClick={() => setShowImportHistory(true)} title="Import History">
+            <History size={14} /> <span className="hidden sm:inline">Import History</span>
           </button>
           <button className="btn-primary" onClick={openNew} title={t('products.addProduct')}>
             <Plus size={14} /> <span className="hidden sm:inline">{t('products.addProduct')}</span>
@@ -882,8 +898,67 @@ export default function ProductsPage() {
       {showShipmentImport && (
         <ShipmentImportModal
           onClose={() => setShowShipmentImport(false)}
-          onImported={() => qc.invalidateQueries({ queryKey: ['products'] })}
+          onImported={() => { qc.invalidateQueries({ queryKey: ['products'] }); qc.invalidateQueries({ queryKey: ['inventory-imports'] }); }}
         />
+      )}
+
+      {/* ── Import history modal ── */}
+      {showImportHistory && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="card w-full sm:max-w-2xl rounded-t-2xl sm:rounded-xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+              <div className="flex items-center gap-2">
+                <History size={16} className="text-primary-600" />
+                <h2 className="text-sm font-bold text-stone-900">Import History</h2>
+              </div>
+              <button onClick={() => setShowImportHistory(false)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+            </div>
+            <div className="overflow-y-auto">
+              {loadingHistory ? (
+                <div className="p-8 text-center text-stone-400 text-sm">{t('common.loading')}</div>
+              ) : importHistory.length === 0 ? (
+                <div className="p-10 text-center text-stone-400">
+                  <History size={28} className="mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No imports yet. CSV and shipment imports will appear here.</p>
+                </div>
+              ) : (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t('common.date')}</th>
+                      <th>Type</th>
+                      <th>File</th>
+                      <th>Imported</th>
+                      <th>Skipped</th>
+                      <th>Qty / Value</th>
+                      <th>By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importHistory.map(imp => (
+                      <tr key={imp.id}>
+                        <td className="text-xs whitespace-nowrap">{new Date(imp.createdAt).toLocaleString('en-TZ', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td>
+                          <span className={`badge ${imp.type === 'SHIPMENT' ? 'badge-blue' : 'badge-stone'} text-xs`}>
+                            {imp.type === 'SHIPMENT' ? 'Shipment' : 'CSV'}
+                          </span>
+                        </td>
+                        <td className="text-xs text-stone-500 max-w-[140px] truncate" title={imp.fileName ?? ''}>{imp.fileName || '—'}</td>
+                        <td className="font-semibold text-emerald-600">{imp.imported}</td>
+                        <td className={imp.skipped > 0 ? 'text-amber-600 font-medium' : 'text-stone-400'}>{imp.skipped}</td>
+                        <td className="text-xs text-stone-600">
+                          {imp.totalQty != null ? `${imp.totalQty} pcs` : '—'}
+                          {imp.totalValue != null && <span className="text-stone-400"> · {fmt(imp.totalValue)}</span>}
+                        </td>
+                        <td className="text-xs text-stone-500">{imp.user?.fullName ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Barcode camera scanner (for product form) ── */}

@@ -4,7 +4,7 @@ import {
   listProducts, getProduct, lookupByBarcode, createProduct, updateProduct, deleteProduct, importProducts, importShipment, addProductStock,
   getInventoryDashboard,
   listStock, adjustStock, receivePO, createPO, listPOs, getPO, updatePO,
-  listMovements, listSuppliers, createSupplier, updateSupplier,
+  listMovements, listImports, listSuppliers, createSupplier, updateSupplier,
   listRecipes, getRecipe, createRecipe, updateRecipe,
   getExpiryAlerts,
 } from './inventory.controller';
@@ -62,5 +62,6 @@ router.post('/po/:id/receive', receivePO);
 
 // Movements
 router.get('/movements',       listMovements);
+router.get('/imports',         listImports);
 
 export default router;
