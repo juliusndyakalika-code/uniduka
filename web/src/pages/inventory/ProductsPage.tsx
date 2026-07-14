@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import CameraScanner from '../../components/CameraScanner';
+import { TablePagination } from '../../components/ui/DataTable';
 
 interface Product {
   id: string; name: string; sku: string; barcode?: string;
@@ -350,6 +351,8 @@ export default function ProductsPage() {
   const qc = useQueryClient();
   const [search, setSearch]       = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [page, setPage]           = useState(1);
+  const [pageSize, setPageSize]   = useState(50);
   const [showForm, setShowForm]   = useState(false);
   const [showImport, setShowImport]           = useState(false);
   const [showShipmentImport, setShowShipmentImport] = useState(false);
@@ -421,8 +424,8 @@ export default function ProductsPage() {
   const activeParam = activeFilter === 'all' ? undefined : activeFilter === 'active' ? 'true' : 'false';
 
   const { data, isLoading } = useQuery<{ items: Product[]; total: number }>({
-    queryKey: ['products', shopId, search, activeFilter],
-    queryFn: () => api.get('/inventory/products', { params: { search, limit: 50, active: activeParam } }).then(r => ({
+    queryKey: ['products', shopId, search, activeFilter, page, pageSize],
+    queryFn: () => api.get('/inventory/products', { params: { search, limit: pageSize, page, active: activeParam } }).then(r => ({
       items: r.data.data as Product[],
       total: (r.data.meta?.total ?? r.data.data?.length ?? 0) as number,
     })),
@@ -575,13 +578,13 @@ export default function ProductsPage() {
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-3 text-stone-400" />
-          <input className="input pl-8" placeholder={t('products.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="input pl-8" placeholder={t('products.searchPlaceholder')} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         </div>
         <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1">
           {(['all', 'active', 'inactive'] as const).map(f => (
             <button
               key={f}
-              onClick={() => setActiveFilter(f)}
+              onClick={() => { setActiveFilter(f); setPage(1); }}
               className={`px-3 py-1 text-xs font-medium rounded-md capitalize transition-colors ${
                 activeFilter === f ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-700'
               }`}
@@ -690,6 +693,16 @@ export default function ProductsPage() {
               </tbody>
             </table>
           </div>
+          {!isLoading && (data?.total ?? 0) > 0 && (
+            <TablePagination
+              page={page}
+              pageCount={Math.max(1, Math.ceil((data?.total ?? 0) / pageSize))}
+              total={data?.total ?? 0}
+              pageSize={pageSize}
+              onPage={setPage}
+              onPageSize={n => { setPageSize(n); setPage(1); }}
+            />
+          )}
         )}
       </div>
 
