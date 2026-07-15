@@ -5,7 +5,10 @@ import { useAuthStore } from '../store/authStore';
 export const api = axios.create({ baseURL: API_BASE });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('ud_token');
+  let token: string | null = null;
+  try { token = localStorage.getItem('ud_token'); } catch {}
+  // Fallback to Zustand in-memory token when localStorage is blocked (Firefox strict/private mode)
+  if (!token) token = useAuthStore.getState().token;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });

@@ -22,32 +22,47 @@ interface AuthState {
   logout: () => void;
 }
 
+// Safe localStorage helpers — Firefox strict/private mode can throw SecurityError
+function lsGet(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function lsSet(key: string, value: string): void {
+  try { localStorage.setItem(key, value); } catch { /* persisting failed; in-memory state still updates */ }
+}
+function lsRemove(key: string): void {
+  try { localStorage.removeItem(key); } catch {}
+}
+function lsParse<T>(key: string): T | null {
+  try { return JSON.parse(lsGet(key) || 'null') as T; } catch { return null; }
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
-  token:           localStorage.getItem('ud_token'),
-  user:            JSON.parse(localStorage.getItem('ud_user') || 'null'),
-  account:         JSON.parse(localStorage.getItem('ud_account') || 'null'),
-  shopId:          localStorage.getItem('ud_shop'),
+  token:           lsGet('ud_token'),
+  user:            lsParse<User>('ud_user'),
+  account:         lsParse<Account>('ud_account'),
+  shopId:          lsGet('ud_shop'),
   shops:           [],
-  isAuthenticated: !!localStorage.getItem('ud_token'),
+  isAuthenticated: !!lsGet('ud_token'),
 
   setAuth: (token, user, account, shopId) => {
-    localStorage.setItem('ud_token', token);
-    localStorage.setItem('ud_user', JSON.stringify(user));
-    localStorage.setItem('ud_account', JSON.stringify(account));
-    if (shopId) localStorage.setItem('ud_shop', shopId);
+    lsSet('ud_token', token);
+    lsSet('ud_user', JSON.stringify(user));
+    lsSet('ud_account', JSON.stringify(account));
+    if (shopId) lsSet('ud_shop', shopId);
+    // Always update in-memory state even if storage failed
     set({ token, user, account, shopId: shopId || null, isAuthenticated: true });
   },
 
   setShopId: (shopId, token) => {
-    localStorage.setItem('ud_shop', shopId);
-    if (token) localStorage.setItem('ud_token', token);
+    lsSet('ud_shop', shopId);
+    if (token) lsSet('ud_token', token);
     set({ shopId, ...(token && { token }) });
   },
 
   setShops: (shops) => set({ shops }),
 
   logout: () => {
-    ['ud_token', 'ud_refresh', 'ud_user', 'ud_account', 'ud_shop'].forEach(k => localStorage.removeItem(k));
+    ['ud_token', 'ud_refresh', 'ud_user', 'ud_account', 'ud_shop'].forEach(lsRemove);
     set({ token: null, user: null, account: null, shopId: null, shops: [], isAuthenticated: false });
   },
 }));
