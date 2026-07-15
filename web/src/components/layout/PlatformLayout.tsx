@@ -5,13 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 function NavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
   return (
     <NavLink to={to}
-      className={({ isActive }) =>
-        `flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm transition-colors ${
-          isActive
-            ? 'bg-violet-100 text-violet-800 font-semibold'
-            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-        }`
-      }
+      className={({ isActive }) => isActive ? 'nav-item-active' : 'nav-item'}
     >
       {icon}
       <span>{label}</span>
@@ -26,16 +20,16 @@ export default function PlatformLayout() {
   function handleLogout() { logout(); navigate('/login'); }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden" style={{ background: '#E8EBF0' }}>
       {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-slate-200 flex flex-col shrink-0">
+      <aside className="w-60 flex flex-col shrink-0" style={{ borderRight: '1px solid rgba(163,177,198,0.3)' }}>
         {/* Brand */}
-        <div className="h-14 px-4 border-b border-slate-200 flex items-center gap-2.5">
+        <div className="h-14 px-4 flex items-center gap-2.5" style={{ borderBottom: '1px solid rgba(163,177,198,0.3)' }}>
           <div className="w-7 h-7 rounded bg-violet-600 flex items-center justify-center">
             <ShieldCheck size={15} className="text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-900 leading-none">MauzoSmart</p>
+            <p className="text-sm font-bold text-stone-900 leading-none">MauzoSmart</p>
             <p className="text-[10px] text-violet-600 font-semibold uppercase tracking-wider">Platform Admin</p>
           </div>
         </div>
@@ -50,14 +44,14 @@ export default function PlatformLayout() {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-slate-200 p-3">
+        <div className="p-3" style={{ borderTop: '1px solid rgba(163,177,198,0.3)' }}>
           <div className="px-3 py-2 mb-1">
-            <p className="text-xs font-semibold text-slate-900 truncate">{user?.fullName}</p>
+            <p className="text-xs font-semibold text-stone-900 truncate">{user?.fullName}</p>
             <p className="text-[10px] uppercase tracking-widest text-violet-500 font-semibold">Platform Admin</p>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-500 hover:bg-red-50 rounded-sm transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-500 hover:bg-red-50 rounded-xl transition-colors"
           >
             <LogOut size={13} /> Sign Out
           </button>

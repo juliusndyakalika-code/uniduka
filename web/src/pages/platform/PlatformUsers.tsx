@@ -34,89 +34,88 @@ export default function PlatformUsers() {
 
   const usersTable = useDataTable(data ?? [], {
     sortValues: {
-      user: u => u.fullName,
-      tenant: u => u.ownerAccount.legalName,
-      role: u => u.role,
+      user:      u => u.fullName,
+      tenant:    u => u.ownerAccount.legalName,
+      role:      u => u.role,
       lastLogin: u => (u.lastLoginAt ? new Date(u.lastLoginAt) : null),
-      status: u => (u.isActive ? 0 : 1),
+      status:    u => (u.isActive ? 0 : 1),
     },
     initialSort: { field: 'user', dir: 'asc' },
     pageSize: 25,
   });
-  const thBase = 'text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider';
 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">All Users</h1>
-        <p className="text-sm text-slate-500 mt-0.5">{data?.length ?? 0} users across all tenants</p>
+        <h1 className="page-title">All Users</h1>
+        <p className="page-subtitle">{data?.length ?? 0} users across all tenants</p>
       </div>
 
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      <div className="relative max-w-sm">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
         <input
           value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search by name or email…"
-          className="w-full max-w-sm pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:border-violet-400"
+          className="input pl-8"
         />
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="table-wrapper">
         {isLoading ? (
-          <div className="p-10 text-center text-slate-400 text-sm">Loading…</div>
+          <div className="p-10 text-center text-stone-400 text-sm">Loading…</div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
+          <table className="table">
+            <thead>
               <tr>
-                <SortableTh field="user" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>User</SortableTh>
-                <SortableTh field="tenant" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>Tenant</SortableTh>
-                <SortableTh field="role" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>Role</SortableTh>
-                <SortableTh field="lastLogin" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>Last Login</SortableTh>
-                <SortableTh field="status" sort={usersTable.sort} onSort={usersTable.toggleSort} className={thBase}>Status</SortableTh>
+                <SortableTh field="user"      sort={usersTable.sort} onSort={usersTable.toggleSort}>User</SortableTh>
+                <SortableTh field="tenant"    sort={usersTable.sort} onSort={usersTable.toggleSort}>Tenant</SortableTh>
+                <SortableTh field="role"      sort={usersTable.sort} onSort={usersTable.toggleSort}>Role</SortableTh>
+                <SortableTh field="lastLogin" sort={usersTable.sort} onSort={usersTable.toggleSort}>Last Login</SortableTh>
+                <SortableTh field="status"    sort={usersTable.sort} onSort={usersTable.toggleSort}>Status</SortableTh>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {usersTable.view.map(u => (
-                <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3">
+                <tr key={u.id}>
+                  <td>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-stone-100 text-stone-600 text-xs font-bold flex items-center justify-center shrink-0">
                         {u.fullName.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-semibold text-slate-900">{u.fullName}</p>
-                        <p className="text-xs text-slate-400">{u.email}</p>
+                        <p className="font-semibold text-stone-900">{u.fullName}</p>
+                        <p className="text-xs text-stone-400">{u.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <Link to={`/platform/accounts/${u.ownerAccount.id}`} className="text-violet-600 hover:underline text-xs font-medium">
                       {u.ownerAccount.legalName}
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ROLE_COLORS[u.role] ?? 'bg-slate-100 text-slate-600'}`}>
+                  <td>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ROLE_COLORS[u.role] ?? 'bg-stone-100 text-stone-600'}`}>
                       {u.role.replace(/_/g, ' ')}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-400">
+                  <td className="text-xs text-stone-400">
                     {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString() : 'Never'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <button
                       onClick={() => toggleUser({ id: u.id, isActive: !u.isActive })}
                       className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
                         u.isActive ? 'bg-emerald-100 text-emerald-700 hover:bg-red-100 hover:text-red-700'
-                                   : 'bg-slate-100 text-slate-500 hover:bg-emerald-100 hover:text-emerald-700'
+                                   : 'bg-stone-100 text-stone-500 hover:bg-emerald-100 hover:text-emerald-700'
                       }`}
                     >
-                      {u.isActive ? 'Active' : 'Deactivate'}
+                      {u.isActive ? 'Active' : 'Deactivated'}
                     </button>
                   </td>
                 </tr>
               ))}
               {usersTable.total === 0 && (
-                <tr><td colSpan={5} className="text-center text-slate-400 py-12">No users found</td></tr>
+                <tr><td colSpan={5} className="text-center text-stone-400 py-12">No users found</td></tr>
               )}
             </tbody>
           </table>
