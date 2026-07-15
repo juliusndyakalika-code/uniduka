@@ -1,5 +1,5 @@
 import { NavLink, useNavigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Building2, Store, Users, LogOut, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Building2, Store, Users, LogOut, ShieldCheck, Activity } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 function NavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
@@ -46,6 +46,7 @@ export default function PlatformLayout() {
           <NavItem to="/platform/accounts" icon={<Building2 size={15} />}       label="Tenant Accounts" />
           <NavItem to="/platform/shops"    icon={<Store size={15} />}           label="All Shops" />
           <NavItem to="/platform/users"    icon={<Users size={15} />}           label="All Users" />
+          <NavItem to="/platform/monitor"  icon={<Activity size={15} />}        label="Monitor" />
         </nav>
 
         {/* Footer */}

@@ -18,6 +18,7 @@ import PlatformAccounts from './pages/platform/PlatformAccounts';
 import PlatformAccountDetail from './pages/platform/PlatformAccountDetail';
 import PlatformShops from './pages/platform/PlatformShops';
 import PlatformUsers from './pages/platform/PlatformUsers';
+import PlatformMonitor from './pages/platform/PlatformMonitor';
 
 import Dashboard from './pages/dashboard/Dashboard';
 import PosPage from './pages/pos/PosPage';
@@ -80,6 +81,7 @@ export default function App() {
             <Route path="/platform/accounts/:id"       element={<PlatformAccountDetail />} />
             <Route path="/platform/shops"              element={<PlatformShops />} />
             <Route path="/platform/users"              element={<PlatformUsers />} />
+            <Route path="/platform/monitor"            element={<PlatformMonitor />} />
           </Route>
         </Route>
 

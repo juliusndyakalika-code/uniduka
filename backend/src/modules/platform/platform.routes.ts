@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../../middleware/auth';
 import {
-  getMetrics, listAccounts, getAccount, updateAccount, createAccount, activateAccount, approveAccount, suspendAccount,
+  getMetrics, getMonitor, listAccounts, getAccount, updateAccount, createAccount, activateAccount, approveAccount, suspendAccount,
   listShops, updateShop, listUsers, updateUser, resetShopData,
 } from './platform.controller';
 
@@ -11,6 +11,7 @@ const router = Router();
 router.use(authenticate, authorize('PLATFORM_ADMIN'));
 
 router.get('/metrics',          getMetrics);
+router.get('/monitor',          getMonitor);
 
 router.get('/accounts',         listAccounts);
 router.post('/accounts',        createAccount);

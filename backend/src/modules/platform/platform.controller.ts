@@ -234,6 +234,51 @@ export async function updateUser(req: Request, res: Response) {
   return R.ok(res, user);
 }
 
+// GET /api/v1/platform/monitor — system health + activity metrics
+export async function getMonitor(_req: Request, res: Response) {
+  const t0 = Date.now();
+  await prisma.$queryRaw`SELECT 1`;
+  const dbLatency = Date.now() - t0;
+
+  const mem    = process.memoryUsage();
+  const uptime = Math.floor(process.uptime());
+
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const since1h  = new Date(Date.now() - 60 * 60 * 1000);
+
+  const [txLast24h, txLastHour, loginsLast24h, activeUsers, totalTx, activeShops, activeProducts] = await Promise.all([
+    prisma.transaction.count({ where: { createdAt: { gte: since24h }, status: 'COMPLETED' } }),
+    prisma.transaction.count({ where: { createdAt: { gte: since1h  }, status: 'COMPLETED' } }),
+    prisma.user.count({ where: { lastLoginAt: { gte: since24h } } }),
+    prisma.user.count({ where: { isActive: true, role: { not: 'PLATFORM_ADMIN' as never } } }),
+    prisma.transaction.count({ where: { status: 'COMPLETED' } }),
+    prisma.shop.count({ where: { isActive: true } }),
+    prisma.product.count({ where: { isActive: true } }),
+  ]);
+
+  // Hourly transaction buckets for the last 24 h
+  const recentTx = await prisma.transaction.findMany({
+    where: { createdAt: { gte: since24h }, status: 'COMPLETED' },
+    select: { createdAt: true, total: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  const hourlyMap: Record<string, { hour: string; count: number; revenue: number }> = {};
+  for (const tx of recentTx) {
+    const h = tx.createdAt.toISOString().slice(0, 13);
+    if (!hourlyMap[h]) hourlyMap[h] = { hour: h, count: 0, revenue: 0 };
+    hourlyMap[h].count++;
+    hourlyMap[h].revenue += tx.total;
+  }
+
+  return R.ok(res, {
+    health:  { api: 'ok', db: dbLatency < 500 ? 'ok' : 'slow', dbLatency },
+    system:  { uptime, memUsed: Math.round(mem.heapUsed / 1024 / 1024), memTotal: Math.round(mem.heapTotal / 1024 / 1024), rss: Math.round(mem.rss / 1024 / 1024) },
+    activity: { txLast24h, txLastHour, loginsLast24h, activeUsers, totalTx, activeShops, activeProducts },
+    hourly:  Object.values(hourlyMap),
+    checkedAt: new Date().toISOString(),
+  });
+}
+
 // POST /api/v1/platform/accounts  — create a new tenant account + owner user
 export async function createAccount(req: AuthRequest, res: Response) {
   const { legalName, email, phone, ownerName, ownerEmail, ownerPassword, subscriptionPlan } = req.body;
