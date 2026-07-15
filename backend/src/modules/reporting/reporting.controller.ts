@@ -182,6 +182,20 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
     const totalGrossProfit  = grossProfit + consignmentProfit;
     const totalNetProfit    = totalGrossProfit - expenses;
 
+    // Stock investment: cash spent receiving goods in this period
+    const poAgg = await prisma.purchaseOrder.aggregate({
+      where: { shopId: shop(req), status: 'RECEIVED', receivedAt: range },
+      _sum: { totalAmount: true },
+    });
+    const stockPurchased = poAgg._sum.totalAmount ?? 0;
+
+    // Current inventory value at cost (snapshot, not period-filtered)
+    const inventoryItems = await prisma.inventoryItem.findMany({
+      where: { shopId: shop(req) },
+      select: { quantity: true, costPrice: true },
+    });
+    const inventoryValue = inventoryItems.reduce((s, i) => s + i.quantity * i.costPrice, 0);
+
     // Group by period → byDay
     const grouped: Record<string, { date: string; revenue: number; txCount: number; grossProfit: number }> = {};
     for (const tx of transactions) {
@@ -226,7 +240,7 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
     const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
 
     return R.ok(res, {
-      summary: { revenue, transactions: txCount, avgTicket, grossProfit, debtAmount, debtGrossProfit, expenses, netProfit, consignmentProfit, totalGrossProfit, totalNetProfit },
+      summary: { revenue, transactions: txCount, avgTicket, grossProfit, debtAmount, debtGrossProfit, expenses, netProfit, consignmentProfit, totalGrossProfit, totalNetProfit, stockPurchased, inventoryValue },
       byDay:           Object.values(grouped),
       byPaymentMethod: Object.values(pmMap),
       topProducts,

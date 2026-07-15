@@ -21,6 +21,7 @@ interface SalesReport {
     revenue: number; transactions: number; avgTicket: number; grossProfit: number;
     debtAmount?: number; debtGrossProfit?: number; expenses?: number; netProfit?: number;
     consignmentProfit?: number; totalGrossProfit?: number; totalNetProfit?: number;
+    stockPurchased?: number; inventoryValue?: number;
   };
   byDay: { date: string; revenue: number; txCount: number; grossProfit: number }[];
   byPaymentMethod: { method: string; label: string; total: number; count: number }[];
@@ -752,6 +753,35 @@ export default function SalesReportPage() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Stock investment — cash flow context for goods purchased */}
+          {!isHotel && (
+            <div className="card p-5 border-l-4 border-l-amber-400 bg-amber-50/30">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-stone-700">Stock Investment</h3>
+                  <p className="text-[11px] text-stone-400 mt-0.5">
+                    Cash spent buying goods — not an expense, but reduces your available cash.
+                  </p>
+                </div>
+                <Link to="/inventory/purchase-orders" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+                  View POs →
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="stat-value text-amber-700">{fmt(data?.summary.stockPurchased ?? 0)}</p>
+                  <p className="stat-label">Purchased this period</p>
+                  <p className="text-[10px] text-stone-400 mt-0.5">From received Purchase Orders</p>
+                </div>
+                <div>
+                  <p className="stat-value text-stone-700">{fmt(data?.summary.inventoryValue ?? 0)}</p>
+                  <p className="stat-label">Stock on hand (at cost)</p>
+                  <p className="text-[10px] text-stone-400 mt-0.5">Current inventory value</p>
+                </div>
+              </div>
             </div>
           )}
 
