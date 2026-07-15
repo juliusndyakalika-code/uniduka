@@ -6,12 +6,18 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../api/client';
 
+interface OnlineUser {
+  id: string; fullName: string; role: string; lastSeenAt: string;
+  ownerAccount?: { legalName: string } | null;
+  shopAccess?: { shop: { tradingName: string } }[];
+}
 interface MonitorData {
-  health:   { api: string; db: string; dbLatency: number };
-  system:   { uptime: number; memUsed: number; memTotal: number; rss: number };
-  activity: { txLast24h: number; txLastHour: number; loginsLast24h: number; activeUsers: number; totalTx: number; activeShops: number; activeProducts: number };
-  hourly:   { hour: string; count: number; revenue: number }[];
-  checkedAt: string;
+  health:      { api: string; db: string; dbLatency: number };
+  system:      { uptime: number; memUsed: number; memTotal: number; rss: number };
+  activity:    { txLast24h: number; txLastHour: number; loginsLast24h: number; activeUsers: number; totalTx: number; activeShops: number; activeProducts: number };
+  onlineUsers: OnlineUser[];
+  hourly:      { hour: string; count: number; revenue: number }[];
+  checkedAt:   string;
 }
 
 function uptime(seconds: number) {
@@ -159,6 +165,65 @@ export default function PlatformMonitor() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Who's Online */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+          </span>
+          <h2 className="text-sm font-semibold text-slate-700">
+            Who's Online
+          </h2>
+          <span className="ml-1 text-xs bg-emerald-100 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">
+            {data?.onlineUsers?.length ?? 0} active
+          </span>
+          <span className="ml-auto text-[10px] text-slate-400">Active in last 5 minutes</span>
+        </div>
+        {isLoading ? (
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => <div key={i} className="h-10 bg-slate-100 rounded-lg animate-pulse" />)}
+          </div>
+        ) : !data?.onlineUsers?.length ? (
+          <p className="text-sm text-slate-400 py-4 text-center">No users active in the last 5 minutes</p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {data.onlineUsers.map(u => {
+              const shop = u.shopAccess?.[0]?.shop?.tradingName;
+              const seenAgo = Math.round((Date.now() - new Date(u.lastSeenAt).getTime()) / 1000);
+              const seenLabel = seenAgo < 60 ? `${seenAgo}s ago` : `${Math.round(seenAgo / 60)}m ago`;
+              const roleColor: Record<string, string> = {
+                ACCOUNT_OWNER: 'bg-violet-100 text-violet-700',
+                CASHIER:       'bg-blue-100 text-blue-700',
+                INVENTORY_STAFF: 'bg-amber-100 text-amber-700',
+                MANAGER:       'bg-indigo-100 text-indigo-700',
+                RECEPTIONIST:  'bg-pink-100 text-pink-700',
+              };
+              return (
+                <div key={u.id} className="flex items-center gap-3 py-2.5">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                    <span className="text-sm font-bold text-slate-500">
+                      {u.fullName.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-900 truncate">{u.fullName}</p>
+                    <p className="text-xs text-slate-400 truncate">
+                      {u.ownerAccount?.legalName ?? ''}
+                      {shop ? ` · ${shop}` : ''}
+                    </p>
+                  </div>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleColor[u.role] ?? 'bg-slate-100 text-slate-600'}`}>
+                    {u.role.replace(/_/g, ' ')}
+                  </span>
+                  <span className="text-[10px] text-slate-400 whitespace-nowrap">{seenLabel}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Hourly Transaction Chart */}

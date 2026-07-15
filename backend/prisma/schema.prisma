@@ -362,6 +362,7 @@ model User {
   twoFaEnabled   Boolean      @default(false)
   isActive       Boolean      @default(true)
   lastLoginAt    DateTime?
+  lastSeenAt     DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

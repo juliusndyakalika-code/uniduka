@@ -246,6 +246,8 @@ export async function getMonitor(_req: Request, res: Response) {
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const since1h  = new Date(Date.now() - 60 * 60 * 1000);
 
+  const since5m   = new Date(Date.now() - 5 * 60 * 1000);
+
   const [txLast24h, txLastHour, loginsLast24h, activeUsers, totalTx, activeShops, activeProducts] = await Promise.all([
     prisma.transaction.count({ where: { createdAt: { gte: since24h }, status: 'COMPLETED' } }),
     prisma.transaction.count({ where: { createdAt: { gte: since1h  }, status: 'COMPLETED' } }),
@@ -255,6 +257,17 @@ export async function getMonitor(_req: Request, res: Response) {
     prisma.shop.count({ where: { isActive: true } }),
     prisma.product.count({ where: { isActive: true } }),
   ]);
+
+  // Users active in the last 5 minutes
+  const onlineUsers = await prisma.user.findMany({
+    where: { lastSeenAt: { gte: since5m }, role: { not: 'PLATFORM_ADMIN' as never } },
+    select: {
+      id: true, fullName: true, role: true, lastSeenAt: true,
+      ownerAccount: { select: { legalName: true } },
+      shopAccess: { select: { shop: { select: { tradingName: true } } }, take: 1 },
+    },
+    orderBy: { lastSeenAt: 'desc' },
+  });
 
   // Hourly transaction buckets for the last 24 h
   const recentTx = await prisma.transaction.findMany({
@@ -274,6 +287,7 @@ export async function getMonitor(_req: Request, res: Response) {
     health:  { api: 'ok', db: dbLatency < 500 ? 'ok' : 'slow', dbLatency },
     system:  { uptime, memUsed: Math.round(mem.heapUsed / 1024 / 1024), memTotal: Math.round(mem.heapTotal / 1024 / 1024), rss: Math.round(mem.rss / 1024 / 1024) },
     activity: { txLast24h, txLastHour, loginsLast24h, activeUsers, totalTx, activeShops, activeProducts },
+    onlineUsers,
     hourly:  Object.values(hourlyMap),
     checkedAt: new Date().toISOString(),
   });
