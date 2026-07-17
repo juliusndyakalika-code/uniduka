@@ -667,7 +667,7 @@ export async function getPO(req: AuthRequest, res: Response) {
   return R.ok(res, po);
 }
 export async function createPO(req: AuthRequest, res: Response) {
-  const { supplierId, type = 'LOCAL', lines, notes, expectedAt, exchangeRate, sharedCosts } = req.body;
+  const { supplierId, type = 'LOCAL', lines, notes, orderedAt, expectedAt, exchangeRate, sharedCosts } = req.body;
   const poNumber = `PO-${Date.now()}`;
   const lineData = (lines || []).map((l: { style?: string; qty: number; unitCost: number; sellingPrice?: number; color?: string; sizeRange?: string }) => ({
     style:        l.style || undefined,
@@ -681,7 +681,8 @@ export async function createPO(req: AuthRequest, res: Response) {
   const po = await prisma.purchaseOrder.create({
     data: {
       shopId: shop(req), supplierId: supplierId || undefined, poNumber, notes, type,
-      expectedAt: expectedAt ? new Date(expectedAt) : undefined,
+      orderedAt:   orderedAt   ? new Date(orderedAt)   : new Date(),
+      expectedAt:  expectedAt  ? new Date(expectedAt)  : undefined,
       exchangeRate: exchangeRate ? Number(exchangeRate) : undefined,
       sharedCosts: sharedCosts || undefined,
       totalAmount: total,

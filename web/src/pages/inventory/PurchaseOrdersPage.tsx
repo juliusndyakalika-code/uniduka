@@ -19,7 +19,7 @@ interface POLine {
 interface PO {
   id: string; poNumber: string; status: string; type: string; totalAmount: number;
   exchangeRate?: number; sharedCosts?: { shipping?: number; clearance?: number; transport?: number; other?: number };
-  supplier?: { name: string } | null; lines: POLine[]; createdAt: string; expectedAt?: string; notes?: string;
+  supplier?: { name: string } | null; lines: POLine[]; createdAt: string; orderedAt?: string; expectedAt?: string; notes?: string;
 }
 
 // CSV row types
@@ -205,6 +205,7 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [poType, setPoType] = useState<POType>('LOCAL');
   const [supplierId, setSupplierId] = useState('');
+  const [orderedAt, setOrderedAt] = useState(new Date().toISOString().slice(0, 10));
   const [expectedAt, setExpectedAt] = useState('');
   const [notes, setNotes] = useState('');
   // IMPORT extras (optional at PO time, can be updated at shipment time)
@@ -297,7 +298,7 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
       transport: parseFloat(transport) || 0, other: parseFloat(other) || 0,
     } : undefined;
     try {
-      await api.post('/inventory/po', { supplierId: supplierId || undefined, type: poType, expectedAt: expectedAt || undefined, notes: notes || undefined, lines, exchangeRate: rate, sharedCosts });
+      await api.post('/inventory/po', { supplierId: supplierId || undefined, type: poType, orderedAt: orderedAt || undefined, expectedAt: expectedAt || undefined, notes: notes || undefined, lines, exchangeRate: rate, sharedCosts });
       qc.invalidateQueries({ queryKey: ['purchase-orders'] });
       onCreated();
     } catch (e: unknown) {
@@ -344,7 +345,7 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="col-span-2">
                   <div className="flex items-center justify-between mb-2">
                     <label className="label mb-0">Supplier <span className="text-red-500">*</span></label>
                     <button
@@ -359,6 +360,17 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
                     <option value="">— Select supplier —</option>
                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
+                </div>
+                <div>
+                  <label className="label">Order Date</label>
+                  <input
+                    type="date" className="input" value={orderedAt}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={e => setOrderedAt(e.target.value)}
+                  />
+                  {orderedAt < new Date().toISOString().slice(0, 10) && (
+                    <p className="text-[10px] text-amber-600 mt-1">Backdated entry</p>
+                  )}
                 </div>
                 <div>
                   <label className="label">Expected Delivery</label>
@@ -584,6 +596,7 @@ export default function PurchaseOrdersPage() {
       total:       po => po.totalAmount,
       status:      po => po.status,
       type:        po => po.type,
+      orderedAt:   po => (po.orderedAt ? new Date(po.orderedAt) : new Date(po.createdAt)),
       expectedAt:  po => (po.expectedAt ? new Date(po.expectedAt) : null),
       createdAt:   po => new Date(po.createdAt),
     },
@@ -626,7 +639,7 @@ export default function PurchaseOrdersPage() {
                   <SortableTh field="supplier"   sort={poTable.sort} onSort={poTable.toggleSort}>Supplier</SortableTh>
                   <SortableTh field="total"      sort={poTable.sort} onSort={poTable.toggleSort}>Value</SortableTh>
                   <SortableTh field="status"     sort={poTable.sort} onSort={poTable.toggleSort}>Status</SortableTh>
-                  <SortableTh field="expectedAt" sort={poTable.sort} onSort={poTable.toggleSort}>Expected</SortableTh>
+                  <SortableTh field="orderedAt" sort={poTable.sort} onSort={poTable.toggleSort}>Order Date</SortableTh>
                   <th>Lines</th>
                   <th></th>
                 </tr>
@@ -643,8 +656,18 @@ export default function PurchaseOrdersPage() {
                     <td className="font-medium">{po.supplier?.name || <span className="text-stone-400">—</span>}</td>
                     <td>{po.totalAmount > 0 ? fmt(po.totalAmount) : <span className="text-stone-400">—</span>}</td>
                     <td><span className={`badge ${STATUS_BADGE[po.status] ?? 'badge-stone'}`}>{po.status.replace('_', ' ')}</span></td>
-                    <td className="text-stone-400 text-xs">
-                      {po.expectedAt ? new Date(po.expectedAt).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                    <td className="text-xs">
+                      {(() => {
+                        const d = po.orderedAt ?? po.createdAt;
+                        const dateStr = new Date(d).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short', year: 'numeric' });
+                        const today = new Date().toISOString().slice(0, 10);
+                        const isBackdated = (po.orderedAt ?? '').slice(0, 10) < today && !!po.orderedAt;
+                        return (
+                          <span className={isBackdated ? 'text-amber-600' : 'text-stone-400'}>
+                            {dateStr}{isBackdated && ' ↩'}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="text-stone-500 text-xs">{po.lines.length}</td>
                     <td>
