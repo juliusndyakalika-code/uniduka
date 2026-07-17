@@ -696,6 +696,15 @@ export async function updatePO(req: AuthRequest, res: Response) {
   await prisma.purchaseOrder.updateMany({ where: { id: req.params.id, shopId: shop(req) }, data: req.body });
   return R.ok(res, { message: 'PO updated' });
 }
+export async function deletePO(req: AuthRequest, res: Response) {
+  const po = await prisma.purchaseOrder.findFirst({ where: { id: req.params.id, shopId: shop(req) } });
+  if (!po) return R.notFound(res, 'PO not found');
+  if (po.status === 'PARTIALLY_RECEIVED' || po.status === 'RECEIVED') {
+    return R.badRequest(res, 'Cannot delete a PO that has already been received into stock');
+  }
+  await prisma.purchaseOrder.delete({ where: { id: req.params.id } });
+  return R.ok(res, { message: 'PO deleted' });
+}
 export async function receivePO(req: AuthRequest, res: Response) {
   // Receives a LOCAL PO: for each line, find or create the product, add stock
   const { lines } = req.body; // [{lineId, receivedQty, batchNo}]

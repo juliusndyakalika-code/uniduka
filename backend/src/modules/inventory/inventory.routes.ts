@@ -3,7 +3,7 @@ import multer from 'multer';
 import {
   listProducts, getProduct, lookupByBarcode, createProduct, updateProduct, deleteProduct, importProducts, importShipment, addProductStock,
   getInventoryDashboard,
-  listStock, adjustStock, receivePO, createPO, listPOs, getPO, updatePO,
+  listStock, adjustStock, receivePO, createPO, listPOs, getPO, updatePO, deletePO,
   listMovements, listImports, listSuppliers, createSupplier, updateSupplier,
   listRecipes, getRecipe, createRecipe, updateRecipe,
   getExpiryAlerts,
@@ -58,6 +58,7 @@ router.get('/po',              listPOs);
 router.post('/po',             createPO);
 router.get('/po/:id',          getPO);
 router.put('/po/:id',          updatePO);
+router.delete('/po/:id',       deletePO);
 router.post('/po/:id/receive', receivePO);
 
 // Movements

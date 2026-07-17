@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, X, ChevronRight, CheckCircle, Truck, Download, Upload,
-  ArrowRight, ArrowLeft, AlertCircle, Package, Ship, UserPlus,
+  ArrowRight, ArrowLeft, AlertCircle, Package, Ship, UserPlus, Trash2,
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -588,6 +588,15 @@ export default function PurchaseOrdersPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-orders'] }),
   });
 
+  const { mutate: deletePO } = useMutation({
+    mutationFn: (id: string) => api.delete(`/inventory/po/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['purchase-orders'] });
+      setSuccess('Purchase order deleted.');
+      setTimeout(() => setSuccess(''), 3000);
+    },
+  });
+
   const poTable = useDataTable(orders, {
     searchable: po => [po.poNumber, po.supplier?.name, po.status, po.type],
     sortValues: {
@@ -671,7 +680,7 @@ export default function PurchaseOrdersPage() {
                     </td>
                     <td className="text-stone-500 text-xs">{po.lines.length}</td>
                     <td>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         {po.status === 'DRAFT' && (
                           <button onClick={() => markSent(po.id)} className="text-xs text-primary-600 hover:underline">
                             Mark Sent
@@ -691,6 +700,17 @@ export default function PurchaseOrdersPage() {
                             className="flex items-center gap-1 text-xs text-blue-600 hover:underline font-medium"
                           >
                             <Ship size={12} /> Import Shipment
+                          </button>
+                        )}
+                        {(po.status === 'DRAFT' || po.status === 'SENT' || po.status === 'CANCELLED') && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete ${po.poNumber}? This cannot be undone.`)) deletePO(po.id);
+                            }}
+                            className="text-stone-300 hover:text-red-500 transition-colors"
+                            title="Delete PO"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         )}
                       </div>
