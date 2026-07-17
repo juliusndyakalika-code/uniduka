@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, X, ChevronRight, CheckCircle, Truck, Download, Upload,
-  ArrowRight, ArrowLeft, AlertCircle, Package, Ship,
+  ArrowRight, ArrowLeft, AlertCircle, Package, Ship, UserPlus,
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -124,6 +124,77 @@ function ReceiveModal({ po, onClose, onDone }: { po: PO; onClose: () => void; on
   );
 }
 
+// ── Quick-add supplier (called from inside NewPOModal) ────────────────────────
+function QuickAddSupplierModal({ onCreated, onClose }: {
+  onCreated: (id: string) => void;
+  onClose: () => void;
+}) {
+  const { shopId } = useAuthStore();
+  const qc = useQueryClient();
+  const [name, setName]   = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: () =>
+      api.post('/inventory/suppliers', {
+        name: name.trim(), phone: phone.trim() || undefined, email: email.trim() || undefined,
+      }).then(r => r.data.data as { id: string }),
+    onSuccess: (supplier) => {
+      qc.invalidateQueries({ queryKey: ['suppliers', shopId] });
+      onCreated(supplier.id);
+    },
+    onError: (e: unknown) =>
+      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to save'),
+  });
+
+  function submit(ev: React.FormEvent) {
+    ev.preventDefault();
+    if (!name.trim()) { setError('Supplier name is required.'); return; }
+    setError(''); mutate();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+      <div className="card w-full max-w-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h4 className="text-sm font-bold text-stone-900">Add New Supplier</h4>
+            <p className="text-xs text-stone-400 mt-0.5">Will be available immediately in this PO</p>
+          </div>
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-700"><X size={16} /></button>
+        </div>
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="label">Supplier Name <span className="text-red-500">*</span></label>
+            <input
+              className="input" value={name} autoFocus
+              onChange={e => { setName(e.target.value); setError(''); }}
+              placeholder="e.g. ABC Wholesalers"
+            />
+          </div>
+          <div>
+            <label className="label">Phone</label>
+            <input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+255 7XX XXX XXX" />
+          </div>
+          <div>
+            <label className="label">Email</label>
+            <input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="supplier@example.com" />
+          </div>
+          {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5">{error}</p>}
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" disabled={isPending} className="btn-primary flex-1">
+              <UserPlus size={13} /> {isPending ? 'Saving…' : 'Add Supplier'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── New PO wizard ─────────────────────────────────────────────────────────────
 function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { shopId } = useAuthStore();
@@ -153,6 +224,7 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [step1Error, setStep1Error] = useState('');
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
 
   function goToStep2() {
     if (!supplierId) { setStep1Error('Please select a supplier.'); return; }
@@ -237,6 +309,7 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
   const totalQty = poType === 'LOCAL' ? localRows.reduce((s, r) => s + r.qty, 0) : importRows.reduce((s, r) => s + r.qty, 0);
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="card w-full max-w-2xl max-h-[92vh] flex flex-col">
         {/* Header */}
@@ -272,7 +345,16 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Supplier <span className="text-red-500">*</span></label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="label mb-0">Supplier <span className="text-red-500">*</span></label>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddSupplier(true)}
+                      className="flex items-center gap-1 text-xs text-primary-600 hover:underline"
+                    >
+                      <UserPlus size={11} /> New supplier
+                    </button>
+                  </div>
                   <select className="input" value={supplierId} onChange={e => { setSupplierId(e.target.value); setStep1Error(''); }}>
                     <option value="">— Select supplier —</option>
                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -464,6 +546,13 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
         </div>
       </div>
     </div>
+    {showAddSupplier && (
+      <QuickAddSupplierModal
+        onCreated={(id) => { setSupplierId(id); setStep1Error(''); setShowAddSupplier(false); }}
+        onClose={() => setShowAddSupplier(false)}
+      />
+    )}
+    </>
   );
 }
 
