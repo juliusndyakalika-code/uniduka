@@ -182,12 +182,17 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
     const totalGrossProfit  = grossProfit + consignmentProfit;
     const totalNetProfit    = totalGrossProfit - expenses;
 
-    // Stock investment: cash spent receiving goods in this period
-    const poAgg = await prisma.purchaseOrder.aggregate({
+    // Stock investment: LOCAL POs in TZS, IMPORT POs converted CNY→TZS via exchangeRate
+    const receivedPOs = await prisma.purchaseOrder.findMany({
       where: { shopId: shop(req), status: 'RECEIVED', receivedAt: range },
-      _sum: { totalAmount: true },
+      select: { totalAmount: true, type: true, exchangeRate: true },
     });
-    const stockPurchased = poAgg._sum.totalAmount ?? 0;
+    const stockPurchased = receivedPOs.reduce((sum, po) => {
+      const tzs = po.type === 'IMPORT' && po.exchangeRate
+        ? po.totalAmount * po.exchangeRate
+        : po.totalAmount;
+      return sum + tzs;
+    }, 0);
 
     // Current inventory value at cost (snapshot, not period-filtered)
     const inventoryItems = await prisma.inventoryItem.findMany({

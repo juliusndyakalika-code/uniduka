@@ -663,7 +663,13 @@ export default function PurchaseOrdersPage() {
                       </span>
                     </td>
                     <td className="font-medium">{po.supplier?.name || <span className="text-stone-400">—</span>}</td>
-                    <td>{po.totalAmount > 0 ? fmt(po.totalAmount) : <span className="text-stone-400">—</span>}</td>
+                    <td>
+                      {po.totalAmount > 0
+                        ? po.type === 'IMPORT'
+                          ? <span>¥{po.totalAmount.toLocaleString()}</span>
+                          : fmt(po.totalAmount)
+                        : <span className="text-stone-400">—</span>}
+                    </td>
                     <td><span className={`badge ${STATUS_BADGE[po.status] ?? 'badge-stone'}`}>{po.status.replace('_', ' ')}</span></td>
                     <td className="text-xs">
                       {(() => {
