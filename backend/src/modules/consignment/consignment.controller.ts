@@ -56,6 +56,7 @@ export async function listSales(req: AuthRequest, res: Response) {
     include: {
       partner: { select: { id: true, name: true } },
       soldBy: { select: { id: true, fullName: true } },
+      customer: { select: { id: true, fullName: true, phone: true } },
     },
     orderBy: { soldAt: 'desc' },
   });
@@ -63,7 +64,7 @@ export async function listSales(req: AuthRequest, res: Response) {
 }
 
 export async function createSale(req: AuthRequest, res: Response) {
-  const { partnerId, productName, costPrice, sellingPrice, qty, notes, soldAt, paymentMethod } = req.body;
+  const { partnerId, productName, costPrice, sellingPrice, qty, notes, soldAt, paymentMethod, customerId } = req.body;
 
   const partner = await prisma.consignmentPartner.findFirst({
     where: { id: partnerId, shopId: shop(req), isActive: true },
@@ -81,6 +82,15 @@ export async function createSale(req: AuthRequest, res: Response) {
   // A DEBIT (credit) sale starts unpaid; every other method is settled in full at the sale.
   const amountPaid = method === 'DEBIT' ? 0 : revenue;
 
+  // A customer (debtor) is captured only for credit sales, and is required there.
+  let linkedCustomerId: string | null = null;
+  if (method === 'DEBIT') {
+    if (!customerId) return R.badRequest(res, 'A customer is required for a credit (debit) sale');
+    const customer = await prisma.customer.findFirst({ where: { id: customerId, shopId: shop(req) } });
+    if (!customer) return R.badRequest(res, 'Customer not found');
+    linkedCustomerId = customer.id;
+  }
+
   const sale = await prisma.consignmentSale.create({
     data: {
       shopId: shop(req),
@@ -93,12 +103,14 @@ export async function createSale(req: AuthRequest, res: Response) {
       notes,
       paymentMethod: method as never,
       amountPaid,
+      customerId: linkedCustomerId,
       soldById: req.user!.sub,
       ...(soldAt && { soldAt: new Date(soldAt) }),
     },
     include: {
       partner: { select: { id: true, name: true } },
       soldBy: { select: { id: true, fullName: true } },
+      customer: { select: { id: true, fullName: true, phone: true } },
     },
   });
   return R.created(res, sale);
@@ -133,6 +145,7 @@ export async function settleSale(req: AuthRequest, res: Response) {
     include: {
       partner: { select: { id: true, name: true } },
       soldBy: { select: { id: true, fullName: true } },
+      customer: { select: { id: true, fullName: true, phone: true } },
     },
   });
   return R.ok(res, { sale: updated, paid: pay, remaining: Math.max(0, revenue - updated.amountPaid) });

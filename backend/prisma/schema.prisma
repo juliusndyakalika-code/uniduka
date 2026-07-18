@@ -820,6 +820,7 @@ model Customer {
 
   transactions   Transaction[]
   appointments   Appointment[]
+  consignmentSales ConsignmentSale[]
 
   @@map("customers")
 }
@@ -1128,6 +1129,10 @@ model ConsignmentSale {
 
   paymentMethod PaymentMethod @default(CASH)
   amountPaid    Float         @default(0)   // collected from customer; < sellingPrice*qty means outstanding (credit)
+
+  // Debtor — captured only for credit (DEBIT) sales so the balance is collectable
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   soldById String
   soldBy   User   @relation(fields: [soldById], references: [id])

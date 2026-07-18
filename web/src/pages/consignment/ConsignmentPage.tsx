@@ -16,6 +16,7 @@ interface Sale {
   amountPaid?: number;
   partner: { id: string; name: string };
   soldBy: { id: string; fullName: string };
+  customer?: { id: string; fullName: string; phone?: string } | null;
 }
 
 const PAYMENT_METHODS = [
@@ -59,7 +60,8 @@ function todayYmd() { return ymd(new Date()); }
 // ── Forms ─────────────────────────────────────────────────────────────────────
 
 type PartnerForm = { name: string; phone?: string; email?: string; notes?: string; };
-type SaleForm = { partnerId: string; productName: string; costPrice: number; sellingPrice: number; qty: number; notes?: string; soldAt?: string; paymentMethod?: string; };
+type SaleForm = { partnerId: string; productName: string; costPrice: number; sellingPrice: number; qty: number; notes?: string; soldAt?: string; paymentMethod?: string; customerId?: string; };
+interface CustomerOpt { id: string; fullName: string; phone?: string; }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
@@ -92,6 +94,13 @@ export default function ConsignmentPage() {
     queryKey: ['consignment-partners', shopId],
     queryFn: () => api.get('/consignment/partners').then(r => r.data.data),
     enabled: !!shopId,
+  });
+
+  // Customers for linking a credit (debit) sale to a debtor
+  const { data: customers = [] } = useQuery<CustomerOpt[]>({
+    queryKey: ['crm-customers', shopId],
+    queryFn: () => api.get('/crm').then(r => (Array.isArray(r.data.data) ? r.data.data : [])),
+    enabled: !!shopId && showSaleForm,
   });
 
   const { data: sales = [], isLoading: salesLoading } = useQuery<Sale[]>({
@@ -159,6 +168,7 @@ export default function ConsignmentPage() {
   const watchCost = useWatch({ control: saleForm.control, name: 'costPrice' });
   const watchSell = useWatch({ control: saleForm.control, name: 'sellingPrice' });
   const watchQty = useWatch({ control: saleForm.control, name: 'qty' });
+  const watchMethod = useWatch({ control: saleForm.control, name: 'paymentMethod' });
   const previewProfit = (Number(watchSell) - Number(watchCost) || 0) * (Number(watchQty) || 0);
 
   // ── Summary stats ─────────────────────────────────────────────────────────────
@@ -360,7 +370,9 @@ export default function ConsignmentPage() {
                       <td>
                         <span className="badge badge-stone text-xs">{paymentLabel(s.paymentMethod)}</span>
                         {outstanding > 0 && (
-                          <span className="block mt-0.5 text-[10px] font-semibold text-amber-700">Owes {fmt(outstanding)}</span>
+                          <span className="block mt-0.5 text-[10px] font-semibold text-amber-700">
+                            Owes {fmt(outstanding)}{s.customer ? ` · ${s.customer.fullName}` : ''}
+                          </span>
                         )}
                       </td>
                       <td className="text-stone-500">{s.soldBy.fullName}</td>
@@ -627,6 +639,19 @@ export default function ConsignmentPage() {
                   {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
               </div>
+              {/* Customer — captured only for credit (debit) sales */}
+              {watchMethod === 'DEBIT' && (
+                <div>
+                  <label className="label">Customer (owes) *</label>
+                  <select className="select w-full" {...saleForm.register('customerId', { required: watchMethod === 'DEBIT' })}>
+                    <option value="">Select customer…</option>
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.fullName}{c.phone ? ` · ${c.phone}` : ''}</option>)}
+                  </select>
+                  {customers.length === 0 && (
+                    <p className="text-[10px] text-amber-600 mt-1">No customers yet — add one under Customers first.</p>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">{t('common.date')}</label>
@@ -658,8 +683,8 @@ export default function ConsignmentPage() {
             </div>
             <div className="bg-stone-50 rounded-lg p-3 mb-4 flex justify-between items-center text-sm">
               <div>
-                <p className="font-medium text-stone-900">{settlingSale.productName}</p>
-                <p className="text-xs text-stone-400">{settlingSale.partner.name}</p>
+                <p className="font-medium text-stone-900">{settlingSale.customer?.fullName ?? settlingSale.productName}</p>
+                <p className="text-xs text-stone-400">{settlingSale.productName} · {settlingSale.partner.name}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-stone-400">Owes</p>
