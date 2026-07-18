@@ -13,6 +13,7 @@ interface Partner { id: string; name: string; phone?: string; email?: string; no
 interface Sale {
   id: string; productName: string; costPrice: number; sellingPrice: number;
   qty: number; profit: number; notes?: string; soldAt: string; paymentMethod?: string;
+  amountPaid?: number;
   partner: { id: string; name: string };
   soldBy: { id: string; fullName: string };
 }
@@ -22,7 +23,11 @@ const PAYMENT_METHODS = [
   { value: 'MOBILE_MONEY',  label: 'Mobile Money' },
   { value: 'CARD',          label: 'Card' },
   { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  { value: 'DEBIT',         label: 'Debit (Credit — pay later)' },
 ];
+// Revenue and outstanding balance for a sale
+function saleRevenue(s: Sale) { return s.sellingPrice * s.qty; }
+function saleOutstanding(s: Sale) { return Math.max(0, saleRevenue(s) - (s.amountPaid ?? saleRevenue(s))); }
 function paymentLabel(m?: string) {
   return PAYMENT_METHODS.find(p => p.value === m)?.label ?? (m ? m.replace('_', ' ') : '—');
 }
@@ -74,6 +79,8 @@ export default function ConsignmentPage() {
   // modal state
   const [showPartnerForm, setShowPartnerForm] = useState(false);
   const [showSaleForm, setShowSaleForm] = useState(false);
+  const [settlingSale, setSettlingSale] = useState<Sale | null>(null);
+  const [settleAmount, setSettleAmount] = useState('');
 
   function err(e: unknown) {
     return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Something went wrong';
@@ -133,6 +140,16 @@ export default function ConsignmentPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consignment-sales'] });
       qc.invalidateQueries({ queryKey: ['consignment-profit-report'] });
+    },
+    onError: (e) => setError(err(e)),
+  });
+
+  const { mutate: settleSale, isPending: settling } = useMutation({
+    mutationFn: ({ id, amount }: { id: string; amount: number }) =>
+      api.post(`/consignment/sales/${id}/settle`, { amount }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['consignment-sales'] });
+      setSettlingSale(null); setSettleAmount(''); setError('');
     },
     onError: (e) => setError(err(e)),
   });
@@ -323,11 +340,13 @@ export default function ConsignmentPage() {
                     <SortableTh field="payment" sort={salesTable.sort} onSort={salesTable.toggleSort}>{t('consignment.paymentMethod')}</SortableTh>
                     <SortableTh field="soldBy" sort={salesTable.sort} onSort={salesTable.toggleSort}>Sold By</SortableTh>
                     <SortableTh field="soldAt" sort={salesTable.sort} onSort={salesTable.toggleSort}>{t('common.date')}</SortableTh>
-                    {isOwner && <th></th>}
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {salesTable.view.map(s => (
+                  {salesTable.view.map(s => {
+                    const outstanding = saleOutstanding(s);
+                    return (
                     <tr key={s.id}>
                       <td className="font-medium">{s.productName}</td>
                       <td className="text-stone-500">{s.partner.name}</td>
@@ -338,20 +357,34 @@ export default function ConsignmentPage() {
                       </td>
                       <td className="text-xs">{s.qty}</td>
                       <td className="font-semibold text-green-600">{fmt(s.profit)}</td>
-                      <td><span className="badge badge-stone text-xs">{paymentLabel(s.paymentMethod)}</span></td>
+                      <td>
+                        <span className="badge badge-stone text-xs">{paymentLabel(s.paymentMethod)}</span>
+                        {outstanding > 0 && (
+                          <span className="block mt-0.5 text-[10px] font-semibold text-amber-700">Owes {fmt(outstanding)}</span>
+                        )}
+                      </td>
                       <td className="text-stone-500">{s.soldBy.fullName}</td>
                       <td className="text-stone-400">{date(s.soldAt)}</td>
-                      {isOwner && (
-                        <td>
-                          <button className="btn-sm btn-ghost text-red-500" onClick={() => removeSale(s.id)} title="Delete">
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      )}
+                      <td>
+                        <div className="flex items-center justify-end gap-1">
+                          {outstanding > 0 && (
+                            <button className="text-xs font-semibold text-primary-600 hover:text-primary-800 px-2 py-1 rounded hover:bg-primary-50"
+                              onClick={() => { setError(''); setSettlingSale(s); setSettleAmount(String(outstanding)); }}>
+                              Settle
+                            </button>
+                          )}
+                          {isOwner && (
+                            <button className="btn-sm btn-ghost text-red-500" onClick={() => removeSale(s.id)} title="Delete">
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                   {salesTable.total === 0 && (
-                    <tr><td colSpan={isOwner ? 9 : 8} className="text-center text-stone-400 py-8">{t('common.noData')}</td></tr>
+                    <tr><td colSpan={9} className="text-center text-stone-400 py-8">{t('common.noData')}</td></tr>
                   )}
                 </tbody>
               </table>
@@ -611,6 +644,38 @@ export default function ConsignmentPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Settle credit sale ────────────────────────────────────────── */}
+      {settlingSale && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="card w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-stone-900">Record Payment</h2>
+              <button onClick={() => setSettlingSale(null)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+            </div>
+            <div className="bg-stone-50 rounded-lg p-3 mb-4 flex justify-between items-center text-sm">
+              <div>
+                <p className="font-medium text-stone-900">{settlingSale.productName}</p>
+                <p className="text-xs text-stone-400">{settlingSale.partner.name}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-stone-400">Owes</p>
+                <p className="font-bold text-amber-700">{fmt(saleOutstanding(settlingSale))}</p>
+              </div>
+            </div>
+            <label className="label">Amount received</label>
+            <input type="number" min="0" max={saleOutstanding(settlingSale)} className="input" autoFocus
+              value={settleAmount} onChange={e => setSettleAmount(e.target.value)} />
+            <div className="flex gap-3 pt-4">
+              <button className="btn-secondary flex-1" onClick={() => setSettlingSale(null)}>{t('common.cancel')}</button>
+              <button className="btn-primary flex-1" disabled={settling || !settleAmount || Number(settleAmount) <= 0}
+                onClick={() => settleSale({ id: settlingSale.id, amount: Number(settleAmount) })}>
+                {settling ? t('common.saving') : `Record ${settleAmount ? fmt(Number(settleAmount)) : 'Payment'}`}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -74,9 +74,12 @@ export async function createSale(req: AuthRequest, res: Response) {
   const sell = Number(sellingPrice);
   const quantity = Number(qty);
   const profit = (sell - cost) * quantity;
+  const revenue = sell * quantity;
 
-  const VALID_METHODS = ['CASH', 'CARD', 'MOBILE_MONEY', 'BANK_TRANSFER'];
+  const VALID_METHODS = ['CASH', 'CARD', 'MOBILE_MONEY', 'BANK_TRANSFER', 'DEBIT'];
   const method = VALID_METHODS.includes(paymentMethod) ? paymentMethod : 'CASH';
+  // A DEBIT (credit) sale starts unpaid; every other method is settled in full at the sale.
+  const amountPaid = method === 'DEBIT' ? 0 : revenue;
 
   const sale = await prisma.consignmentSale.create({
     data: {
@@ -89,6 +92,7 @@ export async function createSale(req: AuthRequest, res: Response) {
       profit,
       notes,
       paymentMethod: method as never,
+      amountPaid,
       soldById: req.user!.sub,
       ...(soldAt && { soldAt: new Date(soldAt) }),
     },
@@ -106,6 +110,32 @@ export async function deleteSale(req: AuthRequest, res: Response) {
   });
   if (!r.count) return R.notFound(res);
   return R.noContent(res);
+}
+
+// Record a payment against a credit (debit) consignment sale.
+export async function settleSale(req: AuthRequest, res: Response) {
+  const amount = Number(req.body.amount);
+  if (!amount || amount <= 0) return R.badRequest(res, 'A positive amount is required');
+
+  const sale = await prisma.consignmentSale.findFirst({
+    where: { id: req.params.id, shopId: shop(req) },
+  });
+  if (!sale) return R.notFound(res);
+
+  const revenue = sale.sellingPrice * sale.qty;
+  const outstanding = Math.max(0, revenue - sale.amountPaid);
+  if (outstanding <= 0) return R.badRequest(res, 'This sale is already fully paid');
+
+  const pay = Math.min(amount, outstanding);
+  const updated = await prisma.consignmentSale.update({
+    where: { id: sale.id },
+    data: { amountPaid: sale.amountPaid + pay },
+    include: {
+      partner: { select: { id: true, name: true } },
+      soldBy: { select: { id: true, fullName: true } },
+    },
+  });
+  return R.ok(res, { sale: updated, paid: pay, remaining: Math.max(0, revenue - updated.amountPaid) });
 }
 
 // ── Profit report (by seller & by payment method) ───────────────────────────

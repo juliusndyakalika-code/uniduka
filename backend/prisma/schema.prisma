@@ -1127,6 +1127,7 @@ model ConsignmentSale {
   notes        String?
 
   paymentMethod PaymentMethod @default(CASH)
+  amountPaid    Float         @default(0)   // collected from customer; < sellingPrice*qty means outstanding (credit)
 
   soldById String
   soldBy   User   @relation(fields: [soldById], references: [id])

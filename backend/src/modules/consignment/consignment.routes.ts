@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authorize } from '../../middleware/auth';
 import {
   listPartners, createPartner, updatePartner, deletePartner,
-  listSales, createSale, deleteSale,
+  listSales, createSale, deleteSale, settleSale,
   getProfitReport,
 } from './consignment.controller';
 
@@ -17,6 +17,7 @@ router.delete('/partners/:id', authorize('ACCOUNT_OWNER'), deletePartner);
 // Sales — record: all roles; delete: owner only
 router.get('/sales',           listSales);
 router.post('/sales',          createSale);
+router.post('/sales/:id/settle', settleSale);
 router.delete('/sales/:id',    authorize('ACCOUNT_OWNER'), deleteSale);
 
 router.get('/profit-report',   getProfitReport);
