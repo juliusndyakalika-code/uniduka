@@ -83,6 +83,12 @@ export default function ConsignmentPage() {
   const [showSaleForm, setShowSaleForm] = useState(false);
   const [settlingSale, setSettlingSale] = useState<Sale | null>(null);
   const [settleAmount, setSettleAmount] = useState('');
+  // Quick-add customer (from inside the credit sale form)
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
+  const [newCustName, setNewCustName] = useState('');
+  const [newCustPhone, setNewCustPhone] = useState('');
+  const [savingCust, setSavingCust] = useState(false);
+  const [newCustError, setNewCustError] = useState('');
 
   function err(e: unknown) {
     return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Something went wrong';
@@ -170,6 +176,21 @@ export default function ConsignmentPage() {
   const watchQty = useWatch({ control: saleForm.control, name: 'qty' });
   const watchMethod = useWatch({ control: saleForm.control, name: 'paymentMethod' });
   const previewProfit = (Number(watchSell) - Number(watchCost) || 0) * (Number(watchQty) || 0);
+
+  async function saveNewCustomer() {
+    if (!newCustName.trim()) { setNewCustError('Name is required'); return; }
+    setSavingCust(true); setNewCustError('');
+    try {
+      const res = await api.post('/crm', { fullName: newCustName.trim(), phone: newCustPhone.trim() || undefined });
+      const cust = res.data.data as CustomerOpt;
+      await qc.invalidateQueries({ queryKey: ['crm-customers'] });
+      saleForm.setValue('customerId', cust.id, { shouldValidate: true });
+      setShowNewCustomer(false); setNewCustName(''); setNewCustPhone('');
+    } catch (e) {
+      setNewCustError(err(e));
+    }
+    setSavingCust(false);
+  }
 
   // ── Summary stats ─────────────────────────────────────────────────────────────
 
@@ -642,13 +663,35 @@ export default function ConsignmentPage() {
               {/* Customer — captured only for credit (debit) sales */}
               {watchMethod === 'DEBIT' && (
                 <div>
-                  <label className="label">Customer (owes) *</label>
-                  <select className="select w-full" {...saleForm.register('customerId', { required: watchMethod === 'DEBIT' })}>
-                    <option value="">Select customer…</option>
-                    {customers.map(c => <option key={c.id} value={c.id}>{c.fullName}{c.phone ? ` · ${c.phone}` : ''}</option>)}
-                  </select>
-                  {customers.length === 0 && (
-                    <p className="text-[10px] text-amber-600 mt-1">No customers yet — add one under Customers first.</p>
+                  <div className="flex items-center justify-between">
+                    <label className="label">Customer (owes) *</label>
+                    <button type="button" onClick={() => { setNewCustError(''); setShowNewCustomer(v => !v); }}
+                      className="text-xs font-medium text-primary-600 hover:text-primary-700">
+                      {showNewCustomer ? 'Cancel' : '+ New customer'}
+                    </button>
+                  </div>
+                  {showNewCustomer ? (
+                    <div className="border border-stone-200 rounded-lg p-3 space-y-2 bg-stone-50">
+                      <input className="input text-xs" placeholder="Full name" autoFocus
+                        value={newCustName} onChange={e => setNewCustName(e.target.value)} />
+                      <input className="input text-xs" placeholder="Phone (optional)" type="tel"
+                        value={newCustPhone} onChange={e => setNewCustPhone(e.target.value)} />
+                      {newCustError && <p className="text-[10px] text-red-600">{newCustError}</p>}
+                      <button type="button" className="btn-primary w-full text-xs py-1.5" disabled={savingCust}
+                        onClick={saveNewCustomer}>
+                        {savingCust ? t('common.saving') : 'Add & select'}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <select className="select w-full" {...saleForm.register('customerId', { required: watchMethod === 'DEBIT' })}>
+                        <option value="">Select customer…</option>
+                        {customers.map(c => <option key={c.id} value={c.id}>{c.fullName}{c.phone ? ` · ${c.phone}` : ''}</option>)}
+                      </select>
+                      {customers.length === 0 && (
+                        <p className="text-[10px] text-amber-600 mt-1">No customers yet — tap “+ New customer” to add one.</p>
+                      )}
+                    </>
                   )}
                 </div>
               )}
