@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Store, CreditCard, Printer, X, Wallet } from 'lucide-react';
+import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Store, CreditCard, Printer, X, Wallet, Boxes } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -15,6 +15,7 @@ interface DashboardData {
   transactions: { today: number; week: number };
   customers: { total: number; new: number };
   lowStock: number;
+  stockValue?: number;
   topProducts: { name: string; qty: number; revenue: number }[];
   recentTransactions: { id: string; receiptNo: string; total: number; paymentMethod: string; createdAt: string; status: string; cashierName?: string }[];
   salesChart: { label: string; revenue: number }[];
@@ -176,6 +177,12 @@ export default function Dashboard() {
             sub={data.netProfit.consignmentProfit > 0 ? `incl. ${fmt(data.netProfit.consignmentProfit)} consignment` : `after ${fmt(data.netProfit.expenses)} expenses`}
             color={data.netProfit.month >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}
             to="/reports/sales" />
+        )}
+        {!isHotel && data?.stockValue != null && (
+          <StatCard icon={Boxes} label={t('dashboard.stockInvestment')} value={fmt(data.stockValue)}
+            sub="Value tied up in inventory (at cost)"
+            color="bg-amber-50 text-amber-600"
+            to="/inventory" />
         )}
       </div>
 

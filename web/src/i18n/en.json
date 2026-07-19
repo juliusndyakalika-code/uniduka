@@ -169,7 +169,8 @@
     "reprintTitle": "Reprint Receipt",
     "managePlan": "Manage",
     "plan": "{{plan}} plan",
-    "netProfitMonth": "Net Profit (This Month)"
+    "netProfitMonth": "Net Profit (This Month)",
+    "stockInvestment": "Stock Investment"
   },
   "pos": {
     "title": "Point of Sale",

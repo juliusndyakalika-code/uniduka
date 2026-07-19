@@ -191,13 +191,19 @@ export async function getDashboard(req: AuthRequest, res: Response) {
     prisma.transaction.count({ where: { shopId, status: 'COMPLETED', createdAt: { gte: startOfWeek } } }),
     prisma.customer.count({ where: { shopId } }),
     prisma.customer.count({ where: { shopId, createdAt: { gte: startOfMonth } } }),
-    prisma.product.findMany({ where: { shopId, isActive: true }, select: { id: true, name: true, minStockLevel: true, reorderPoint: true, inventory: { select: { quantity: true } } } }),
+    prisma.product.findMany({ where: { shopId, isActive: true }, select: { id: true, name: true, minStockLevel: true, reorderPoint: true, inventory: { select: { quantity: true, costPrice: true } } } }),
   ]);
 
   const lowStock = products.filter(p => {
     const qty = p.inventory.reduce((s, i) => s + i.quantity, 0);
     return qty <= p.reorderPoint;
   }).length;
+
+  // Stock investment = money currently tied up in inventory (qty × cost).
+  const stockValue = products.reduce(
+    (s, p) => s + p.inventory.reduce((is, i) => is + i.quantity * i.costPrice, 0),
+    0,
+  );
 
   const recentTx = await prisma.transaction.findMany({
     where: { shopId, status: 'COMPLETED' },
@@ -256,6 +262,7 @@ export async function getDashboard(req: AuthRequest, res: Response) {
     transactions: { today: todayTx, week: weekTx },
     customers: { total: totalCustomers, new: newCustomers },
     lowStock,
+    stockValue,
     topProducts: topItems.map(i => ({ name: nameMap[i.productId ?? ''] ?? '—', qty: i._sum.quantity ?? 0, revenue: i._sum.lineTotal ?? 0 })),
     recentTransactions: recentTx.map(tx => ({ id: tx.id, receiptNo: tx.receiptNo, total: tx.total, paymentMethod: tx.payments[0]?.method?.toString() ?? 'CASH', createdAt: tx.createdAt })),
     salesChart,

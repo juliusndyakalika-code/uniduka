@@ -169,7 +169,8 @@
     "reprintTitle": "Chapisha Risiti Tena",
     "managePlan": "Simamia",
     "plan": "Mpango {{plan}}",
-    "netProfitMonth": "Faida Halisi (Mwezi Huu)"
+    "netProfitMonth": "Faida Halisi (Mwezi Huu)",
+    "stockInvestment": "Uwekezaji wa Hisa"
   },
   "pos": {
     "title": "Mauzo (POS)",
