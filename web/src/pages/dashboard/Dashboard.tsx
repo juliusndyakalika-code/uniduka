@@ -188,7 +188,7 @@ export default function Dashboard() {
 
       {/* Charts + top products */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="card p-5 lg:col-span-2">
+        <div className="card p-5 lg:col-span-2 min-w-0">
           <h3 className="text-sm font-semibold text-stone-700 mb-4">{t('dashboard.salesChart')}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data?.salesChart ?? []} barSize={14}>

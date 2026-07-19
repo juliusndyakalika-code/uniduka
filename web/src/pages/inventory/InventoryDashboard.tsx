@@ -155,7 +155,7 @@ export default function InventoryDashboard() {
       <div className="grid lg:grid-cols-3 gap-4">
 
         {/* Stock value by category — bar */}
-        <div className="card p-5 lg:col-span-2">
+        <div className="card p-5 lg:col-span-2 min-w-0">
           <SectionHeader title="Stock Value by Category" />
           {byCategory.length === 0 ? (
             <p className="text-sm text-stone-400 text-center py-8">No categorised products yet</p>
@@ -178,7 +178,7 @@ export default function InventoryDashboard() {
         </div>
 
         {/* Product type distribution — donut */}
-        <div className="card p-5">
+        <div className="card p-5 min-w-0">
           <SectionHeader title="By Product Type" />
           {byType.length === 0 ? (
             <p className="text-sm text-stone-400 text-center py-8">No products</p>
