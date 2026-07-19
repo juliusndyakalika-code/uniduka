@@ -202,7 +202,7 @@ export default function InventoryDashboard() {
       <div className="grid lg:grid-cols-2 gap-4">
 
         {/* Low stock */}
-        <div className="card">
+        <div className="card min-w-0">
           <div className="p-4 border-b border-stone-100">
             <SectionHeader title={`${t('stock.lowStockItems')} (${kpis.lowStock})`} to="/inventory/products?active=true" label={t('stock.viewProducts')} />
           </div>
@@ -228,7 +228,7 @@ export default function InventoryDashboard() {
         </div>
 
         {/* Out of stock */}
-        <div className="card">
+        <div className="card min-w-0">
           <div className="p-4 border-b border-stone-100">
             <SectionHeader title={`${t('stock.outOfStockItems')} (${kpis.outOfStock})`} to="/inventory/products?active=false" label={t('stock.viewProducts')} />
           </div>
@@ -259,7 +259,7 @@ export default function InventoryDashboard() {
       <div className="grid lg:grid-cols-2 gap-4">
 
         {/* Top by stock value */}
-        <div className="card">
+        <div className="card min-w-0">
           <div className="p-4 border-b border-stone-100">
             <SectionHeader title="Top Products by Stock Value" />
           </div>
@@ -282,7 +282,7 @@ export default function InventoryDashboard() {
         </div>
 
         {/* Recent movements */}
-        <div className="card">
+        <div className="card min-w-0">
           <div className="p-4 border-b border-stone-100">
             <SectionHeader title="Recent Stock Movements" to="/inventory/stock" label={t('stock.viewMovements')} />
           </div>
@@ -316,7 +316,7 @@ export default function InventoryDashboard() {
 
       {/* ── Expiry alerts ── */}
       {expiryAlerts.length > 0 && (
-        <div className="card">
+        <div className="card min-w-0">
           <div className="p-4 border-b border-stone-100 flex flex-wrap items-center justify-between gap-2">
             <SectionHeader title={`Expiring Within 30 Days (${expiryAlerts.length})`} />
             <TableSearch value={expiryTable.search} onChange={expiryTable.setSearch} placeholder="Search product, SKU…" className="max-w-[13rem]" />
