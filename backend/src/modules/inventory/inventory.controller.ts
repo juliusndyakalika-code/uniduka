@@ -175,8 +175,35 @@ export async function updateProduct(req: AuthRequest, res: Response) {
 }
 
 export async function deleteProduct(req: AuthRequest, res: Response) {
-  await prisma.product.updateMany({ where: { id: req.params.id, shopId: shop(req) }, data: { isActive: false } });
-  return R.noContent(res);
+  const hard = (req.query.hard as string) === 'true';
+  const product = await prisma.product.findFirst({
+    where: { id: req.params.id, shopId: shop(req) },
+    include: { _count: { select: { txItems: true, appointmentServices: true, recipeLines: true, recipeProducts: true } } },
+  });
+  if (!product) return R.notFound(res);
+
+  // Default delete = deactivate (keeps history). Permanent delete only when asked.
+  if (!hard) {
+    await prisma.product.update({ where: { id: product.id }, data: { isActive: false } });
+    return R.noContent(res);
+  }
+
+  // A product tied to sales / appointments / recipes must not be purged — keep it deactivated.
+  const c = product._count;
+  if (c.txItems > 0 || c.appointmentServices > 0 || c.recipeLines > 0 || c.recipeProducts > 0) {
+    await prisma.product.update({ where: { id: product.id }, data: { isActive: false } });
+    return R.badRequest(res, 'This product has sales, appointment or recipe history and cannot be permanently deleted — it has been deactivated instead.');
+  }
+
+  // Remove ledger rows that would block the delete (inventory items cascade automatically).
+  try {
+    await prisma.stockMovement.deleteMany({ where: { productId: product.id, shopId: shop(req) } });
+    await prisma.product.delete({ where: { id: product.id } });
+    return R.noContent(res);
+  } catch {
+    await prisma.product.update({ where: { id: product.id }, data: { isActive: false } });
+    return R.badRequest(res, 'This product is referenced elsewhere and cannot be permanently deleted — it has been deactivated instead.');
+  }
 }
 
 export async function importProducts(req: AuthRequest, res: Response) {

@@ -457,8 +457,13 @@ export default function ProductsPage() {
   });
 
   const { mutate: remove } = useMutation({
-    mutationFn: (id: string) => api.delete(`/inventory/products/${id}`),
+    mutationFn: ({ id, hard }: { id: string; hard?: boolean }) =>
+      api.delete(`/inventory/products/${id}`, { params: hard ? { hard: 'true' } : {} }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+    onError: (e: unknown) => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Delete failed');
+    },
   });
 
   const { mutate: toggleActive } = useMutation({
@@ -679,9 +684,19 @@ export default function ProductsPage() {
                           </button>
                         )}
 
-                        {/* Delete — owner only */}
+                        {/* Delete — owner only. Active → deactivate; inactive → permanent delete */}
                         {isOwner && (
-                          <button onClick={() => { if (confirm('Delete this product?')) remove(p.id); }} className="p-1.5 rounded hover:bg-red-50 text-stone-400 hover:text-red-500 transition-colors" title="Delete">
+                          <button
+                            onClick={() => {
+                              if (p.isActive) {
+                                if (confirm('Deactivate this product? It will be hidden from sales but kept for history. You can permanently delete it afterwards.')) remove({ id: p.id });
+                              } else if (confirm('Permanently delete this inactive product? This cannot be undone.')) {
+                                remove({ id: p.id, hard: true });
+                              }
+                            }}
+                            className="p-1.5 rounded hover:bg-red-50 text-stone-400 hover:text-red-500 transition-colors"
+                            title={p.isActive ? 'Deactivate' : 'Delete permanently'}
+                          >
                             <Trash2 size={13} />
                           </button>
                         )}
