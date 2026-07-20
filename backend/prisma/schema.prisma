@@ -586,6 +586,7 @@ model PurchaseOrder {
   status       PurchaseOrderStatus @default(DRAFT)
   type         String              @default("LOCAL")   // LOCAL | IMPORT
   totalAmount  Float               @default(0)
+  amountPaid   Float               @default(0)         // paid to supplier; outstanding = totalAmount - amountPaid
   exchangeRate Float?              // CNY→TZS for IMPORT POs
   sharedCosts  Json?               // {shipping, clearance, transport, other}
   notes        String?

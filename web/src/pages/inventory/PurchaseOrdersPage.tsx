@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, X, ChevronRight, CheckCircle, Truck, Download, Upload,
-  ArrowRight, ArrowLeft, AlertCircle, Package, Ship, UserPlus, Trash2,
+  ArrowRight, ArrowLeft, AlertCircle, Package, Ship, UserPlus, Trash2, Wallet,
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -17,7 +17,7 @@ interface POLine {
   unitCost: number; sellingPrice?: number; color?: string; sizeRange?: string;
 }
 interface PO {
-  id: string; poNumber: string; status: string; type: string; totalAmount: number;
+  id: string; poNumber: string; status: string; type: string; totalAmount: number; amountPaid: number;
   exchangeRate?: number; sharedCosts?: { shipping?: number; clearance?: number; transport?: number; other?: number };
   supplier?: { name: string } | null; lines: POLine[]; createdAt: string; orderedAt?: string; expectedAt?: string; notes?: string;
 }
@@ -33,6 +33,13 @@ const STATUS_BADGE: Record<string, string> = {
 
 function fmt(n: number) {
   return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+}
+// PO amounts are TZS for LOCAL orders and CNY for IMPORT orders
+function fmtPO(n: number, type: string) {
+  return type === 'IMPORT' ? `¥${n.toLocaleString()}` : fmt(n);
+}
+function poOutstanding(po: PO) {
+  return Math.max(0, po.totalAmount - (po.amountPaid || 0));
 }
 function parseCsvText(text: string): string[][] {
   return text.trim().split(/\r?\n/).map(line => {
@@ -124,6 +131,54 @@ function ReceiveModal({ po, onClose, onDone }: { po: PO; onClose: () => void; on
   );
 }
 
+// ── Settle payment modal ──────────────────────────────────────────────────────
+function SettleModal({ po, onClose, onDone }: { po: PO; onClose: () => void; onDone: () => void }) {
+  const qc = useQueryClient();
+  const outstanding = poOutstanding(po);
+  const [amount, setAmount] = useState(String(outstanding));
+  const [error, setError] = useState('');
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: () => api.post(`/inventory/po/${po.id}/settle`, { amount: Number(amount) || undefined }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['purchase-orders'] }); onDone(); },
+    onError: (e: unknown) => setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
+  });
+
+  const amt = Number(amount) || 0;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="card p-6 w-full max-w-sm">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="text-base font-bold text-stone-900">Record Payment</h3>
+            <p className="text-xs text-stone-400 font-mono mt-0.5">{po.poNumber}</p>
+          </div>
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+        </div>
+        <div className="bg-stone-50 rounded-lg p-3 mb-4 space-y-1.5">
+          <div className="flex justify-between text-xs"><span className="text-stone-400">Total</span><span className="font-medium text-stone-700">{fmtPO(po.totalAmount, po.type)}</span></div>
+          <div className="flex justify-between text-xs"><span className="text-stone-400">Paid</span><span className="font-medium text-stone-700">{fmtPO(po.amountPaid || 0, po.type)}</span></div>
+          <div className="flex justify-between text-sm font-bold pt-1 border-t border-stone-200"><span className="text-stone-600">Outstanding</span><span className="text-red-600">{fmtPO(outstanding, po.type)}</span></div>
+        </div>
+        <div className="mb-4">
+          <label className="label">Amount to pay {po.type === 'IMPORT' ? '(¥)' : '(TZS)'}</label>
+          <input type="number" min="0" max={outstanding} className="input" value={amount}
+            onChange={e => { setAmount(e.target.value); setError(''); }} autoFocus />
+          {amt > outstanding && <p className="text-[11px] text-amber-600 mt-1">Capped at outstanding {fmtPO(outstanding, po.type)}.</p>}
+        </div>
+        {error && <p className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5">{error}</p>}
+        <div className="flex gap-3">
+          <button className="btn-secondary flex-1" onClick={onClose}>Cancel</button>
+          <button className="btn-primary flex-1" disabled={isPending || amt <= 0} onClick={() => mutate()}>
+            {isPending ? 'Saving…' : 'Record Payment'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Quick-add supplier (called from inside NewPOModal) ────────────────────────
 function QuickAddSupplierModal({ onCreated, onClose }: {
   onCreated: (id: string) => void;
@@ -208,6 +263,7 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
   const [orderedAt, setOrderedAt] = useState(new Date().toISOString().slice(0, 10));
   const [expectedAt, setExpectedAt] = useState('');
   const [notes, setNotes] = useState('');
+  const [onCredit, setOnCredit] = useState(false);
   // IMPORT extras (optional at PO time, can be updated at shipment time)
   const [exchangeRate, setExchangeRate] = useState('');
   const [shipping, setShipping]   = useState('');
@@ -298,7 +354,7 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
       transport: parseFloat(transport) || 0, other: parseFloat(other) || 0,
     } : undefined;
     try {
-      await api.post('/inventory/po', { supplierId: supplierId || undefined, type: poType, orderedAt: orderedAt || undefined, expectedAt: expectedAt || undefined, notes: notes || undefined, lines, exchangeRate: rate, sharedCosts });
+      await api.post('/inventory/po', { supplierId: supplierId || undefined, type: poType, orderedAt: orderedAt || undefined, expectedAt: expectedAt || undefined, notes: notes || undefined, lines, exchangeRate: rate, sharedCosts, onCredit });
       qc.invalidateQueries({ queryKey: ['purchase-orders'] });
       onCreated();
     } catch (e: unknown) {
@@ -396,6 +452,27 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
                   </div>
                 </div>
               )}
+
+              <div>
+                <label className="label">Payment</label>
+                <div className="flex gap-3">
+                  {([['paid', 'Paid now'], ['credit', 'On credit']] as const).map(([key, lbl]) => {
+                    const active = key === 'credit' ? onCredit : !onCredit;
+                    return (
+                      <button key={key} type="button" onClick={() => setOnCredit(key === 'credit')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-semibold transition-colors ${
+                          active ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-stone-200 text-stone-500'
+                        }`}
+                      >
+                        {lbl}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-stone-400 mt-1.5">
+                  {onCredit ? 'Recorded as owed to supplier — settle payments later.' : 'Supplier is paid in full at creation.'}
+                </p>
+              </div>
 
               <div>
                 <label className="label">Notes (optional)</label>
@@ -575,13 +652,21 @@ export default function PurchaseOrdersPage() {
   const [showNew, setShowNew]         = useState(false);
   const [receiving, setReceiving]     = useState<PO | null>(null);
   const [importingPO, setImportingPO] = useState<PO | null>(null);
+  const [settling, setSettling]       = useState<PO | null>(null);
+  const [unpaidOnly, setUnpaidOnly]   = useState(false);
   const [success, setSuccess]         = useState('');
 
-  const { data: orders = [], isLoading } = useQuery<PO[]>({
+  const { data: allOrders = [], isLoading } = useQuery<PO[]>({
     queryKey: ['purchase-orders', shopId],
     queryFn: () => api.get('/inventory/po').then(r => r.data.data),
     enabled: !!shopId,
   });
+
+  const orders = unpaidOnly ? allOrders.filter(po => poOutstanding(po) > 0) : allOrders;
+  // Payables total only sums LOCAL (TZS) outstanding to avoid mixing currencies with IMPORT (CNY)
+  const payablesTzs = allOrders.filter(po => po.type !== 'IMPORT').reduce((s, po) => s + poOutstanding(po), 0);
+  const payablesCny = allOrders.filter(po => po.type === 'IMPORT').reduce((s, po) => s + poOutstanding(po), 0);
+  const unpaidCount = allOrders.filter(po => poOutstanding(po) > 0).length;
 
   const { mutate: markSent } = useMutation({
     mutationFn: (id: string) => api.put(`/inventory/po/${id}`, { status: 'SENT' }),
@@ -603,6 +688,7 @@ export default function PurchaseOrdersPage() {
       poNumber:    po => po.poNumber,
       supplier:    po => po.supplier?.name,
       total:       po => po.totalAmount,
+      owed:        po => poOutstanding(po),
       status:      po => po.status,
       type:        po => po.type,
       orderedAt:   po => (po.orderedAt ? new Date(po.orderedAt) : new Date(po.createdAt)),
@@ -631,13 +717,39 @@ export default function PurchaseOrdersPage() {
         </div>
       )}
 
+      {(payablesTzs > 0 || payablesCny > 0) && (
+        <div className="card p-4 flex items-center gap-3 border-amber-200 bg-amber-50/50">
+          <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+            <Wallet size={18} className="text-amber-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] text-stone-500 uppercase tracking-widest">Supplier Payables (Owed)</p>
+            <p className="text-lg font-bold text-stone-900 leading-tight">
+              {fmt(payablesTzs)}
+              {payablesCny > 0 && <span className="text-sm font-semibold text-stone-500"> + ¥{payablesCny.toLocaleString()}</span>}
+            </p>
+            <p className="text-[11px] text-stone-400">{unpaidCount} unpaid order{unpaidCount === 1 ? '' : 's'}</p>
+          </div>
+        </div>
+      )}
+
       <div className="card">
         {isLoading ? (
           <div className="p-8 text-center text-stone-400">Loading…</div>
         ) : (
           <>
-          <div className="px-4 py-3 border-b border-stone-100">
-            <TableSearch value={poTable.search} onChange={poTable.setSearch} placeholder="Search PO, supplier, status…" />
+          <div className="px-4 py-3 border-b border-stone-100 flex flex-wrap items-center gap-3">
+            <div className="flex-1 min-w-[180px]">
+              <TableSearch value={poTable.search} onChange={poTable.setSearch} placeholder="Search PO, supplier, status…" />
+            </div>
+            <button
+              onClick={() => setUnpaidOnly(v => !v)}
+              className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                unpaidOnly ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-stone-200 text-stone-500 hover:bg-stone-50'
+              }`}
+            >
+              Unpaid only{unpaidCount > 0 ? ` (${unpaidCount})` : ''}
+            </button>
           </div>
           <div className="table-wrapper">
             <table className="table">
@@ -647,6 +759,7 @@ export default function PurchaseOrdersPage() {
                   <SortableTh field="type"       sort={poTable.sort} onSort={poTable.toggleSort}>Type</SortableTh>
                   <SortableTh field="supplier"   sort={poTable.sort} onSort={poTable.toggleSort}>Supplier</SortableTh>
                   <SortableTh field="total"      sort={poTable.sort} onSort={poTable.toggleSort}>Value</SortableTh>
+                  <SortableTh field="owed"       sort={poTable.sort} onSort={poTable.toggleSort}>Owed</SortableTh>
                   <SortableTh field="status"     sort={poTable.sort} onSort={poTable.toggleSort}>Status</SortableTh>
                   <SortableTh field="orderedAt" sort={poTable.sort} onSort={poTable.toggleSort}>Order Date</SortableTh>
                   <th>Lines</th>
@@ -665,10 +778,13 @@ export default function PurchaseOrdersPage() {
                     <td className="font-medium">{po.supplier?.name || <span className="text-stone-400">—</span>}</td>
                     <td>
                       {po.totalAmount > 0
-                        ? po.type === 'IMPORT'
-                          ? <span>¥{po.totalAmount.toLocaleString()}</span>
-                          : fmt(po.totalAmount)
+                        ? fmtPO(po.totalAmount, po.type)
                         : <span className="text-stone-400">—</span>}
+                    </td>
+                    <td>
+                      {poOutstanding(po) > 0
+                        ? <span className="badge badge-amber">{fmtPO(poOutstanding(po), po.type)}</span>
+                        : <span className="badge badge-green">Paid</span>}
                     </td>
                     <td><span className={`badge ${STATUS_BADGE[po.status] ?? 'badge-stone'}`}>{po.status.replace('_', ' ')}</span></td>
                     <td className="text-xs">
@@ -687,6 +803,14 @@ export default function PurchaseOrdersPage() {
                     <td className="text-stone-500 text-xs">{po.lines.length}</td>
                     <td>
                       <div className="flex items-center gap-3">
+                        {poOutstanding(po) > 0 && (
+                          <button
+                            onClick={() => setSettling(po)}
+                            className="flex items-center gap-1 text-xs text-amber-600 hover:underline font-medium"
+                          >
+                            <Wallet size={12} /> Pay
+                          </button>
+                        )}
                         {po.status === 'DRAFT' && (
                           <button onClick={() => markSent(po.id)} className="text-xs text-primary-600 hover:underline">
                             Mark Sent
@@ -724,7 +848,7 @@ export default function PurchaseOrdersPage() {
                   </tr>
                 ))}
                 {poTable.total === 0 && (
-                  <tr><td colSpan={8} className="text-center text-stone-400 py-8">No purchase orders yet</td></tr>
+                  <tr><td colSpan={9} className="text-center text-stone-400 py-8">{unpaidOnly ? 'No unpaid purchase orders' : 'No purchase orders yet'}</td></tr>
                 )}
               </tbody>
             </table>
@@ -746,6 +870,14 @@ export default function PurchaseOrdersPage() {
           po={receiving}
           onClose={() => setReceiving(null)}
           onDone={() => { setReceiving(null); setSuccess('Stock received and inventory updated.'); setTimeout(() => setSuccess(''), 4000); }}
+        />
+      )}
+
+      {settling && (
+        <SettleModal
+          po={settling}
+          onClose={() => setSettling(null)}
+          onDone={() => { setSettling(null); setSuccess('Payment recorded.'); setTimeout(() => setSuccess(''), 4000); }}
         />
       )}
 

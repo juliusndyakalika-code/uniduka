@@ -694,7 +694,7 @@ export async function getPO(req: AuthRequest, res: Response) {
   return R.ok(res, po);
 }
 export async function createPO(req: AuthRequest, res: Response) {
-  const { supplierId, type = 'LOCAL', lines, notes, orderedAt, expectedAt, exchangeRate, sharedCosts } = req.body;
+  const { supplierId, type = 'LOCAL', lines, notes, orderedAt, expectedAt, exchangeRate, sharedCosts, onCredit } = req.body;
   const poNumber = `PO-${Date.now()}`;
   const lineData = (lines || []).map((l: { style?: string; qty: number; unitCost: number; sellingPrice?: number; color?: string; sizeRange?: string }) => ({
     style:        l.style || undefined,
@@ -713,6 +713,7 @@ export async function createPO(req: AuthRequest, res: Response) {
       exchangeRate: exchangeRate ? Number(exchangeRate) : undefined,
       sharedCosts: sharedCosts || undefined,
       totalAmount: total,
+      amountPaid: onCredit ? 0 : total,
       lines: { create: lineData },
     },
     include: { supplier: true, lines: true },
@@ -731,6 +732,20 @@ export async function deletePO(req: AuthRequest, res: Response) {
   }
   await prisma.purchaseOrder.delete({ where: { id: req.params.id } });
   return R.ok(res, { message: 'PO deleted' });
+}
+export async function settlePO(req: AuthRequest, res: Response) {
+  const po = await prisma.purchaseOrder.findFirst({ where: { id: req.params.id, shopId: shop(req) } });
+  if (!po) return R.notFound(res, 'PO not found');
+  const outstanding = po.totalAmount - po.amountPaid;
+  if (outstanding <= 0) return R.badRequest(res, 'This purchase order is already fully paid');
+  const raw = Number(req.body.amount);
+  const amount = !raw || raw <= 0 ? outstanding : Math.min(raw, outstanding);
+  const updated = await prisma.purchaseOrder.update({
+    where: { id: po.id },
+    data: { amountPaid: po.amountPaid + amount },
+    include: { supplier: true, lines: true },
+  });
+  return R.ok(res, updated);
 }
 export async function receivePO(req: AuthRequest, res: Response) {
   // Receives a LOCAL PO: for each line, find or create the product, add stock
