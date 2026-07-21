@@ -721,7 +721,9 @@ export async function createPO(req: AuthRequest, res: Response) {
   return R.created(res, po);
 }
 export async function updatePO(req: AuthRequest, res: Response) {
-  await prisma.purchaseOrder.updateMany({ where: { id: req.params.id, shopId: shop(req) }, data: req.body });
+  const data = { ...req.body };
+  if (data.status === 'RECEIVED' && !data.receivedAt) data.receivedAt = new Date();
+  await prisma.purchaseOrder.updateMany({ where: { id: req.params.id, shopId: shop(req) }, data });
   return R.ok(res, { message: 'PO updated' });
 }
 export async function deletePO(req: AuthRequest, res: Response) {

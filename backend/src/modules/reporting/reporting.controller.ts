@@ -183,8 +183,16 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
     const totalNetProfit    = totalGrossProfit - expenses;
 
     // Stock investment: LOCAL POs in TZS, IMPORT POs converted CNY→TZS via exchangeRate
+    // Falls back to orderedAt then createdAt when receivedAt is null (older POs or manual status updates)
     const receivedPOs = await prisma.purchaseOrder.findMany({
-      where: { shopId: shop(req), status: 'RECEIVED', receivedAt: range },
+      where: {
+        shopId: shop(req), status: 'RECEIVED',
+        OR: [
+          { receivedAt: range },
+          { receivedAt: null, orderedAt: range },
+          { receivedAt: null, orderedAt: null, createdAt: range },
+        ],
+      },
       select: { totalAmount: true, type: true, exchangeRate: true },
     });
     const stockPurchased = receivedPOs.reduce((sum, po) => {
