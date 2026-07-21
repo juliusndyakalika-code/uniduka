@@ -355,6 +355,8 @@
     "salesCount": "Mauzo",
     "totalQty": "Idadi Iliyouzwa",
     "exportCsv": "Hamisha CSV",
+    "exportValuation": "Thamani CSV",
+    "exportLowStock": "Stoki Ndogo CSV",
     "period": "Kipindi",
     "day": "Siku",
     "week": "Wiki",

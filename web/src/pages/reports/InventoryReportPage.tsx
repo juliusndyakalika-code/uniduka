@@ -72,7 +72,7 @@ export default function InventoryReportPage() {
               );
             }}
           >
-            <Download size={13} className="mr-1" /> {t('reports.exportCsv')}
+            <Download size={13} className="mr-1" /> {t('reports.exportValuation')}
           </button>
           <button
             className="btn-secondary text-xs"
@@ -87,7 +87,7 @@ export default function InventoryReportPage() {
               );
             }}
           >
-            <Download size={13} className="mr-1" /> {t('reports.exportCsv')}
+            <Download size={13} className="mr-1" /> {t('reports.exportLowStock')}
           </button>
         </div>
       </div>

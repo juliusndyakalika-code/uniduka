@@ -355,6 +355,8 @@
     "salesCount": "Sales",
     "totalQty": "Qty Sold",
     "exportCsv": "Export CSV",
+    "exportValuation": "Valuation CSV",
+    "exportLowStock": "Low Stock CSV",
     "period": "Period",
     "day": "Day",
     "week": "Week",

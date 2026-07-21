@@ -272,25 +272,30 @@ export async function inventoryReport(req: AuthRequest, res: Response) {
     }),
   ]);
 
+  // Accumulate qty and value per batch so products with multiple batches
+  // (different cost prices) are valued correctly — matches the dashboard's
+  // stock investment figure (Σ qty × costPrice per inventory row).
   const stockByProduct: Record<string, number> = {};
-  const costByProduct: Record<string, number> = {};
+  const valueByProduct: Record<string, number> = {};
   for (const i of items) {
     stockByProduct[i.productId] = (stockByProduct[i.productId] ?? 0) + i.quantity;
-    costByProduct[i.productId]  = i.costPrice;
+    valueByProduct[i.productId] = (valueByProduct[i.productId] ?? 0) + i.quantity * i.costPrice;
   }
 
-  const enriched = products.map(p => ({
-    ...p,
-    stock:     stockByProduct[p.id] ?? 0,
-    costPrice: costByProduct[p.id]  ?? p.costPrice,
-  }));
+  const enriched = products.map(p => {
+    const stock = stockByProduct[p.id] ?? 0;
+    const value = valueByProduct[p.id] ?? 0;
+    // Effective (weighted-average) unit cost for display/export
+    const costPrice = stock > 0 ? value / stock : p.costPrice;
+    return { ...p, stock, value, costPrice };
+  });
 
   const lowStock = enriched
     .filter(p => p.stock <= p.reorderPoint)
     .map(p => ({ id: p.id, name: p.name, sku: p.sku, stock: p.stock, reorderPoint: p.reorderPoint, unit: p.unit ?? 'ea' }));
 
   const valuation = enriched
-    .map(p => ({ name: p.name, stock: p.stock, costPrice: p.costPrice, value: p.stock * p.costPrice }))
+    .map(p => ({ name: p.name, stock: p.stock, costPrice: p.costPrice, value: p.value }))
     .sort((a, b) => b.value - a.value);
 
   return R.ok(res, {
