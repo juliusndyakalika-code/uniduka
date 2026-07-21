@@ -194,9 +194,9 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
       return sum + tzs;
     }, 0);
 
-    // Current inventory value at cost (snapshot, not period-filtered)
+    // Current inventory value at cost — active products only, matching the Inventory Dashboard
     const inventoryItems = await prisma.inventoryItem.findMany({
-      where: { shopId: shop(req) },
+      where: { shopId: shop(req), product: { isActive: true } },
       select: { quantity: true, costPrice: true },
     });
     const inventoryValue = inventoryItems.reduce((s, i) => s + i.quantity * i.costPrice, 0);
