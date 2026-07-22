@@ -1,17 +1,32 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Store, Users, CheckCircle, XCircle, Calendar, CreditCard, AlertTriangle } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { ArrowLeft, Store, Users, CheckCircle, XCircle, Calendar, CreditCard, AlertTriangle, TrendingUp, ReceiptText, Edit2, X, KeyRound } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import api from '../../api/client';
 import { useDataTable, SortableTh } from '../../components/ui/DataTable';
 
 interface AccountDetail {
   id: string; legalName: string; email: string; phone?: string;
+  billingEmail?: string; billingCycle?: string;
   subscriptionPlan: string; isActive: boolean; subscriptionActive: boolean;
   subscriptionExpiresAt?: string | null; createdAt: string;
   shops: { id: string; tradingName: string; businessType: string; isActive: boolean; city?: string; country?: string; wizardCompleted: boolean; createdAt: string }[];
   users: { id: string; fullName: string; email: string; role: string; isActive: boolean; lastLoginAt?: string; createdAt: string }[];
+  stats: { totalRevenue: number; totalTransactions: number };
+}
+
+interface EditForm {
+  legalName: string;
+  email: string;
+  phone: string;
+  billingEmail: string;
+  billingCycle: string;
+}
+
+interface PasswordResetForm {
+  password: string;
 }
 
 const PLANS = ['STARTER', 'GROWTH', 'BUSINESS', 'ENTERPRISE'] as const;
@@ -37,17 +52,57 @@ function daysLeft(expiresAt?: string | null): number | null {
   return Math.max(0, differenceInDays(new Date(expiresAt), new Date()));
 }
 
+function fmtCurrency(n: number): string {
+  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+}
+
 export default function PlatformAccountDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const qc = useQueryClient();
+
   const [showActivate, setShowActivate] = useState(false);
   const [activatePlan, setActivatePlan] = useState<string>('STARTER');
   const [activateDays, setActivateDays] = useState<number>(30);
+
+  const [showEdit, setShowEdit] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  const [pwdUserId, setPwdUserId] = useState<string | null>(null);
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState('');
 
   const { data: account, isLoading } = useQuery<AccountDetail>({
     queryKey: ['platform-account', id],
     queryFn: () => api.get(`/platform/accounts/${id}`).then(r => r.data.data),
     enabled: !!id,
+  });
+
+  // Edit account form
+  const editForm = useForm<EditForm>();
+
+  const openEdit = () => {
+    if (!account) return;
+    editForm.reset({
+      legalName: account.legalName,
+      email: account.email,
+      phone: account.phone ?? '',
+      billingEmail: account.billingEmail ?? '',
+      billingCycle: account.billingCycle ?? 'monthly',
+    });
+    setEditError('');
+    setShowEdit(true);
+  };
+
+  const { mutate: saveEdit, isPending: savingEdit } = useMutation({
+    mutationFn: (d: EditForm) => api.patch(`/platform/accounts/${id}`, d),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['platform-account', id] });
+      setShowEdit(false);
+    },
+    onError: (e: unknown) => {
+      setEditError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to save');
+    },
   });
 
   const { mutate: activateAccount, isPending: activating } = useMutation({
@@ -60,6 +115,11 @@ export default function PlatformAccountDetail() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['platform-account', id] }),
   });
 
+  const { mutate: deleteAccount, isPending: deleting } = useMutation({
+    mutationFn: () => api.delete(`/platform/accounts/${id}`),
+    onSuccess: () => navigate('/platform/accounts'),
+  });
+
   const { mutate: toggleShop } = useMutation({
     mutationFn: ({ shopId, isActive }: { shopId: string; isActive: boolean }) =>
       api.patch(`/platform/shops/${shopId}`, { isActive }),
@@ -70,6 +130,29 @@ export default function PlatformAccountDetail() {
     mutationFn: ({ userId, isActive }: { userId: string; isActive: boolean }) =>
       api.patch(`/platform/users/${userId}`, { isActive }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['platform-account', id] }),
+  });
+
+  // Password reset form
+  const pwdForm = useForm<PasswordResetForm>();
+
+  const openPwdReset = (userId: string) => {
+    pwdForm.reset({ password: '' });
+    setPwdError('');
+    setPwdSuccess('');
+    setPwdUserId(userId);
+  };
+
+  const { mutate: resetPassword, isPending: resettingPwd } = useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      api.post(`/platform/users/${userId}/reset-password`, { password }),
+    onSuccess: () => {
+      setPwdSuccess('Password reset successfully.');
+      setPwdError('');
+      pwdForm.reset();
+    },
+    onError: (e: unknown) => {
+      setPwdError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to reset password');
+    },
   });
 
   const shopsTable = useDataTable(account?.shops ?? [], {
@@ -94,6 +177,11 @@ export default function PlatformAccountDetail() {
 
   const days = daysLeft(account.subscriptionExpiresAt);
   const isExpired = account.subscriptionActive && account.subscriptionExpiresAt && days === 0;
+
+  const handleDelete = () => {
+    if (!confirm(`Permanently delete ${account.legalName}? This cannot be undone.`)) return;
+    deleteAccount();
+  };
 
   return (
     <div className="space-y-6">
@@ -124,6 +212,9 @@ export default function PlatformAccountDetail() {
             ) : (
               <span className="badge badge-green">Active</span>
             )}
+            <button onClick={openEdit} className="btn-secondary">
+              <Edit2 size={13} /> Edit
+            </button>
             <button
               onClick={() => { setActivatePlan(account.subscriptionPlan); setActivateDays(30); setShowActivate(true); }}
               className="btn-primary"
@@ -143,8 +234,28 @@ export default function PlatformAccountDetail() {
         </div>
       </div>
 
-      {/* Subscription info strip */}
+      {/* Stats strip */}
       <div className="card p-5 grid grid-cols-2 sm:grid-cols-4 gap-5">
+        <div>
+          <p className="text-xs text-stone-400 mb-1 flex items-center gap-1"><TrendingUp size={11} /> Total Revenue</p>
+          <p className="text-sm font-bold text-stone-900">{fmtCurrency(account.stats?.totalRevenue ?? 0)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-stone-400 mb-1 flex items-center gap-1"><ReceiptText size={11} /> Transactions</p>
+          <p className="stat-value">{(account.stats?.totalTransactions ?? 0).toLocaleString()}</p>
+        </div>
+        <div>
+          <p className="text-xs text-stone-400 mb-1">Shops</p>
+          <p className="stat-value">{account.shops.length}</p>
+        </div>
+        <div>
+          <p className="text-xs text-stone-400 mb-1">Member since</p>
+          <p className="text-sm font-bold text-stone-900">{format(new Date(account.createdAt), 'MMM d, yyyy')}</p>
+        </div>
+      </div>
+
+      {/* Subscription info strip */}
+      <div className="card p-5 grid grid-cols-2 sm:grid-cols-2 gap-5">
         <div>
           <p className="text-xs text-stone-400 mb-1 flex items-center gap-1"><CreditCard size={11} /> Plan</p>
           <span className={`badge ${PLAN_COLORS[account.subscriptionPlan] ?? 'badge-stone'}`}>
@@ -165,14 +276,6 @@ export default function PlatformAccountDetail() {
           ) : (
             <p className="text-stone-400">—</p>
           )}
-        </div>
-        <div>
-          <p className="text-xs text-stone-400 mb-1">Shops</p>
-          <p className="stat-value">{account.shops.length}</p>
-        </div>
-        <div>
-          <p className="text-xs text-stone-400 mb-1">Member since</p>
-          <p className="text-sm font-bold text-stone-900">{format(new Date(account.createdAt), 'MMM d, yyyy')}</p>
         </div>
       </div>
 
@@ -265,14 +368,22 @@ export default function PlatformAccountDetail() {
                     {u.lastLoginAt ? format(new Date(u.lastLoginAt), 'MMM d, yyyy') : 'Never'}
                   </td>
                   <td>
-                    <button
-                      onClick={() => toggleUser({ userId: u.id, isActive: !u.isActive })}
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-full transition-colors ${
-                        u.isActive ? 'bg-emerald-100 text-emerald-700 hover:bg-red-100 hover:text-red-700'
-                                   : 'bg-stone-100 text-stone-500 hover:bg-emerald-100 hover:text-emerald-700'}`}
-                    >
-                      {u.isActive ? 'Active' : 'Inactive'}
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => toggleUser({ userId: u.id, isActive: !u.isActive })}
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                          u.isActive ? 'bg-emerald-100 text-emerald-700 hover:bg-red-100 hover:text-red-700'
+                                     : 'bg-stone-100 text-stone-500 hover:bg-emerald-100 hover:text-emerald-700'}`}
+                      >
+                        {u.isActive ? 'Active' : 'Inactive'}
+                      </button>
+                      <button
+                        onClick={() => openPwdReset(u.id)}
+                        className="text-xs px-2 py-0.5 rounded-full border border-stone-200 text-stone-500 hover:border-violet-400 hover:text-violet-600 transition-colors flex items-center gap-1"
+                      >
+                        <KeyRound size={10} /> Reset Pwd
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -280,6 +391,106 @@ export default function PlatformAccountDetail() {
           </table>
         )}
       </div>
+
+      {/* Danger Zone */}
+      <div className="card p-5 border-l-4 border-l-red-400">
+        <h3 className="text-sm font-bold text-red-700 mb-1">Danger Zone</h3>
+        <p className="text-xs text-stone-400 mb-4">Permanently deletes this account, all its shops, users, products, and data. This cannot be undone.</p>
+        <button onClick={handleDelete} disabled={deleting} className="btn-danger">
+          {deleting ? 'Deleting…' : 'Delete Account'}
+        </button>
+      </div>
+
+      {/* Edit Account modal */}
+      {showEdit && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-bold text-stone-900">Edit Account</h3>
+              <button onClick={() => setShowEdit(false)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+            </div>
+            {editError && (
+              <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">{editError}</div>
+            )}
+            <form onSubmit={editForm.handleSubmit(d => saveEdit(d))} className="space-y-4">
+              <div>
+                <label className="label">Legal Name</label>
+                <input {...editForm.register('legalName', { required: true })} className="input" />
+                {editForm.formState.errors.legalName && <p className="text-xs text-red-500 mt-0.5">Required</p>}
+              </div>
+              <div>
+                <label className="label">Email</label>
+                <input {...editForm.register('email', { required: true })} type="email" className="input" />
+                {editForm.formState.errors.email && <p className="text-xs text-red-500 mt-0.5">Required</p>}
+              </div>
+              <div>
+                <label className="label">Phone</label>
+                <input {...editForm.register('phone')} className="input" placeholder="+255 7XX XXX XXX" />
+              </div>
+              <div>
+                <label className="label">Billing Email</label>
+                <input {...editForm.register('billingEmail')} type="email" className="input" placeholder="billing@company.com" />
+              </div>
+              <div>
+                <label className="label">Billing Cycle</label>
+                <select {...editForm.register('billingCycle')} className="select">
+                  <option value="monthly">Monthly</option>
+                  <option value="annually">Annually</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowEdit(false)} className="btn-secondary flex-1">Cancel</button>
+                <button type="submit" disabled={savingEdit} className="btn-primary flex-1">
+                  {savingEdit ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset modal */}
+      {pwdUserId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-stone-900">Reset Password</h3>
+              <button onClick={() => setPwdUserId(null)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+            </div>
+            <p className="text-xs text-stone-400 mb-4">
+              Set a new password for {account.users.find(u => u.id === pwdUserId)?.fullName ?? 'this user'}.
+            </p>
+            {pwdError && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">{pwdError}</div>}
+            {pwdSuccess && <div className="mb-3 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700">{pwdSuccess}</div>}
+            <form
+              onSubmit={pwdForm.handleSubmit(d => resetPassword({ userId: pwdUserId, password: d.password }))}
+              className="space-y-4"
+            >
+              <div>
+                <label className="label">New Password</label>
+                <input
+                  {...pwdForm.register('password', { required: true, minLength: 8 })}
+                  type="password"
+                  className="input"
+                  placeholder="Min. 8 characters"
+                  autoComplete="new-password"
+                />
+                {pwdForm.formState.errors.password && (
+                  <p className="text-xs text-red-500 mt-0.5">
+                    {pwdForm.formState.errors.password.type === 'minLength' ? 'Minimum 8 characters' : 'Required'}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setPwdUserId(null)} className="btn-secondary flex-1">Cancel</button>
+                <button type="submit" disabled={resettingPwd} className="btn-primary flex-1">
+                  {resettingPwd ? 'Resetting…' : 'Reset Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Activate / Change Plan modal */}
       {showActivate && (

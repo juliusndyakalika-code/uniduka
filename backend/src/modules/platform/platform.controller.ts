@@ -86,7 +86,21 @@ export async function getAccount(req: Request, res: Response) {
     },
   });
   if (!account) return R.notFound(res, 'Account not found');
-  return R.ok(res, account);
+
+  const shopIds = account.shops.map(s => s.id);
+  const aggregate = await prisma.transaction.aggregate({
+    where: { shopId: { in: shopIds }, status: 'COMPLETED' },
+    _sum: { total: true },
+    _count: { id: true },
+  });
+
+  return R.ok(res, {
+    ...account,
+    stats: {
+      totalRevenue: aggregate._sum.total ?? 0,
+      totalTransactions: aggregate._count.id,
+    },
+  });
 }
 
 // POST /api/v1/platform/accounts/:id/activate
@@ -131,7 +145,7 @@ export async function suspendAccount(req: Request, res: Response, next: NextFunc
 
 // PATCH /api/v1/platform/accounts/:id
 export async function updateAccount(req: Request, res: Response) {
-  const { isActive, subscriptionPlan, subscriptionActive } = req.body;
+  const { isActive, subscriptionPlan, subscriptionActive, legalName, email, phone, billingEmail, billingCycle } = req.body;
 
   if (subscriptionPlan && !Object.values(SubscriptionPlan).includes(subscriptionPlan)) {
     return R.badRequest(res, 'Invalid subscription plan');
@@ -143,11 +157,45 @@ export async function updateAccount(req: Request, res: Response) {
       ...(isActive !== undefined && { isActive }),
       ...(subscriptionActive !== undefined && { subscriptionActive }),
       ...(subscriptionPlan && { subscriptionPlan }),
+      ...(legalName !== undefined && { legalName }),
+      ...(email !== undefined && { email }),
+      ...(phone !== undefined && { phone }),
+      ...(billingEmail !== undefined && { billingEmail }),
+      ...(billingCycle !== undefined && { billingCycle }),
     },
-    select: { id: true, legalName: true, email: true, subscriptionPlan: true, isActive: true, subscriptionActive: true },
+    select: { id: true, legalName: true, email: true, phone: true, billingEmail: true, billingCycle: true, subscriptionPlan: true, isActive: true, subscriptionActive: true },
   });
 
   return R.ok(res, account);
+}
+
+// DELETE /api/v1/platform/accounts/:id
+export async function deleteAccount(req: Request, res: Response) {
+  const account = await prisma.ownerAccount.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, email: true, legalName: true },
+  });
+  if (!account) return R.notFound(res, 'Account not found');
+  if (account.email === 'platform@internal.uniduka.com') {
+    return R.badRequest(res, 'Cannot delete the platform internal account');
+  }
+  await prisma.ownerAccount.delete({ where: { id: req.params.id } });
+  return R.ok(res, { id: req.params.id, deleted: true });
+}
+
+// POST /api/v1/platform/users/:id/reset-password
+export async function resetUserPassword(req: Request, res: Response) {
+  const { password } = req.body as { password?: string };
+  if (!password || password.length < 8) {
+    return R.badRequest(res, 'Password must be at least 8 characters');
+  }
+  const passwordHash = await bcrypt.hash(password, 12);
+  const user = await prisma.user.update({
+    where: { id: req.params.id },
+    data: { passwordHash },
+    select: { id: true, fullName: true, email: true },
+  });
+  return R.ok(res, user);
 }
 
 // GET /api/v1/platform/shops

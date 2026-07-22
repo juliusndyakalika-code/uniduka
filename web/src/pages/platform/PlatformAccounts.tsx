@@ -22,11 +22,16 @@ const PLAN_COLORS: Record<string, string> = {
   STARTER: 'badge-stone', GROWTH: 'badge-blue', BUSINESS: 'badge-amber', ENTERPRISE: 'badge-green',
 };
 
+type StatusFilter = 'ALL' | 'ACTIVE' | 'SUSPENDED' | 'PENDING';
+type PlanFilter = '' | 'STARTER' | 'GROWTH' | 'BUSINESS' | 'ENTERPRISE';
+
 export default function PlatformAccounts() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [planFilter, setPlanFilter] = useState<PlanFilter>('');
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateForm>({
     defaultValues: { subscriptionPlan: 'STARTER' },
@@ -64,7 +69,15 @@ export default function PlatformAccounts() {
     onError: (e: unknown) => setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
 
-  const acctTable = useDataTable(data ?? [], {
+  const filteredData = (data ?? []).filter(a => {
+    if (statusFilter === 'ACTIVE'    && !(a.subscriptionActive && a.isActive))    return false;
+    if (statusFilter === 'SUSPENDED' && a.isActive)                               return false;
+    if (statusFilter === 'PENDING'   && !(!a.subscriptionActive && a.isActive))   return false;
+    if (planFilter && a.subscriptionPlan !== planFilter)                          return false;
+    return true;
+  });
+
+  const acctTable = useDataTable(filteredData, {
     sortValues: {
       account: a => a.legalName,
       plan: a => a.subscriptionPlan,
@@ -81,7 +94,7 @@ export default function PlatformAccounts() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Tenant Accounts</h1>
-          <p className="page-subtitle">{data?.length ?? 0} accounts</p>
+          <p className="page-subtitle">{filteredData.length} of {data?.length ?? 0} accounts</p>
         </div>
         <button onClick={() => { setError(''); setShowCreate(true); }} className="btn-primary">
           <Plus size={15} /> New Account
@@ -96,6 +109,40 @@ export default function PlatformAccounts() {
           placeholder="Search by name or email…"
           className="input pl-8"
         />
+      </div>
+
+      {/* Filters */}
+      <div className="space-y-2">
+        <div className="flex gap-1 flex-wrap">
+          {(['ALL', 'ACTIVE', 'SUSPENDED', 'PENDING'] as StatusFilter[]).map(f => (
+            <button
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={`text-xs px-3 py-1 rounded-full font-medium border transition-colors ${
+                statusFilter === f
+                  ? 'bg-violet-600 text-white border-violet-600'
+                  : 'border-stone-200 text-stone-500 hover:border-violet-300'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1 flex-wrap">
+          {(['', 'STARTER', 'GROWTH', 'BUSINESS', 'ENTERPRISE'] as PlanFilter[]).map(f => (
+            <button
+              key={f || 'ALL_PLANS'}
+              onClick={() => setPlanFilter(f)}
+              className={`text-xs px-3 py-1 rounded-full font-medium border transition-colors ${
+                planFilter === f
+                  ? 'bg-violet-600 text-white border-violet-600'
+                  : 'border-stone-200 text-stone-500 hover:border-violet-300'
+              }`}
+            >
+              {f || 'All Plans'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Table */}
