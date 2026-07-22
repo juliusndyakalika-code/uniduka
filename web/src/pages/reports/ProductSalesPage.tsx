@@ -80,7 +80,7 @@ export default function ProductSalesPage() {
     enabled: !!shopId,
   });
 
-  const { view, search, setSearch, sort, toggleSort, page, setPage, pageCount, pageSize, setPageSize, total } =
+  const { view, filtered, search, setSearch, sort, toggleSort, page, setPage, pageCount, pageSize, setPageSize, total } =
     useDataTable<SaleRow>(data?.rows ?? [], {
       searchable: r => [r.productName, r.sku, r.soldBy, r.receiptNo],
       sortValues: {
@@ -98,8 +98,17 @@ export default function ProductSalesPage() {
       pageSize: 25,
     });
 
-  const totals = useMemo(() => data?.totals ?? { lineItems: 0, qty: 0, revenue: 0, cost: 0, grossProfit: 0 }, [data]);
-  const overallMargin = totals.revenue > 0 ? (totals.grossProfit / totals.revenue) * 100 : 0;
+  // Always computed from filtered rows so the footer reflects search results
+  const totals = useMemo(() =>
+    filtered.reduce(
+      (s, r) => ({ qty: s.qty + r.quantity, revenue: s.revenue + r.lineTotal, cost: s.cost + r.cost, grossProfit: s.grossProfit + r.grossProfit }),
+      { qty: 0, revenue: 0, cost: 0, grossProfit: 0 },
+    ), [filtered]);
+
+  // Full-dataset totals for the summary cards (unaffected by search)
+  const allTotals = useMemo(() => data?.totals ?? { qty: 0, revenue: 0, cost: 0, grossProfit: 0 }, [data]);
+  const overallMargin  = allTotals.revenue > 0 ? (allTotals.grossProfit / allTotals.revenue) * 100 : 0;
+  const filteredMargin = totals.revenue > 0 ? (totals.grossProfit / totals.revenue) * 100 : 0;
 
   function exportCsv() {
     const headers = ['Date & Time', 'Receipt', 'Product', 'SKU', 'Sold By', 'Qty', 'Unit', 'Unit Price', 'Discount %', 'Line Total', 'Cost', 'Gross Profit', 'Margin %'];
@@ -167,12 +176,12 @@ export default function ProductSalesPage() {
         </div>
         <div className="card p-5">
           <p className="stat-value text-stone-800">
-            {isLoading ? '—' : (totals.qty % 1 === 0 ? totals.qty.toLocaleString() : totals.qty.toFixed(2))}
+            {isLoading ? '—' : (allTotals.qty % 1 === 0 ? allTotals.qty.toLocaleString() : allTotals.qty.toFixed(2))}
           </p>
           <p className="stat-label">Total items sold</p>
         </div>
         <div className="card p-5">
-          <p className="stat-value text-stone-800">{isLoading ? '—' : fmt(totals.revenue)}</p>
+          <p className="stat-value text-stone-800">{isLoading ? '—' : fmt(allTotals.revenue)}</p>
           <p className="stat-label">Total revenue</p>
         </div>
         <div className="card p-5">
@@ -253,7 +262,7 @@ export default function ProductSalesPage() {
                 <tfoot>
                   <tr className="font-semibold border-t-2 border-stone-200">
                     <td colSpan={4} className="text-stone-600">
-                      Total ({data?.rows.length.toLocaleString()} lines)
+                      Total ({total.toLocaleString()} lines)
                     </td>
                     <td className="text-right tabular-nums">
                       {totals.qty % 1 === 0 ? totals.qty.toLocaleString() : totals.qty.toFixed(2)}
@@ -262,8 +271,8 @@ export default function ProductSalesPage() {
                     <td className="text-right tabular-nums">{fmt(totals.revenue)}</td>
                     <td className="text-right tabular-nums text-emerald-700">{fmt(totals.grossProfit)}</td>
                     <td className="text-right">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${marginBadge(overallMargin)}`}>
-                        {overallMargin.toFixed(1)}%
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${marginBadge(filteredMargin)}`}>
+                        {filteredMargin.toFixed(1)}%
                       </span>
                     </td>
                   </tr>
