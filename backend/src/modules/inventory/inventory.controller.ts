@@ -86,7 +86,7 @@ export async function listProducts(req: AuthRequest, res: Response) {
   const [items, total] = await Promise.all([
     prisma.product.findMany({
       where, skip, take: Number(limit), orderBy: { name: 'asc' },
-      include: { inventory: true, _count: { select: { txItems: true } } },
+      include: { inventory: true, _count: { select: { txItems: { where: { transaction: { status: { not: 'VOIDED' } } } } } } },
     }),
     prisma.product.count({ where }),
   ]);
@@ -159,16 +159,41 @@ export async function createProduct(req: AuthRequest, res: Response) {
 }
 
 export async function updateProduct(req: AuthRequest, res: Response) {
-  const { initialStock: _, type, ...fields } = extractProductFields(req.body);
-  if (fields.sellPrice !== undefined && fields.sellPrice <= 0) return R.badRequest(res, 'Selling price must be greater than 0');
-  const isActive = req.body.isActive as boolean | undefined;
+  const b = req.body as Record<string, unknown>;
+  const num = (v: unknown) => v != null && v !== '' ? Number(v) : undefined;
+  const str = (v: unknown) => v != null && v !== '' ? (v as string) : undefined;
+  const bool = (v: unknown) => v === true || v === 'true' ? true : v === false || v === 'false' ? false : undefined;
+
+  // Only include fields that were explicitly sent in the request body
+  const data: Record<string, unknown> = {};
+  if ('name'            in b) data.name            = b.name;
+  if ('sku'             in b) data.sku              = str(b.sku)      ?? null;
+  if ('barcode'         in b) data.barcode          = str(b.barcode)  ?? null;
+  if ('description'     in b) data.description      = str(b.description) ?? null;
+  if ('category'        in b) data.category         = str(b.category) ?? null;
+  if ('unit'            in b) data.unit             = str(b.unit)     ?? null;
+  if ('type'            in b) data.type             = b.type;
+  if ('costPrice'       in b) data.costPrice        = num(b.costPrice) ?? 0;
+  if ('reorderPoint'    in b) data.reorderPoint     = num(b.reorderPoint) ?? 0;
+  if ('isActive'        in b) data.isActive         = bool(b.isActive);
+  if ('genericName'     in b) data.genericName      = str(b.genericName) ?? null;
+  if ('requiresRx'      in b) data.requiresRx       = bool(b.requiresRx) ?? false;
+  if ('isControlled'    in b) data.isControlled     = bool(b.isControlled) ?? false;
+  if ('durationMinutes' in b) data.durationMinutes  = num(b.durationMinutes) ?? null;
+  if ('requiresStaff'   in b) data.requiresStaff    = bool(b.requiresStaff) ?? false;
+
+  // Selling price — only validate if it was actually provided
+  if ('sellingPrice' in b || 'sellPrice' in b) {
+    const price = num(b.sellingPrice ?? b.sellPrice);
+    if (!price || price <= 0) return R.badRequest(res, 'Selling price must be greater than 0');
+    data.sellPrice = price;
+  }
+
+  if (Object.keys(data).length === 0) return R.badRequest(res, 'No fields to update');
+
   const r = await prisma.product.updateMany({
     where: { id: req.params.id, shopId: shop(req) },
-    data: {
-      ...fields,
-      ...(type ? { type: type as never } : {}),
-      ...(isActive !== undefined ? { isActive } : {}),
-    },
+    data,
   });
   if (!r.count) return R.notFound(res);
   return R.ok(res, { message: 'Updated' });
