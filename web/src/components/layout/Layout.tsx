@@ -1,13 +1,54 @@
-import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useIdleTimer } from '../../hooks/useIdleTimer';
+import IdleWarningModal from '../ui/IdleWarningModal';
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { setShops, shopId, setShopId } = useAuthStore();
+  const { setShops, shopId, setShopId, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  // Idle timeout state
+  const [warningVisible, setWarningVisible] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(60);
+  const [fadingOut, setFadingOut] = useState(false);
+
+  const handleExpire = useCallback(() => {
+    setFadingOut(true);
+    // Give the black overlay 2 s to finish fading in, then log out
+    setTimeout(() => {
+      logout();
+      navigate('/login', { replace: true });
+    }, 2000);
+  }, [logout, navigate]);
+
+  const handleWarn = useCallback((secs: number) => {
+    setWarningVisible(true);
+    setSecondsLeft(secs);
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setWarningVisible(false);
+    setSecondsLeft(60);
+    setFadingOut(false);
+  }, []);
+
+  const { reset } = useIdleTimer({
+    timeoutMs: 15 * 60 * 1000, // 15 minutes
+    warnBeforeMs: 60 * 1000,   // warn at 1 minute left
+    onWarn: handleWarn,
+    onExpire: handleExpire,
+    onReset: handleReset,
+  });
+
+  function handleStay() {
+    reset();
+    handleReset();
+  }
 
   useEffect(() => {
     api.get('/shops').then(r => {
@@ -15,7 +56,6 @@ export default function Layout() {
       setShops(shops.map((s: { id: string; tradingName: string; businessType: string }) => ({
         id: s.id, tradingName: s.tradingName, businessType: s.businessType,
       })));
-      // Auto-select first shop if none selected
       if (!shopId && shops.length > 0) setShopId(shops[0].id);
     }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -29,6 +69,14 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {warningVisible && (
+        <IdleWarningModal
+          secondsLeft={secondsLeft}
+          onStay={handleStay}
+          fadingOut={fadingOut}
+        />
+      )}
     </div>
   );
 }
