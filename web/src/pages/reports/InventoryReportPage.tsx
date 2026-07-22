@@ -6,6 +6,7 @@ import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
 import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
+import { PageLoader } from '../../components/ui/Loader';
 
 const REPORT_TABS = [
   { to: '/reports/sales',     label: 'Sales',      icon: TrendingUp },
@@ -106,7 +107,7 @@ export default function InventoryReportPage() {
       </div>
 
       {isLoading ? (
-        <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>
+        <div className="card"><PageLoader /></div>
       ) : isError ? (
         <div className="card p-8 text-center text-red-500 text-sm">{t('common.error')}</div>
       ) : (

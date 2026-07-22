@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useDataTable, SortableTh } from '../../components/ui/DataTable';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface Movement {
   id: string; type: string; quantity: number; note?: string;
@@ -141,7 +142,7 @@ export default function StockPage() {
 
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
+          <PageLoader />
         ) : (
           <>
             <div className="table-wrapper">

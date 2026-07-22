@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface AccountInfo {
   id: string; legalName: string; tradingName?: string; email?: string; phone?: string;
@@ -45,7 +46,7 @@ export default function BusinessSettingsPage() {
     onError: (e: unknown) => setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
 
-  if (isLoading) return <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>;
+  if (isLoading) return <div className="card"><PageLoader /></div>;
 
   return (
     <div className="space-y-6 max-w-2xl">

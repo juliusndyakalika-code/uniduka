@@ -8,6 +8,7 @@ import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 import ShipmentImportModal from './ShipmentImportModal';
+import { PageLoader } from '../../components/ui/Loader';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type POType = 'LOCAL' | 'IMPORT';
@@ -735,7 +736,7 @@ export default function PurchaseOrdersPage() {
 
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">Loading…</div>
+          <PageLoader />
         ) : (
           <>
           <div className="px-4 py-3 border-b border-stone-100 flex flex-wrap items-center gap-3">

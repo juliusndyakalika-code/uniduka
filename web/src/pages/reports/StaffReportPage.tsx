@@ -8,6 +8,7 @@ import { useAuthStore } from '../../store/authStore';
 import { printReceipt } from '../../utils/printReceipt';
 import { useTranslation } from 'react-i18next';
 import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
+import { PageLoader, Spinner } from '../../components/ui/Loader';
 
 interface StaffStat {
   userId: string; fullName: string; role: string;
@@ -172,7 +173,7 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
           <td colSpan={isHotel ? 6 : 8} className="p-0">
             <div className="bg-stone-50 border-t border-b border-stone-200 px-6 py-3">
               {isLoading ? (
-                <p className="text-xs text-stone-400 py-2">{t('common.loading')}</p>
+                <div className="flex items-center justify-center py-4"><Spinner size={16} /></div>
               ) : isHotel ? (
                 /* ── Hotel: folio list ── */
                 folios.length === 0 ? (
@@ -435,7 +436,7 @@ export default function StaffReportPage() {
           <TableSearch value={staffTable.search} onChange={staffTable.setSearch} placeholder={isHotel ? 'Search receptionist…' : 'Search seller…'} className="max-w-[13rem]" />
         </div>
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
+          <PageLoader />
         ) : isError ? (
           <div className="p-8 text-center text-red-500 text-sm">{t('common.error')}</div>
         ) : (

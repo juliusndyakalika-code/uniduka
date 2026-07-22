@@ -8,6 +8,7 @@ import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import CameraScanner from '../../components/CameraScanner';
 import { TablePagination } from '../../components/ui/DataTable';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface Product {
   id: string; name: string; sku: string; barcode?: string;
@@ -603,7 +604,7 @@ export default function ProductsPage() {
 
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
+          <PageLoader />
         ) : (
           <>
           <div className="table-wrapper">

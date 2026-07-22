@@ -4,6 +4,7 @@ import { Plus, Edit2, Truck, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface Supplier {
   id: string;
@@ -87,7 +88,7 @@ export default function SuppliersPage() {
 
       <div className="card">
         {isLoading ? (
-          <div className="p-12 text-center text-stone-400 text-sm">Loading…</div>
+          <PageLoader />
         ) : suppliers.length === 0 ? (
           <div className="p-12 text-center">
             <Truck size={32} className="text-stone-300 mx-auto mb-3" />

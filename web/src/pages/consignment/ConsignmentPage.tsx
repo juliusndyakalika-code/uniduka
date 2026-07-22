@@ -6,6 +6,7 @@ import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
 import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
+import { PageLoader } from '../../components/ui/Loader';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -348,7 +349,7 @@ export default function ConsignmentPage() {
       {tab === 'Sales' && (
         <div className="card">
           {salesLoading ? (
-            <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
+            <PageLoader />
           ) : sales.length === 0 ? (
             <div className="p-10 text-center text-stone-400">
               <Package size={32} className="mx-auto mb-2 opacity-30" />
@@ -496,7 +497,7 @@ export default function ConsignmentPage() {
 
         <div className="card">
           {reportLoading ? (
-            <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
+            <PageLoader />
           ) : reportSellers.length === 0 ? (
             <div className="p-10 text-center text-stone-400">
               <Trophy size={32} className="mx-auto mb-2 opacity-30" />

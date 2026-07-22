@@ -6,6 +6,7 @@ import { ArrowLeft, Store, Users, CheckCircle, XCircle, Calendar, CreditCard, Al
 import { format, differenceInDays } from 'date-fns';
 import api from '../../api/client';
 import { useDataTable, SortableTh } from '../../components/ui/DataTable';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface AccountDetail {
   id: string; legalName: string; email: string; phone?: string;
@@ -172,7 +173,7 @@ export default function PlatformAccountDetail() {
     pageSize: 1000,
   });
 
-  if (isLoading) return <div className="text-stone-400 text-sm p-8">Loading…</div>;
+  if (isLoading) return <PageLoader />;
   if (!account)  return <div className="text-red-500 text-sm p-8">Account not found</div>;
 
   const days = daysLeft(account.subscriptionExpiresAt);

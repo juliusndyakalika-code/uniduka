@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface Shop {
   id: string; tradingName: string; legalName?: string; businessType: string;
@@ -104,7 +105,7 @@ export default function ShopsPage() {
       </div>
 
       {isLoading ? (
-        <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>
+        <div className="card"><PageLoader /></div>
       ) : (
         <div className="card">
           <div className="px-4 py-3 border-b border-stone-100">

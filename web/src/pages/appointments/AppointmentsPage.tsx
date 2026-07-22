@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface Appointment {
   id: string; status: string; scheduledAt: string; duration: number; notes?: string;
@@ -75,7 +76,7 @@ export default function AppointmentsPage() {
       </div>
 
       {isLoading ? (
-        <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>
+        <div className="card"><PageLoader /></div>
       ) : (
         <div className="space-y-3">
           {appointments.map(a => (

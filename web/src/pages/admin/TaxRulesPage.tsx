@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface TaxRule {
   id: string; name: string; rate: number; taxMode: string; isDefault: boolean;
@@ -54,7 +55,7 @@ export default function TaxRulesPage() {
 
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
+          <PageLoader />
         ) : (
           <div className="divide-y divide-stone-50">
             {rules.map(rule => (

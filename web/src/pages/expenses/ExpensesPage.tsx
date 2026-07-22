@@ -4,6 +4,7 @@ import { Plus, X, Pencil, Trash2, Receipt, Wallet } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface Expense {
   id: string;
@@ -196,7 +197,7 @@ export default function ExpensesPage() {
       {/* Table */}
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">Loading…</div>
+          <PageLoader />
         ) : expenses.length === 0 ? (
           <div className="p-12 text-center">
             <Wallet size={32} className="text-stone-300 mx-auto mb-3" />

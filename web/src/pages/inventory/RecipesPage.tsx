@@ -4,6 +4,7 @@ import { Plus, ChefHat, X, Edit2, Trash2 } from 'lucide-react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface RecipeLine { productId: string; qty: number; unit: string; }
 interface Recipe { id: string; name: string; yield: number; yieldUnit: string; lines: (RecipeLine & { product: { name: string } })[]; }
@@ -60,7 +61,7 @@ export default function RecipesPage() {
       </div>
 
       {isLoading ? (
-        <div className="card p-8 text-center text-stone-400">Loading…</div>
+        <div className="card"><PageLoader /></div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {recipes.map(r => (

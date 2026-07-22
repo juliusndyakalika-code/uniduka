@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useDataTable, SortableTh, TablePagination } from '../../components/ui/DataTable';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface Customer {
   id: string; fullName: string; phone?: string; email?: string;
@@ -97,7 +98,7 @@ export default function CustomersPage() {
 
       <div className="card">
         {isLoading ? (
-          <div className="p-8 text-center text-stone-400">{t('common.loading')}</div>
+          <PageLoader />
         ) : (
           <>
           <div className="table-wrapper">

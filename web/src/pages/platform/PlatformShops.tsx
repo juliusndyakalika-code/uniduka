@@ -4,6 +4,7 @@ import { Search, CheckCircle, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import { useDataTable, SortableTh, TablePagination } from '../../components/ui/DataTable';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface Shop {
   id: string; tradingName: string; businessType: string; isActive: boolean;
@@ -57,7 +58,7 @@ export default function PlatformShops() {
 
       <div className="table-wrapper">
         {isLoading ? (
-          <div className="p-10 text-center text-stone-400 text-sm">Loading…</div>
+          <PageLoader />
         ) : (
           <table className="table">
             <thead>

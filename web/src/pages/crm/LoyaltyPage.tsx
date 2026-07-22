@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface LoyaltyProgram {
   id: string; name: string; pointsPerUnit: number; redeemRate: number;
@@ -52,7 +53,7 @@ export default function LoyaltyPage() {
       </div>
 
       {isLoading ? (
-        <div className="card p-8 text-center text-stone-400">{t('common.loading')}</div>
+        <div className="card"><PageLoader /></div>
       ) : !program ? (
         <div className="card p-10 text-center">
           <div className="w-14 h-14 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { User, Mail, Phone, KeyRound, Check, Loader2 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface Profile { id: string; fullName: string; email?: string | null; phone?: string | null; role: string; }
 interface ProfileForm { fullName: string; email?: string; phone?: string; }
@@ -74,7 +75,7 @@ export default function MyAccountPage() {
     changePassword(d);
   }
 
-  if (isLoading) return <div className="p-8 text-center text-stone-400">Loading…</div>;
+  if (isLoading) return <PageLoader />;
 
   return (
     <div className="max-w-lg space-y-6">
