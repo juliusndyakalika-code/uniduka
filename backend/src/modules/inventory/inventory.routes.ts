@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import {
   listProducts, getProduct, lookupByBarcode, createProduct, updateProduct, deleteProduct, importProducts, importShipment, addProductStock,
-  getInventoryDashboard,
+  getInventoryDashboard, debugProductRefs,
   listStock, adjustStock, receivePO, createPO, listPOs, getPO, updatePO, deletePO, settlePO,
   listMovements, listImports, listSuppliers, createSupplier, updateSupplier,
   listRecipes, getRecipe, createRecipe, updateRecipe,
@@ -26,6 +26,7 @@ const upload = multer({
 router.get('/dashboard',              getInventoryDashboard);
 
 // Products
+router.get('/products/debug-refs',    debugProductRefs); // TEMPORARY
 router.get('/products',               listProducts);
 router.post('/products',              createProduct);
 router.post('/products/import',          upload.single('file'), importProducts);
