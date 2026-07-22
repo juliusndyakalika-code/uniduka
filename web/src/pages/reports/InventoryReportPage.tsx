@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
-import { AlertTriangle, Package, TrendingDown, TrendingUp, Users, Download } from 'lucide-react';
+import { AlertTriangle, Package, TrendingDown, TrendingUp, Users, BarChart2, Download } from 'lucide-react';
 import { downloadCsv } from '../../utils/exportCsv';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -8,8 +8,9 @@ import { useTranslation } from 'react-i18next';
 import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 
 const REPORT_TABS = [
-  { to: '/reports/sales',     label: 'Sales',     icon: TrendingUp },
+  { to: '/reports/sales',     label: 'Sales',      icon: TrendingUp },
   { to: '/reports/staff',     label: 'By Seller',  icon: Users },
+  { to: '/reports/products',  label: 'By Product', icon: BarChart2 },
   { to: '/reports/inventory', label: 'Stock',      icon: Package },
 ];
 

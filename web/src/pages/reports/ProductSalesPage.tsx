@@ -8,13 +8,29 @@ import { downloadCsv } from '../../utils/exportCsv';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
-interface ProductRow {
-  productId: string; name: string; sku: string; unit: string;
-  qty: number; revenue: number; cost: number; grossProfit: number; margin: number;
+interface SaleRow {
+  id: string;
+  transactionId: string;
+  receiptNo: string;
+  createdAt: string;
+  soldBy: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  discountPct: number;
+  lineTotal: number;
+  costPrice: number;
+  cost: number;
+  grossProfit: number;
+  margin: number;
 }
 interface ProductSalesData {
-  rows: ProductRow[];
-  totals: { qty: number; revenue: number; cost: number; grossProfit: number };
+  rows: SaleRow[];
+  totals: { lineItems: number; qty: number; revenue: number; cost: number; grossProfit: number };
+  productCount: number;
 }
 
 const fmt = (n: number) =>
@@ -65,28 +81,34 @@ export default function ProductSalesPage() {
   });
 
   const { view, search, setSearch, sort, toggleSort, page, setPage, pageCount, pageSize, setPageSize, total } =
-    useDataTable<ProductRow>(data?.rows ?? [], {
-      searchable: r => [r.name, r.sku],
+    useDataTable<SaleRow>(data?.rows ?? [], {
+      searchable: r => [r.productName, r.sku, r.soldBy, r.receiptNo],
       sortValues: {
-        name:        r => r.name.toLowerCase(),
-        sku:         r => r.sku.toLowerCase(),
-        qty:         r => r.qty,
-        revenue:     r => r.revenue,
-        cost:        r => r.cost,
+        createdAt:   r => r.createdAt,
+        productName: r => r.productName.toLowerCase(),
+        soldBy:      r => r.soldBy.toLowerCase(),
+        receiptNo:   r => r.receiptNo,
+        quantity:    r => r.quantity,
+        unitPrice:   r => r.unitPrice,
+        lineTotal:   r => r.lineTotal,
         grossProfit: r => r.grossProfit,
         margin:      r => r.margin,
       },
-      initialSort: { field: 'revenue', dir: 'desc' },
+      initialSort: { field: 'createdAt', dir: 'desc' },
       pageSize: 25,
     });
 
-  const totals = useMemo(() => data?.totals ?? { qty: 0, revenue: 0, cost: 0, grossProfit: 0 }, [data]);
-  const totalItems = useMemo(() => data?.rows.reduce((s, r) => s + r.qty, 0) ?? 0, [data]);
+  const totals = useMemo(() => data?.totals ?? { lineItems: 0, qty: 0, revenue: 0, cost: 0, grossProfit: 0 }, [data]);
   const overallMargin = totals.revenue > 0 ? (totals.grossProfit / totals.revenue) * 100 : 0;
 
   function exportCsv() {
-    const headers = ['Product', 'SKU', 'Unit', 'Qty Sold', 'Revenue (TZS)', 'Cost (TZS)', 'Gross Profit (TZS)', 'Margin %'];
-    const rows = (data?.rows ?? []).map(r => [r.name, r.sku, r.unit, r.qty, r.revenue, r.cost, r.grossProfit, r.margin.toFixed(1)]);
+    const headers = ['Date & Time', 'Receipt', 'Product', 'SKU', 'Sold By', 'Qty', 'Unit', 'Unit Price', 'Discount %', 'Line Total', 'Cost', 'Gross Profit', 'Margin %'];
+    const rows = (data?.rows ?? []).map(r => [
+      new Date(r.createdAt).toLocaleString('en-TZ'),
+      r.receiptNo, r.productName, r.sku, r.soldBy,
+      r.quantity, r.unit, r.unitPrice, r.discountPct,
+      r.lineTotal, r.cost, r.grossProfit, r.margin.toFixed(1),
+    ]);
     downloadCsv(`product-sales-${from}-to-${to}.csv`, rows, headers);
   }
 
@@ -101,32 +123,31 @@ export default function ProductSalesPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Sales by Product</h1>
-          <p className="page-subtitle">All completed sales broken down per product</p>
+          <p className="page-subtitle">Every sale line-item — product, seller, price, time</p>
         </div>
         <button onClick={exportCsv} disabled={!data?.rows.length} className="btn-secondary text-xs">
           <Download size={13} className="mr-1" /> Export CSV
         </button>
       </div>
 
-      {/* Report tabs — same pill style as Sales page */}
+      {/* Report tabs */}
       <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1 w-fit">
         {visibleTabs.map(({ to: tabTo, label, icon: Icon }) => (
           <Link key={tabTo} to={tabTo}
             className={`flex items-center gap-1.5 px-4 py-1.5 text-xs rounded-md transition-colors font-medium ${
               location.pathname === tabTo ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'
-            }`}
-          >
+            }`}>
             <Icon size={13} />{label}
           </Link>
         ))}
       </div>
 
-      {/* Filters — same layout as Sales page */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1">
           {(['day', 'week', 'month'] as const).map(p => (
             <button key={p} onClick={() => selectPeriod(p)}
-              className={`px-3 py-1.5 text-xs rounded-md transition-colors capitalize ${
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                 period === p ? 'bg-white shadow-sm text-stone-900 font-medium' : 'text-stone-500 hover:text-stone-700'
               }`}>
               {p === 'day' ? 'Day' : p === 'week' ? 'Week' : 'Month'}
@@ -141,11 +162,13 @@ export default function ProductSalesPage() {
       {/* Summary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-5">
-          <p className="stat-value text-violet-700">{isLoading ? '—' : (data?.rows.length ?? 0)}</p>
+          <p className="stat-value text-violet-700">{isLoading ? '—' : (data?.productCount ?? 0)}</p>
           <p className="stat-label">Products sold</p>
         </div>
         <div className="card p-5">
-          <p className="stat-value text-stone-800">{isLoading ? '—' : totalItems % 1 === 0 ? totalItems.toLocaleString() : totalItems.toFixed(2)}</p>
+          <p className="stat-value text-stone-800">
+            {isLoading ? '—' : (totals.qty % 1 === 0 ? totals.qty.toLocaleString() : totals.qty.toFixed(2))}
+          </p>
           <p className="stat-label">Total items sold</p>
         </div>
         <div className="card p-5">
@@ -160,16 +183,21 @@ export default function ProductSalesPage() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Transactions table */}
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <h2 className="text-sm font-semibold text-stone-700">Product breakdown</h2>
-          <TableSearch value={search} onChange={setSearch} placeholder="Search product or SKU…" />
+          <h2 className="text-sm font-semibold text-stone-700">
+            Individual sales
+            {!isLoading && data && (
+              <span className="ml-2 text-xs font-normal text-stone-400">{data.rows.length.toLocaleString()} line items</span>
+            )}
+          </h2>
+          <TableSearch value={search} onChange={setSearch} placeholder="Search product, seller, receipt…" />
         </div>
 
         {isLoading ? (
           <div className="space-y-2">
-            {[...Array(8)].map((_, i) => <div key={i} className="h-10 bg-stone-100 rounded-lg animate-pulse" />)}
+            {[...Array(10)].map((_, i) => <div key={i} className="h-10 bg-stone-100 rounded-lg animate-pulse" />)}
           </div>
         ) : view.length === 0 ? (
           <p className="text-sm text-stone-400 text-center py-8">No sales found for this period.</p>
@@ -179,26 +207,41 @@ export default function ProductSalesPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <SortableTh field="name"        sort={sort} onSort={toggleSort}>Product</SortableTh>
-                    <SortableTh field="sku"         sort={sort} onSort={toggleSort}>SKU</SortableTh>
-                    <SortableTh field="qty"         sort={sort} onSort={toggleSort} align="right">Qty Sold</SortableTh>
-                    <SortableTh field="revenue"     sort={sort} onSort={toggleSort} align="right">Revenue</SortableTh>
-                    <SortableTh field="cost"        sort={sort} onSort={toggleSort} align="right">Cost</SortableTh>
-                    <SortableTh field="grossProfit" sort={sort} onSort={toggleSort} align="right">Gross Profit</SortableTh>
+                    <SortableTh field="createdAt"   sort={sort} onSort={toggleSort}>Date & Time</SortableTh>
+                    <SortableTh field="receiptNo"   sort={sort} onSort={toggleSort}>Receipt</SortableTh>
+                    <SortableTh field="productName" sort={sort} onSort={toggleSort}>Product</SortableTh>
+                    <SortableTh field="soldBy"      sort={sort} onSort={toggleSort}>Sold By</SortableTh>
+                    <SortableTh field="quantity"    sort={sort} onSort={toggleSort} align="right">Qty</SortableTh>
+                    <SortableTh field="unitPrice"   sort={sort} onSort={toggleSort} align="right">Unit Price</SortableTh>
+                    <SortableTh field="lineTotal"   sort={sort} onSort={toggleSort} align="right">Line Total</SortableTh>
+                    <SortableTh field="grossProfit" sort={sort} onSort={toggleSort} align="right">Profit</SortableTh>
                     <SortableTh field="margin"      sort={sort} onSort={toggleSort} align="right">Margin</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
                   {view.map(row => (
-                    <tr key={row.productId}>
-                      <td className="font-medium text-stone-800">{row.name}</td>
-                      <td className="text-stone-400 text-xs">{row.sku || '—'}</td>
-                      <td className="text-right tabular-nums">
-                        {row.qty % 1 === 0 ? row.qty : row.qty.toFixed(2)} {row.unit}
+                    <tr key={row.id}>
+                      <td className="text-xs text-stone-500 whitespace-nowrap">
+                        {new Date(row.createdAt).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        <span className="ml-1 text-stone-400">
+                          {new Date(row.createdAt).toLocaleTimeString('en-TZ', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </td>
-                      <td className="text-right tabular-nums">{fmt(row.revenue)}</td>
-                      <td className="text-right tabular-nums text-stone-500">{fmt(row.cost)}</td>
-                      <td className="text-right tabular-nums font-medium text-emerald-700">{fmt(row.grossProfit)}</td>
+                      <td className="text-xs text-stone-400 font-mono">{row.receiptNo}</td>
+                      <td>
+                        <p className="font-medium text-stone-800 text-sm">{row.productName}</p>
+                        {row.sku && <p className="text-[10px] text-stone-400">{row.sku}</p>}
+                      </td>
+                      <td className="text-sm text-stone-600">{row.soldBy}</td>
+                      <td className="text-right tabular-nums text-sm">
+                        {row.quantity % 1 === 0 ? row.quantity : row.quantity.toFixed(2)} {row.unit}
+                        {row.discountPct > 0 && (
+                          <span className="ml-1 text-[10px] text-amber-600">-{row.discountPct}%</span>
+                        )}
+                      </td>
+                      <td className="text-right tabular-nums text-sm">{fmt(row.unitPrice)}</td>
+                      <td className="text-right tabular-nums font-medium">{fmt(row.lineTotal)}</td>
+                      <td className="text-right tabular-nums text-emerald-700 text-sm">{fmt(row.grossProfit)}</td>
                       <td className="text-right">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${marginBadge(row.margin)}`}>
                           {row.margin.toFixed(1)}%
@@ -209,12 +252,14 @@ export default function ProductSalesPage() {
                 </tbody>
                 <tfoot>
                   <tr className="font-semibold border-t-2 border-stone-200">
-                    <td colSpan={2} className="text-stone-600">Total ({data?.rows.length} products)</td>
+                    <td colSpan={4} className="text-stone-600">
+                      Total ({data?.rows.length.toLocaleString()} lines)
+                    </td>
                     <td className="text-right tabular-nums">
                       {totals.qty % 1 === 0 ? totals.qty.toLocaleString() : totals.qty.toFixed(2)}
                     </td>
+                    <td />
                     <td className="text-right tabular-nums">{fmt(totals.revenue)}</td>
-                    <td className="text-right tabular-nums text-stone-500">{fmt(totals.cost)}</td>
                     <td className="text-right tabular-nums text-emerald-700">{fmt(totals.grossProfit)}</td>
                     <td className="text-right">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${marginBadge(overallMargin)}`}>

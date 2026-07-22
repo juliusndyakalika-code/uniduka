@@ -428,40 +428,63 @@ export async function productSalesReport(req: AuthRequest, res: Response) {
   const items = await prisma.transactionItem.findMany({
     where: { transaction: { shopId: shop(req), status: 'COMPLETED', createdAt: range } },
     select: {
+      id: true,
       productId: true,
       name: true,
       quantity: true,
+      unitPrice: true,
+      discountPct: true,
       lineTotal: true,
       product: { select: { sku: true, costPrice: true, unit: true } },
+      transaction: {
+        select: {
+          id: true,
+          receiptNo: true,
+          createdAt: true,
+          cashier: { select: { fullName: true } },
+        },
+      },
     },
+    orderBy: { transaction: { createdAt: 'desc' } },
   });
 
-  const map: Record<string, { productId: string; name: string; sku: string; unit: string; qty: number; revenue: number; cost: number }> = {};
-  for (const item of items) {
-    if (!map[item.productId]) {
-      map[item.productId] = {
-        productId: item.productId,
-        name: item.name,
-        sku: item.product?.sku ?? '',
-        unit: item.product?.unit ?? 'ea',
-        qty: 0, revenue: 0, cost: 0,
-      };
-    }
-    map[item.productId].qty     += item.quantity;
-    map[item.productId].revenue += item.lineTotal;
-    map[item.productId].cost    += (item.product?.costPrice ?? 0) * item.quantity;
-  }
+  const rows = items.map(item => {
+    const costPrice  = item.product?.costPrice ?? 0;
+    const cost       = costPrice * item.quantity;
+    const grossProfit = item.lineTotal - cost;
+    return {
+      id:           item.id,
+      transactionId: item.transaction.id,
+      receiptNo:    item.transaction.receiptNo,
+      createdAt:    item.transaction.createdAt.toISOString(),
+      soldBy:       item.transaction.cashier?.fullName ?? 'Unknown',
+      productId:    item.productId,
+      productName:  item.name,
+      sku:          item.product?.sku ?? '',
+      unit:         item.product?.unit ?? 'ea',
+      quantity:     item.quantity,
+      unitPrice:    item.unitPrice,
+      discountPct:  item.discountPct,
+      lineTotal:    item.lineTotal,
+      costPrice,
+      cost,
+      grossProfit,
+      margin:       item.lineTotal > 0 ? (grossProfit / item.lineTotal) * 100 : 0,
+    };
+  });
 
-  const rows = Object.values(map).map(r => ({
-    ...r,
-    grossProfit: r.revenue - r.cost,
-    margin: r.revenue > 0 ? ((r.revenue - r.cost) / r.revenue) * 100 : 0,
-  })).sort((a, b) => b.revenue - a.revenue);
-
+  // Summary totals
   const totals = rows.reduce(
-    (s, r) => ({ qty: s.qty + r.qty, revenue: s.revenue + r.revenue, cost: s.cost + r.cost, grossProfit: s.grossProfit + r.grossProfit }),
-    { qty: 0, revenue: 0, cost: 0, grossProfit: 0 },
+    (s, r) => ({
+      lineItems: s.lineItems + 1,
+      qty:         s.qty + r.quantity,
+      revenue:     s.revenue + r.lineTotal,
+      cost:        s.cost + r.cost,
+      grossProfit: s.grossProfit + r.grossProfit,
+    }),
+    { lineItems: 0, qty: 0, revenue: 0, cost: 0, grossProfit: 0 },
   );
+  const productCount = new Set(rows.map(r => r.productId)).size;
 
-  return R.ok(res, { rows, totals });
+  return R.ok(res, { rows, totals, productCount });
 }
