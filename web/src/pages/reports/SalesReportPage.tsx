@@ -763,7 +763,10 @@ export default function SalesReportPage() {
                 <div>
                   <h3 className="text-sm font-semibold text-stone-700">Stock Investment</h3>
                   <p className="text-[11px] text-stone-400 mt-0.5">
-                    Cash spent buying goods — not an expense, but reduces your available cash.
+                    Showing {from === to ? from : `${from} → ${to}`}
+                    {period === 'day' && (
+                      <span className="ml-1 text-amber-600">— switch to Week or Month to see PO totals</span>
+                    )}
                   </p>
                 </div>
                 <Link to="/inventory/purchase-orders" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
