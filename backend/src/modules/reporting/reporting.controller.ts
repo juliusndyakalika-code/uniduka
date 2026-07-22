@@ -202,6 +202,25 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
       return sum + tzs;
     }, 0);
 
+    // Orders placed this period (cash-commitment basis) — uses orderedAt regardless of received status
+    const orderedPOs = await prisma.purchaseOrder.findMany({
+      where: {
+        shopId: shop(req),
+        status: { notIn: ['CANCELLED'] },
+        OR: [
+          { orderedAt: range },
+          { orderedAt: null, createdAt: range },
+        ],
+      },
+      select: { totalAmount: true, type: true, exchangeRate: true },
+    });
+    const ordersCommitted = orderedPOs.reduce((sum, po) => {
+      const tzs = po.type === 'IMPORT' && po.exchangeRate
+        ? po.totalAmount * po.exchangeRate
+        : po.totalAmount;
+      return sum + tzs;
+    }, 0);
+
     // Current inventory value at cost — active products only, matching the Inventory Dashboard
     const inventoryItems = await prisma.inventoryItem.findMany({
       where: { shopId: shop(req), product: { isActive: true } },
@@ -253,7 +272,7 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
     const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
 
     return R.ok(res, {
-      summary: { revenue, transactions: txCount, avgTicket, grossProfit, debtAmount, debtGrossProfit, expenses, netProfit, consignmentProfit, totalGrossProfit, totalNetProfit, stockPurchased, inventoryValue },
+      summary: { revenue, transactions: txCount, avgTicket, grossProfit, debtAmount, debtGrossProfit, expenses, netProfit, consignmentProfit, totalGrossProfit, totalNetProfit, stockPurchased, ordersCommitted, inventoryValue },
       byDay:           Object.values(grouped),
       byPaymentMethod: Object.values(pmMap),
       topProducts,

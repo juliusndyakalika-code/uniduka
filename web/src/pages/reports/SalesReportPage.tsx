@@ -21,7 +21,7 @@ interface SalesReport {
     revenue: number; transactions: number; avgTicket: number; grossProfit: number;
     debtAmount?: number; debtGrossProfit?: number; expenses?: number; netProfit?: number;
     consignmentProfit?: number; totalGrossProfit?: number; totalNetProfit?: number;
-    stockPurchased?: number; inventoryValue?: number;
+    stockPurchased?: number; ordersCommitted?: number; inventoryValue?: number;
   };
   byDay: { date: string; revenue: number; txCount: number; grossProfit: number }[];
   byPaymentMethod: { method: string; label: string; total: number; count: number }[];
@@ -770,11 +770,16 @@ export default function SalesReportPage() {
                   View POs →
                 </Link>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <p className="stat-value text-amber-700">{fmt(data?.summary.stockPurchased ?? 0)}</p>
-                  <p className="stat-label">Purchased this period</p>
-                  <p className="text-[10px] text-stone-400 mt-0.5">From received Purchase Orders</p>
+                  <p className="stat-label">Received this period</p>
+                  <p className="text-[10px] text-stone-400 mt-0.5">Goods that arrived in stock</p>
+                </div>
+                <div>
+                  <p className="stat-value text-orange-700">{fmt(data?.summary.ordersCommitted ?? 0)}</p>
+                  <p className="stat-label">Orders placed this period</p>
+                  <p className="text-[10px] text-stone-400 mt-0.5">Cash committed (order date)</p>
                 </div>
                 <div>
                   <p className="stat-value text-stone-700">{fmt(data?.summary.inventoryValue ?? 0)}</p>
