@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
-import { TrendingUp, Users, Package, ChevronDown, ChevronRight, Printer, Download } from 'lucide-react';
+import { TrendingUp, Users, Package, BarChart2, ChevronDown, ChevronRight, Printer, Download } from 'lucide-react';
 import { downloadCsv } from '../../utils/exportCsv';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -39,9 +39,24 @@ function txProfit(tx: Tx): number {
   }, 0);
 }
 
+function ymd(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function presetRange(period: 'day' | 'week' | 'month') {
+  const now = new Date();
+  const to = ymd(now);
+  if (period === 'day') return { from: to, to };
+  if (period === 'week') {
+    const s = new Date(now); s.setDate(now.getDate() - now.getDay());
+    return { from: ymd(s), to };
+  }
+  return { from: ymd(new Date(now.getFullYear(), now.getMonth(), 1)), to };
+}
+
 const REPORT_TABS = [
-  { to: '/reports/sales',     label: 'Sales',     icon: TrendingUp },
+  { to: '/reports/sales',     label: 'Sales',      icon: TrendingUp },
   { to: '/reports/staff',     label: 'By Seller',  icon: Users },
+  { to: '/reports/products',  label: 'By Product', icon: BarChart2 },
   { to: '/reports/inventory', label: 'Stock',      icon: Package },
 ];
 
@@ -289,15 +304,21 @@ export default function StaffReportPage() {
   const { t } = useTranslation();
   const { shopId, shops } = useAuthStore();
   const isHotel = shops.find(s => s.id === shopId)?.businessType === 'HOTEL_GUESTHOUSE';
-  const visibleTabs = REPORT_TABS.filter(tab => !(isHotel && tab.to === '/reports/inventory'));
+  const visibleTabs = REPORT_TABS.filter(tab => !(isHotel && (tab.to === '/reports/inventory' || tab.to === '/reports/products')));
   const location = useLocation();
-  const [from, setFrom] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0];
-  });
-  const [to, setTo] = useState(() => new Date().toISOString().split('T')[0]);
+  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [from, setFrom] = useState(() => presetRange('day').from);
+  const [to, setTo]     = useState(() => presetRange('day').to);
+
+  const selectPeriod = (p: 'day' | 'week' | 'month') => {
+    setPeriod(p);
+    const r = presetRange(p);
+    setFrom(r.from);
+    setTo(r.to);
+  };
 
   const { data = [], isLoading, isError } = useQuery<StaffStat[]>({
-    queryKey: ['staff-report', shopId, from, to],
+    queryKey: ['staff-report', shopId, period, from, to],
     queryFn: () => api.get('/reporting/staff', { params: { from, to } }).then(r => r.data.data),
     enabled: !!shopId,
   });
@@ -338,8 +359,18 @@ export default function StaffReportPage() {
         ))}
       </div>
 
-      {/* Date filters + export */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1">
+          {(['day', 'week', 'month'] as const).map(p => (
+            <button key={p} onClick={() => selectPeriod(p)}
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors capitalize ${
+                period === p ? 'bg-white shadow-sm text-stone-900 font-medium' : 'text-stone-500 hover:text-stone-700'
+              }`}>
+              {p === 'day' ? 'Day' : p === 'week' ? 'Week' : 'Month'}
+            </button>
+          ))}
+        </div>
         <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto text-xs" />
         <span className="text-stone-400 text-xs">to</span>
         <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto text-xs" />

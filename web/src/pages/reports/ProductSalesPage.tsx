@@ -6,6 +6,7 @@ import { TrendingUp, Users, Package, BarChart2, Download } from 'lucide-react';
 import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../components/ui/DataTable';
 import { downloadCsv } from '../../utils/exportCsv';
 import api from '../../api/client';
+import { useAuthStore } from '../../store/authStore';
 
 interface ProductRow {
   productId: string; name: string; sku: string; unit: string;
@@ -22,11 +23,11 @@ const fmt = (n: number) =>
 function ymd(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-function presetRange(p: 'today' | 'week' | 'month') {
+function presetRange(period: 'day' | 'week' | 'month') {
   const now = new Date();
   const to = ymd(now);
-  if (p === 'today') return { from: to, to };
-  if (p === 'week') {
+  if (period === 'day') return { from: to, to };
+  if (period === 'week') {
     const s = new Date(now); s.setDate(now.getDate() - now.getDay());
     return { from: ymd(s), to };
   }
@@ -42,12 +43,25 @@ const REPORT_TABS = [
 
 export default function ProductSalesPage() {
   const location = useLocation();
-  const [from, setFrom] = useState(() => presetRange('month').from);
-  const [to, setTo]     = useState(() => presetRange('month').to);
+  const { shopId, shops } = useAuthStore();
+  const isHotel = shops.find(s => s.id === shopId)?.businessType === 'HOTEL_GUESTHOUSE';
+  const visibleTabs = REPORT_TABS.filter(tab => !(isHotel && (tab.to === '/reports/inventory' || tab.to === '/reports/products')));
+
+  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [from, setFrom] = useState(() => presetRange('day').from);
+  const [to, setTo]     = useState(() => presetRange('day').to);
+
+  const selectPeriod = (p: 'day' | 'week' | 'month') => {
+    setPeriod(p);
+    const r = presetRange(p);
+    setFrom(r.from);
+    setTo(r.to);
+  };
 
   const { data, isLoading } = useQuery<ProductSalesData>({
-    queryKey: ['product-sales-report', from, to],
+    queryKey: ['product-sales-report', period, from, to],
     queryFn: () => api.get('/reporting/products', { params: { from, to } }).then(r => r.data.data),
+    enabled: !!shopId,
   });
 
   const { view, search, setSearch, sort, toggleSort, page, setPage, pageCount, pageSize, setPageSize, total } =
@@ -67,6 +81,7 @@ export default function ProductSalesPage() {
     });
 
   const totals = useMemo(() => data?.totals ?? { qty: 0, revenue: 0, cost: 0, grossProfit: 0 }, [data]);
+  const totalItems = useMemo(() => data?.rows.reduce((s, r) => s + r.qty, 0) ?? 0, [data]);
   const overallMargin = totals.revenue > 0 ? (totals.grossProfit / totals.revenue) * 100 : 0;
 
   function exportCsv() {
@@ -88,45 +103,39 @@ export default function ProductSalesPage() {
           <h1 className="page-title">Sales by Product</h1>
           <p className="page-subtitle">All completed sales broken down per product</p>
         </div>
-        <button onClick={exportCsv} disabled={!data?.rows.length} className="btn-secondary">
-          <Download size={13} /> Export CSV
+        <button onClick={exportCsv} disabled={!data?.rows.length} className="btn-secondary text-xs">
+          <Download size={13} className="mr-1" /> Export CSV
         </button>
       </div>
 
-      {/* Report tabs */}
-      <div className="flex gap-1 flex-wrap">
-        {REPORT_TABS.map(tab => {
-          const active = location.pathname === tab.to;
-          return (
-            <Link key={tab.to} to={tab.to}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all
-                ${active ? 'btn-primary' : 'btn-secondary'}`}>
-              <tab.icon size={13} /> {tab.label}
-            </Link>
-          );
-        })}
+      {/* Report tabs — same pill style as Sales page */}
+      <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1 w-fit">
+        {visibleTabs.map(({ to: tabTo, label, icon: Icon }) => (
+          <Link key={tabTo} to={tabTo}
+            className={`flex items-center gap-1.5 px-4 py-1.5 text-xs rounded-md transition-colors font-medium ${
+              location.pathname === tabTo ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            <Icon size={13} />{label}
+          </Link>
+        ))}
       </div>
 
-      {/* Date range */}
-      <div className="card p-4 flex flex-wrap items-end gap-3">
-        <div>
-          <label className="label">From</label>
-          <input type="date" className="input-box" value={from}
-            max={to} onChange={e => setFrom(e.target.value)} />
-        </div>
-        <div>
-          <label className="label">To</label>
-          <input type="date" className="input-box" value={to}
-            min={from} max={ymd(new Date())} onChange={e => setTo(e.target.value)} />
-        </div>
-        <div className="flex gap-2 pb-0.5">
-          {(['today', 'week', 'month'] as const).map(p => (
-            <button key={p} onClick={() => { const r = presetRange(p); setFrom(r.from); setTo(r.to); }}
-              className="btn-secondary text-xs">
-              {p === 'today' ? 'Today' : p === 'week' ? 'This Week' : 'This Month'}
+      {/* Filters — same layout as Sales page */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1">
+          {(['day', 'week', 'month'] as const).map(p => (
+            <button key={p} onClick={() => selectPeriod(p)}
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors capitalize ${
+                period === p ? 'bg-white shadow-sm text-stone-900 font-medium' : 'text-stone-500 hover:text-stone-700'
+              }`}>
+              {p === 'day' ? 'Day' : p === 'week' ? 'Week' : 'Month'}
             </button>
           ))}
         </div>
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-auto text-xs" />
+        <span className="text-stone-400 text-xs">to</span>
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-auto text-xs" />
       </div>
 
       {/* Summary stats */}
@@ -136,12 +145,12 @@ export default function ProductSalesPage() {
           <p className="stat-label">Products sold</p>
         </div>
         <div className="card p-5">
-          <p className="stat-value text-stone-800">{isLoading ? '—' : fmt(totals.revenue)}</p>
-          <p className="stat-label">Total revenue</p>
+          <p className="stat-value text-stone-800">{isLoading ? '—' : totalItems % 1 === 0 ? totalItems.toLocaleString() : totalItems.toFixed(2)}</p>
+          <p className="stat-label">Total items sold</p>
         </div>
         <div className="card p-5">
-          <p className="stat-value text-emerald-700">{isLoading ? '—' : fmt(totals.grossProfit)}</p>
-          <p className="stat-label">Gross profit</p>
+          <p className="stat-value text-stone-800">{isLoading ? '—' : fmt(totals.revenue)}</p>
+          <p className="stat-label">Total revenue</p>
         </div>
         <div className="card p-5">
           <p className={`stat-value ${overallMargin >= 30 ? 'text-emerald-700' : overallMargin >= 15 ? 'text-amber-600' : 'text-red-600'}`}>
@@ -202,7 +211,7 @@ export default function ProductSalesPage() {
                   <tr className="font-semibold border-t-2 border-stone-200">
                     <td colSpan={2} className="text-stone-600">Total ({data?.rows.length} products)</td>
                     <td className="text-right tabular-nums">
-                      {totals.qty % 1 === 0 ? totals.qty : totals.qty.toFixed(2)}
+                      {totals.qty % 1 === 0 ? totals.qty.toLocaleString() : totals.qty.toFixed(2)}
                     </td>
                     <td className="text-right tabular-nums">{fmt(totals.revenue)}</td>
                     <td className="text-right tabular-nums text-stone-500">{fmt(totals.cost)}</td>

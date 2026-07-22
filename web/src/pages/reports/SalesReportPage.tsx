@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Download, TrendingUp, Users, Package, ChevronDown, ChevronRight, Printer, Trash2, Search, X } from 'lucide-react';
+import { Download, TrendingUp, Users, Package, BarChart2, ChevronDown, ChevronRight, Printer, Trash2, Search, X } from 'lucide-react';
 import { downloadCsv } from '../../utils/exportCsv';
 import { printReceipt } from '../../utils/printReceipt';
 import api from '../../api/client';
@@ -12,8 +12,9 @@ import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../co
 
 const REPORT_TABS = [
   { to: '/reports/sales',     label: 'Sales',      icon: TrendingUp },
-  { to: '/reports/staff',     label: 'By Seller',   icon: Users },
-  { to: '/reports/inventory', label: 'Stock',       icon: Package },
+  { to: '/reports/staff',     label: 'By Seller',  icon: Users },
+  { to: '/reports/products',  label: 'By Product', icon: BarChart2 },
+  { to: '/reports/inventory', label: 'Stock',      icon: Package },
 ];
 
 interface SalesReport {
@@ -443,7 +444,7 @@ export default function SalesReportPage() {
   const { t } = useTranslation();
   const { shopId, shops } = useAuthStore();
   const isHotel = shops.find(s => s.id === shopId)?.businessType === 'HOTEL_GUESTHOUSE';
-  const visibleTabs = REPORT_TABS.filter(tab => !(isHotel && tab.to === '/reports/inventory'));
+  const visibleTabs = REPORT_TABS.filter(tab => !(isHotel && (tab.to === '/reports/inventory' || tab.to === '/reports/products')));
   const location = useLocation();
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [from, setFrom] = useState(() => presetRange('day').from);
