@@ -1,60 +1,65 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState } from 'react';
 import AppLoader from './components/ui/AppLoader';
+import { PageLoader } from './components/ui/Loader';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import Layout from './components/layout/Layout';
+import PlatformRoute from './components/layout/PlatformRoute';
+import PlatformLayout from './components/layout/PlatformLayout';
 
+// Auth / public — small, keep eager
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
-import SetupWizard from './pages/setup/SetupWizard';
 import PendingApprovalPage from './pages/auth/PendingApprovalPage';
 import SubscriptionExpiredPage from './pages/auth/SubscriptionExpiredPage';
 
-import PlatformRoute from './components/layout/PlatformRoute';
-import PlatformLayout from './components/layout/PlatformLayout';
-import PlatformOverview from './pages/platform/PlatformOverview';
-import PlatformAccounts from './pages/platform/PlatformAccounts';
-import PlatformAccountDetail from './pages/platform/PlatformAccountDetail';
-import PlatformShops from './pages/platform/PlatformShops';
-import PlatformUsers from './pages/platform/PlatformUsers';
-import PlatformMonitor from './pages/platform/PlatformMonitor';
+// All app pages — lazy-loaded per route
+const SetupWizard          = lazy(() => import('./pages/setup/SetupWizard'));
+const Dashboard            = lazy(() => import('./pages/dashboard/Dashboard'));
+const MyAccountPage        = lazy(() => import('./pages/account/MyAccountPage'));
+const PosPage              = lazy(() => import('./pages/pos/PosPage'));
+const DebtsPage            = lazy(() => import('./pages/pos/DebtsPage'));
+const VoidsPage            = lazy(() => import('./pages/pos/VoidsPage'));
 
-import Dashboard from './pages/dashboard/Dashboard';
-import PosPage from './pages/pos/PosPage';
+const InventoryDashboard   = lazy(() => import('./pages/inventory/InventoryDashboard'));
+const ProductsPage         = lazy(() => import('./pages/inventory/ProductsPage'));
+const StockPage            = lazy(() => import('./pages/inventory/StockPage'));
+const RecipesPage          = lazy(() => import('./pages/inventory/RecipesPage'));
+const PurchaseOrdersPage   = lazy(() => import('./pages/inventory/PurchaseOrdersPage'));
+const SuppliersPage        = lazy(() => import('./pages/inventory/SuppliersPage'));
 
-import ProductsPage from './pages/inventory/ProductsPage';
-import StockPage from './pages/inventory/StockPage';
-import InventoryDashboard from './pages/inventory/InventoryDashboard';
-import RecipesPage from './pages/inventory/RecipesPage';
-import PurchaseOrdersPage from './pages/inventory/PurchaseOrdersPage';
-import SuppliersPage from './pages/inventory/SuppliersPage';
+const CustomersPage        = lazy(() => import('./pages/crm/CustomersPage'));
+const LoyaltyPage          = lazy(() => import('./pages/crm/LoyaltyPage'));
+const AppointmentsPage     = lazy(() => import('./pages/appointments/AppointmentsPage'));
+const ConsignmentPage      = lazy(() => import('./pages/consignment/ConsignmentPage'));
+const ExpensesPage         = lazy(() => import('./pages/expenses/ExpensesPage'));
 
-import CustomersPage from './pages/crm/CustomersPage';
-import LoyaltyPage from './pages/crm/LoyaltyPage';
-import AppointmentsPage from './pages/appointments/AppointmentsPage';
+const SalesReportPage      = lazy(() => import('./pages/reports/SalesReportPage'));
+const InventoryReportPage  = lazy(() => import('./pages/reports/InventoryReportPage'));
+const StaffReportPage      = lazy(() => import('./pages/reports/StaffReportPage'));
+const ProductSalesPage     = lazy(() => import('./pages/reports/ProductSalesPage'));
 
-import SalesReportPage from './pages/reports/SalesReportPage';
-import InventoryReportPage from './pages/reports/InventoryReportPage';
-import StaffReportPage from './pages/reports/StaffReportPage';
-import ProductSalesPage from './pages/reports/ProductSalesPage';
-import DebtsPage from './pages/pos/DebtsPage';
-import VoidsPage from './pages/pos/VoidsPage';
+const KdsPage              = lazy(() => import('./pages/kds/KdsPage'));
+const TimeclockPage        = lazy(() => import('./pages/timeclock/TimeclockPage'));
+const WorkOrdersPage       = lazy(() => import('./pages/repairs/WorkOrdersPage'));
+const HotelPage            = lazy(() => import('./pages/hotel/HotelPage'));
+const PrintReceiptPage     = lazy(() => import('./pages/PrintReceiptPage'));
 
-import KdsPage from './pages/kds/KdsPage';
-import TimeclockPage from './pages/timeclock/TimeclockPage';
-import WorkOrdersPage from './pages/repairs/WorkOrdersPage';
-import HotelPage from './pages/hotel/HotelPage';
+const UsersPage            = lazy(() => import('./pages/admin/UsersPage'));
+const ShopsPage            = lazy(() => import('./pages/admin/ShopsPage'));
+const ShopSettingsPage     = lazy(() => import('./pages/admin/ShopSettingsPage'));
+const BusinessSettingsPage = lazy(() => import('./pages/admin/BusinessSettingsPage'));
+const TaxRulesPage         = lazy(() => import('./pages/admin/TaxRulesPage'));
+const BranchesPage         = lazy(() => import('./pages/branches/BranchesPage'));
 
-import PrintReceiptPage from './pages/PrintReceiptPage';
-import ConsignmentPage from './pages/consignment/ConsignmentPage';
-import ExpensesPage from './pages/expenses/ExpensesPage';
-import ShopsPage from './pages/admin/ShopsPage';
-import UsersPage from './pages/admin/UsersPage';
-import BusinessSettingsPage from './pages/admin/BusinessSettingsPage';
-import ShopSettingsPage from './pages/admin/ShopSettingsPage';
-import TaxRulesPage from './pages/admin/TaxRulesPage';
-import MyAccountPage from './pages/account/MyAccountPage';
+const PlatformOverview     = lazy(() => import('./pages/platform/PlatformOverview'));
+const PlatformAccounts     = lazy(() => import('./pages/platform/PlatformAccounts'));
+const PlatformAccountDetail = lazy(() => import('./pages/platform/PlatformAccountDetail'));
+const PlatformShops        = lazy(() => import('./pages/platform/PlatformShops'));
+const PlatformUsers        = lazy(() => import('./pages/platform/PlatformUsers'));
+const PlatformMonitor      = lazy(() => import('./pages/platform/PlatformMonitor'));
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -63,83 +68,84 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Receipt print page — no app chrome, accessible without auth */}
-        <Route path="/print-receipt" element={<PrintReceiptPage />} />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Receipt print page — no app chrome */}
+          <Route path="/print-receipt" element={<PrintReceiptPage />} />
 
-        {/* Public */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/pending" element={<PendingApprovalPage />} />
-        <Route path="/expired" element={<SubscriptionExpiredPage />} />
+          {/* Public */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/pending" element={<PendingApprovalPage />} />
+          <Route path="/expired" element={<SubscriptionExpiredPage />} />
 
-        {/* Platform admin section — PLATFORM_ADMIN role only */}
-        <Route element={<PlatformRoute />}>
-          <Route element={<PlatformLayout />}>
-            <Route path="/platform"                    element={<PlatformOverview />} />
-            <Route path="/platform/accounts"           element={<PlatformAccounts />} />
-            <Route path="/platform/accounts/:id"       element={<PlatformAccountDetail />} />
-            <Route path="/platform/shops"              element={<PlatformShops />} />
-            <Route path="/platform/users"              element={<PlatformUsers />} />
-            <Route path="/platform/monitor"            element={<PlatformMonitor />} />
-          </Route>
-        </Route>
-
-        {/* Setup wizard — ACCOUNT_OWNER only */}
-        <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER']} />}>
-          <Route path="/setup/wizard" element={<SetupWizard />} />
-        </Route>
-
-        {/* App shell */}
-        <Route element={<ProtectedRoute />}>
-          <Route element={<Layout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/account" element={<MyAccountPage />} />
-            <Route path="/pos" element={<PosPage />} />
-
-            <Route path="/inventory" element={<InventoryDashboard />} />
-            <Route path="/inventory/products" element={<ProductsPage />} />
-            <Route path="/inventory/stock" element={<StockPage />} />
-            <Route path="/inventory/recipes" element={<RecipesPage />} />
-            <Route path="/inventory/purchase-orders" element={<PurchaseOrdersPage />} />
-            <Route path="/inventory/suppliers" element={<SuppliersPage />} />
-
-            <Route path="/consignment" element={<ConsignmentPage />} />
-            <Route path="/customers" element={<CustomersPage />} />
-            <Route path="/loyalty" element={<LoyaltyPage />} />
-            <Route path="/appointments" element={<AppointmentsPage />} />
-
-            <Route path="/reports/sales" element={<SalesReportPage />} />
-            <Route path="/reports/inventory" element={<InventoryReportPage />} />
-            <Route path="/reports/staff" element={<StaffReportPage />} />
-            <Route path="/reports/products" element={<ProductSalesPage />} />
-            <Route path="/pos/debts" element={<DebtsPage />} />
-            <Route path="/pos/voids" element={<VoidsPage />} />
-
-            <Route path="/kds" element={<KdsPage />} />
-            <Route path="/timeclock" element={<TimeclockPage />} />
-            <Route path="/repairs/work-orders" element={<WorkOrdersPage />} />
-            <Route path="/hotel" element={<HotelPage />} />
-
-            {/* Sellers (cashiers) can record & edit expenses; only owners can delete */}
-            <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER', 'CASHIER']} />}>
-              <Route path="/expenses"       element={<ExpensesPage />} />
-            </Route>
-
-            {/* Owner-only management routes */}
-            <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER']} />}>
-              <Route path="/admin/users"    element={<UsersPage />} />
-              <Route path="/admin/shops"    element={<ShopsPage />} />
-              <Route path="/admin/shop"     element={<ShopSettingsPage />} />
-              <Route path="/admin/business" element={<BusinessSettingsPage />} />
-              <Route path="/admin/tax-rules" element={<TaxRulesPage />} />
+          {/* Platform admin */}
+          <Route element={<PlatformRoute />}>
+            <Route element={<PlatformLayout />}>
+              <Route path="/platform"              element={<PlatformOverview />} />
+              <Route path="/platform/accounts"     element={<PlatformAccounts />} />
+              <Route path="/platform/accounts/:id" element={<PlatformAccountDetail />} />
+              <Route path="/platform/shops"        element={<PlatformShops />} />
+              <Route path="/platform/users"        element={<PlatformUsers />} />
+              <Route path="/platform/monitor"      element={<PlatformMonitor />} />
             </Route>
           </Route>
-        </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Setup wizard */}
+          <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER']} />}>
+            <Route path="/setup/wizard" element={<SetupWizard />} />
+          </Route>
+
+          {/* App shell */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/dashboard"  element={<Dashboard />} />
+              <Route path="/account"    element={<MyAccountPage />} />
+              <Route path="/pos"        element={<PosPage />} />
+              <Route path="/pos/debts"  element={<DebtsPage />} />
+              <Route path="/pos/voids"  element={<VoidsPage />} />
+
+              <Route path="/inventory"                    element={<InventoryDashboard />} />
+              <Route path="/inventory/products"           element={<ProductsPage />} />
+              <Route path="/inventory/stock"              element={<StockPage />} />
+              <Route path="/inventory/recipes"            element={<RecipesPage />} />
+              <Route path="/inventory/purchase-orders"    element={<PurchaseOrdersPage />} />
+              <Route path="/inventory/suppliers"          element={<SuppliersPage />} />
+
+              <Route path="/consignment"   element={<ConsignmentPage />} />
+              <Route path="/customers"     element={<CustomersPage />} />
+              <Route path="/loyalty"       element={<LoyaltyPage />} />
+              <Route path="/appointments"  element={<AppointmentsPage />} />
+
+              <Route path="/reports/sales"      element={<SalesReportPage />} />
+              <Route path="/reports/inventory"  element={<InventoryReportPage />} />
+              <Route path="/reports/staff"      element={<StaffReportPage />} />
+              <Route path="/reports/products"   element={<ProductSalesPage />} />
+
+              <Route path="/kds"                   element={<KdsPage />} />
+              <Route path="/timeclock"             element={<TimeclockPage />} />
+              <Route path="/repairs/work-orders"   element={<WorkOrdersPage />} />
+              <Route path="/hotel"                 element={<HotelPage />} />
+              <Route path="/branches"              element={<BranchesPage />} />
+
+              <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER', 'CASHIER']} />}>
+                <Route path="/expenses" element={<ExpensesPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER']} />}>
+                <Route path="/admin/users"      element={<UsersPage />} />
+                <Route path="/admin/shops"      element={<ShopsPage />} />
+                <Route path="/admin/shop"       element={<ShopSettingsPage />} />
+                <Route path="/admin/business"   element={<BusinessSettingsPage />} />
+                <Route path="/admin/tax-rules"  element={<TaxRulesPage />} />
+              </Route>
+            </Route>
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
