@@ -317,6 +317,9 @@ export default function Sidebar({ open, onClose }: Props) {
                 <NavItem to="/reports/sales"  icon={<TrendingUp size={14} />} label={t('nav.sales')} />
                 <NavItem to="/reports/staff"  icon={<Users size={14} />}      label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'By Receptionist' : t('nav.bySeller')} />
                 {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
+                  <NavItem to="/reports/products" icon={<BarChart2 size={14} />} label="By Product" />
+                )}
+                {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
                   <NavItem to="/reports/inventory" icon={<Package size={14} />} label={t('nav.stock')} />
                 )}
               </NavGroup>

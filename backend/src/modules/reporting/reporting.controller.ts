@@ -422,3 +422,46 @@ export async function businessTypeReport(req: AuthRequest, res: Response) {
   }
   return R.ok(res, { type, message: 'Standard sales data applies' });
 }
+
+export async function productSalesReport(req: AuthRequest, res: Response) {
+  const range = dateRange(req);
+  const items = await prisma.transactionItem.findMany({
+    where: { transaction: { shopId: shop(req), status: 'COMPLETED', createdAt: range } },
+    select: {
+      productId: true,
+      name: true,
+      quantity: true,
+      lineTotal: true,
+      product: { select: { sku: true, costPrice: true, unit: true } },
+    },
+  });
+
+  const map: Record<string, { productId: string; name: string; sku: string; unit: string; qty: number; revenue: number; cost: number }> = {};
+  for (const item of items) {
+    if (!map[item.productId]) {
+      map[item.productId] = {
+        productId: item.productId,
+        name: item.name,
+        sku: item.product?.sku ?? '',
+        unit: item.product?.unit ?? 'ea',
+        qty: 0, revenue: 0, cost: 0,
+      };
+    }
+    map[item.productId].qty     += item.quantity;
+    map[item.productId].revenue += item.lineTotal;
+    map[item.productId].cost    += (item.product?.costPrice ?? 0) * item.quantity;
+  }
+
+  const rows = Object.values(map).map(r => ({
+    ...r,
+    grossProfit: r.revenue - r.cost,
+    margin: r.revenue > 0 ? ((r.revenue - r.cost) / r.revenue) * 100 : 0,
+  })).sort((a, b) => b.revenue - a.revenue);
+
+  const totals = rows.reduce(
+    (s, r) => ({ qty: s.qty + r.qty, revenue: s.revenue + r.revenue, cost: s.cost + r.cost, grossProfit: s.grossProfit + r.grossProfit }),
+    { qty: 0, revenue: 0, cost: 0, grossProfit: 0 },
+  );
+
+  return R.ok(res, { rows, totals });
+}

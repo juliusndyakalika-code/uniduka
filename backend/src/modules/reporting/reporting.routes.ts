@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { salesReport, inventoryReport, staffReport, businessTypeReport, dashboardStats } from './reporting.controller';
+import { salesReport, inventoryReport, staffReport, businessTypeReport, dashboardStats, productSalesReport } from './reporting.controller';
 import { authenticate, requireShop } from '../../middleware/auth';
 const router = Router();
 router.use(authenticate, requireShop);
@@ -8,4 +8,5 @@ router.get('/sales',          salesReport);
 router.get('/inventory',      inventoryReport);
 router.get('/staff',          staffReport);
 router.get('/business-type',  businessTypeReport);
+router.get('/products',       productSalesReport);
 export default router;
