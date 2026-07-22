@@ -174,28 +174,6 @@ export async function updateProduct(req: AuthRequest, res: Response) {
   return R.ok(res, { message: 'Updated' });
 }
 
-// TEMPORARY: debug endpoint – remove after investigation
-export async function debugProductRefs(req: AuthRequest, res: Response) {
-  const name = (req.query.name as string) ?? '';
-  const products = await prisma.product.findMany({
-    where: { shopId: shop(req), name: { contains: name, mode: 'insensitive' } },
-    select: {
-      id: true, name: true, isActive: true,
-      _count: { select: {
-        txItems: true,
-        appointmentServices: true,
-        recipeLines: true,
-        recipeProducts: true,
-      }},
-      txItems: {
-        select: { id: true, quantity: true, transaction: { select: { id: true, status: true, createdAt: true } } },
-        take: 20,
-      },
-    },
-  });
-  return R.ok(res, products);
-}
-
 export async function deleteProduct(req: AuthRequest, res: Response) {
   const hard = (req.query.hard as string) === 'true';
   const product = await prisma.product.findFirst({
