@@ -224,21 +224,32 @@ export async function deleteProduct(req: AuthRequest, res: Response) {
   }
 
   // A product tied to real sales / appointments / recipes must not be purged — keep it deactivated.
+  // Still clean up any voided/orphan references so they don't accumulate.
   const c = product._count;
   if (c.txItems > 0 || c.appointmentServices > 0 || c.recipeLines > 0 || c.recipeProducts > 0) {
-    await prisma.product.update({ where: { id: product.id }, data: { isActive: false } });
+    await Promise.all([
+      prisma.stockMovement.deleteMany({ where: { productId: product.id } }),
+      prisma.transactionItem.deleteMany({
+        where: { productId: product.id, transaction: { status: 'VOIDED' } },
+      }),
+      prisma.workOrderPart.deleteMany({ where: { productId: product.id } }),
+      prisma.product.update({ where: { id: product.id }, data: { isActive: false } }),
+    ]);
     return R.badRequest(res, 'This product has sales, appointment or recipe history and cannot be permanently deleted — it has been deactivated instead.');
   }
 
-  // Remove ledger rows that would block the delete (inventory items cascade automatically).
-  try {
-    await prisma.stockMovement.deleteMany({ where: { productId: product.id, shopId: shop(req) } });
-    await prisma.product.delete({ where: { id: product.id } });
-    return R.noContent(res);
-  } catch {
-    await prisma.product.update({ where: { id: product.id }, data: { isActive: false } });
-    return R.badRequest(res, 'This product is referenced elsewhere and cannot be permanently deleted — it has been deactivated instead.');
-  }
+  // Clean up all orphan references before deleting.
+  // InventoryItem cascades automatically.
+  // PurchaseOrderLine has nullable productId → Prisma sets it null automatically.
+  // We must manually remove: stock movements, voided tx items, work order parts.
+  await prisma.stockMovement.deleteMany({ where: { productId: product.id } });
+  await prisma.transactionItem.deleteMany({
+    where: { productId: product.id, transaction: { status: 'VOIDED' } },
+  });
+  await prisma.workOrderPart.deleteMany({ where: { productId: product.id } });
+
+  await prisma.product.delete({ where: { id: product.id } });
+  return R.noContent(res);
 }
 
 export async function importProducts(req: AuthRequest, res: Response) {
