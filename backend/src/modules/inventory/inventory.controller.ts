@@ -178,10 +178,19 @@ export async function updateProduct(req: AuthRequest, res: Response) {
 export async function debugProductRefs(req: AuthRequest, res: Response) {
   const name = (req.query.name as string) ?? '';
   const products = await prisma.product.findMany({
-    where: { shopId: (req as any).shopId, name: { contains: name, mode: 'insensitive' } },
+    where: { shopId: shop(req), name: { contains: name, mode: 'insensitive' } },
     select: {
       id: true, name: true, isActive: true,
-      _count: { select: { txItems: true, appointmentServices: true, recipeLines: true, recipeProducts: true } },
+      _count: { select: {
+        txItems: true,
+        appointmentServices: true,
+        recipeLines: true,
+        recipeProducts: true,
+      }},
+      txItems: {
+        select: { id: true, quantity: true, transaction: { select: { id: true, status: true, createdAt: true } } },
+        take: 20,
+      },
     },
   });
   return R.ok(res, products);
@@ -191,7 +200,17 @@ export async function deleteProduct(req: AuthRequest, res: Response) {
   const hard = (req.query.hard as string) === 'true';
   const product = await prisma.product.findFirst({
     where: { id: req.params.id, shopId: shop(req) },
-    include: { _count: { select: { txItems: true, appointmentServices: true, recipeLines: true, recipeProducts: true } } },
+    include: {
+      _count: {
+        select: {
+          // Only count txItems from non-voided transactions — a voided sale is not real history
+          txItems: { where: { transaction: { status: { not: 'VOIDED' } } } },
+          appointmentServices: true,
+          recipeLines: true,
+          recipeProducts: true,
+        },
+      },
+    },
   });
   if (!product) return R.notFound(res);
 
@@ -201,7 +220,7 @@ export async function deleteProduct(req: AuthRequest, res: Response) {
     return R.noContent(res);
   }
 
-  // A product tied to sales / appointments / recipes must not be purged — keep it deactivated.
+  // A product tied to real sales / appointments / recipes must not be purged — keep it deactivated.
   const c = product._count;
   if (c.txItems > 0 || c.appointmentServices > 0 || c.recipeLines > 0 || c.recipeProducts > 0) {
     await prisma.product.update({ where: { id: product.id }, data: { isActive: false } });
