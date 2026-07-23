@@ -10,6 +10,8 @@ interface Options {
   timeoutMs?: number;
   /** How many ms before expiry to fire onWarn. Default: 60 seconds. */
   warnBeforeMs?: number;
+  /** Fires every second with remaining seconds — drives footer counter. */
+  onTick?: (secondsLeft: number) => void;
   onWarn: (secondsLeft: number) => void;
   onExpire: () => void;
   onReset?: () => void;
@@ -19,29 +21,32 @@ interface Options {
 export function useIdleTimer({
   timeoutMs = 15 * 60 * 1000,
   warnBeforeMs = 60 * 1000,
+  onTick,
   onWarn,
   onExpire,
   onReset,
   enabled = true,
 }: Options) {
-  const expireAt = useRef<number>(Date.now() + timeoutMs);
-  const warnFired = useRef(false);
-  const expired = useRef(false);
-  const onWarnRef = useRef(onWarn);
-  const onExpireRef = useRef(onExpire);
-  const onResetRef = useRef(onReset);
-  const rafId = useRef<number>(0);
+  const expireAt   = useRef<number>(Date.now() + timeoutMs);
+  const warnFired  = useRef(false);
+  const expired    = useRef(false);
+  const intervalId = useRef<ReturnType<typeof setInterval>>(undefined);
 
-  // Keep callback refs fresh so callers don't need to memoize
-  onWarnRef.current = onWarn;
+  // Keep callbacks in refs so they never invalidate the interval
+  const onTickRef   = useRef(onTick);
+  const onWarnRef   = useRef(onWarn);
+  const onExpireRef = useRef(onExpire);
+  const onResetRef  = useRef(onReset);
+  onTickRef.current   = onTick;
+  onWarnRef.current   = onWarn;
   onExpireRef.current = onExpire;
-  onResetRef.current = onReset;
+  onResetRef.current  = onReset;
 
   const reset = useCallback(() => {
     expireAt.current = Date.now() + timeoutMs;
     if (warnFired.current || expired.current) {
       warnFired.current = false;
-      expired.current = false;
+      expired.current   = false;
       onResetRef.current?.();
     }
   }, [timeoutMs]);
@@ -49,42 +54,42 @@ export function useIdleTimer({
   useEffect(() => {
     if (!enabled) return;
 
-    // Attach listeners on the document capture phase so every click/key/touch resets,
-    // even if a child stops propagation.
     function handleActivity() { reset(); }
+
     ACTIVITY_EVENTS.forEach(ev =>
       document.addEventListener(ev, handleActivity, { passive: true, capture: true }),
     );
 
-    function tick() {
-      const now = Date.now();
-      const remaining = expireAt.current - now;
+    // Initialise
+    expireAt.current  = Date.now() + timeoutMs;
+    warnFired.current = false;
+    expired.current   = false;
 
-      if (!expired.current && remaining <= 0) {
+    // Tick every second
+    intervalId.current = setInterval(() => {
+      if (expired.current) return;
+
+      const remaining = expireAt.current - Date.now();
+      const secs      = Math.max(0, Math.ceil(remaining / 1000));
+
+      onTickRef.current?.(secs);
+
+      if (remaining <= 0) {
         expired.current = true;
         onExpireRef.current();
-        return; // stop the loop
+        return;
       }
 
       if (!warnFired.current && remaining <= warnBeforeMs) {
         warnFired.current = true;
-        onWarnRef.current(Math.ceil(remaining / 1000));
-      } else if (warnFired.current && !expired.current) {
-        // Keep caller's countdown updated every second
-        onWarnRef.current(Math.max(0, Math.ceil(remaining / 1000)));
+        onWarnRef.current(secs);
+      } else if (warnFired.current) {
+        onWarnRef.current(secs);
       }
-
-      rafId.current = requestAnimationFrame(tick);
-    }
-
-    // Reset timestamp on mount to start fresh
-    expireAt.current = Date.now() + timeoutMs;
-    warnFired.current = false;
-    expired.current = false;
-    rafId.current = requestAnimationFrame(tick);
+    }, 1000);
 
     return () => {
-      cancelAnimationFrame(rafId.current);
+      clearInterval(intervalId.current);
       ACTIVITY_EVENTS.forEach(ev =>
         document.removeEventListener(ev, handleActivity, { capture: true }),
       );

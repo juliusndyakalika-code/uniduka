@@ -7,19 +7,27 @@ import { useAuthStore } from '../../store/authStore';
 import { useIdleTimer } from '../../hooks/useIdleTimer';
 import IdleWarningModal from '../ui/IdleWarningModal';
 
+function fmtTime(secs: number) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { setShops, shopId, setShopId, logout } = useAuthStore();
   const navigate = useNavigate();
 
+  const TIMEOUT_SECS = 15 * 60;
+
   // Idle timeout state
   const [warningVisible, setWarningVisible] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(60);
-  const [fadingOut, setFadingOut] = useState(false);
+  const [secondsLeft,    setSecondsLeft]    = useState(60);
+  const [footerSecs,     setFooterSecs]     = useState(TIMEOUT_SECS);
+  const [fadingOut,      setFadingOut]      = useState(false);
 
   const handleExpire = useCallback(() => {
     setFadingOut(true);
-    // Give the black overlay 2 s to finish fading in, then log out
     setTimeout(() => {
       logout();
       navigate('/login', { replace: true });
@@ -35,14 +43,20 @@ export default function Layout() {
     setWarningVisible(false);
     setSecondsLeft(60);
     setFadingOut(false);
+    setFooterSecs(TIMEOUT_SECS);
+  }, [TIMEOUT_SECS]);
+
+  const handleTick = useCallback((secs: number) => {
+    setFooterSecs(secs);
   }, []);
 
   const { reset } = useIdleTimer({
-    timeoutMs: 15 * 60 * 1000, // 15 minutes
-    warnBeforeMs: 60 * 1000,   // warn at 1 minute left
-    onWarn: handleWarn,
+    timeoutMs:    TIMEOUT_SECS * 1000,
+    warnBeforeMs: 60 * 1000,
+    onTick:   handleTick,
+    onWarn:   handleWarn,
     onExpire: handleExpire,
-    onReset: handleReset,
+    onReset:  handleReset,
   });
 
   function handleStay() {
@@ -60,6 +74,8 @@ export default function Layout() {
     }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const isWarning = footerSecs <= 60;
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#E8EBF0' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -68,6 +84,16 @@ export default function Layout() {
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
           <Outlet />
         </main>
+
+        {/* Faint idle counter in the footer */}
+        <div className="shrink-0 flex items-center justify-end px-4 py-1 border-t border-stone-200/60">
+          <span
+            className="text-[10px] tabular-nums transition-colors duration-300"
+            style={{ color: isWarning ? (footerSecs <= 10 ? '#ef4444' : '#f97316') : '#c7c3be' }}
+          >
+            Session: {fmtTime(footerSecs)}
+          </span>
+        </div>
       </div>
 
       {warningVisible && (
