@@ -7,12 +7,6 @@ import { useAuthStore } from '../../store/authStore';
 import { useIdleTimer } from '../../hooks/useIdleTimer';
 import IdleWarningModal from '../ui/IdleWarningModal';
 
-function fmtTime(secs: number) {
-  const m = Math.floor(secs / 60);
-  const s = secs % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { setShops, shopId, setShopId, logout } = useAuthStore();
@@ -74,26 +68,14 @@ export default function Layout() {
     }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isWarning = footerSecs <= 60;
-
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#E8EBF0' }}>
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} sessionSecs={footerSecs} />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
           <Outlet />
         </main>
-
-        {/* Faint idle counter in the footer */}
-        <div className="shrink-0 flex items-center justify-end px-4 py-1 border-t border-stone-200/60">
-          <span
-            className="text-[10px] tabular-nums transition-colors duration-300"
-            style={{ color: isWarning ? (footerSecs <= 10 ? '#ef4444' : '#f97316') : '#c7c3be' }}
-          >
-            Session: {fmtTime(footerSecs)}
-          </span>
-        </div>
       </div>
 
       {warningVisible && (

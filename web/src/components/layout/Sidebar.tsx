@@ -61,8 +61,8 @@ function NavGroup({ icon, label, prefix, children }: {
   );
 }
 
-interface Props { open: boolean; onClose: () => void; }
-export default function Sidebar({ open, onClose }: Props) {
+interface Props { open: boolean; onClose: () => void; sessionSecs?: number; }
+export default function Sidebar({ open, onClose, sessionSecs }: Props) {
   const { t } = useTranslation();
   const { user, account, shopId, shops, logout, setShopId } = useAuthStore();
   const navigate = useNavigate();
@@ -360,12 +360,24 @@ export default function Sidebar({ open, onClose }: Props) {
             <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center shrink-0">
               {user?.fullName?.charAt(0).toUpperCase() ?? '?'}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-stone-900 truncate group-hover:text-primary-700">{user?.fullName}</p>
               <p className="text-[10px] uppercase tracking-widest text-stone-400">
                 {isOwner ? `${account?.plan} · ` : ''}{role.replace(/_/g, ' ')}
               </p>
             </div>
+            {sessionSecs !== undefined && (
+              <span
+                className="text-[10px] tabular-nums shrink-0 font-mono transition-colors duration-300"
+                style={{
+                  color: sessionSecs <= 10 ? '#ef4444'
+                       : sessionSecs <= 60 ? '#f97316'
+                       : '#d6d3d1',
+                }}
+              >
+                {`${Math.floor(sessionSecs / 60)}:${String(sessionSecs % 60).padStart(2, '0')}`}
+              </span>
+            )}
           </NavLink>
 
           {/* Language toggle */}
