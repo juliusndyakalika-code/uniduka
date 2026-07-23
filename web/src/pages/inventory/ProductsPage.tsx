@@ -424,7 +424,7 @@ export default function ProductsPage() {
 
   const activeParam = activeFilter === 'all' ? undefined : activeFilter === 'active' ? 'true' : 'false';
 
-  interface ProductTotals { retailValue: number; costValue: number; lowStockCount: number; outOfStock: number; }
+  interface ProductTotals { totalStock: number; retailValue: number; costValue: number; lowStockCount: number; outOfStock: number; }
   const { data, isLoading } = useQuery<{ items: Product[]; total: number; totals: ProductTotals }>({
     queryKey: ['products', shopId, search, activeFilter, page, pageSize],
     queryFn: () => api.get('/inventory/products', { params: { search, limit: pageSize, page, active: activeParam } }).then(r => ({
@@ -604,32 +604,6 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* ── Stock totals aligned with current search/filter ── */}
-      {!isLoading && data && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="card px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Products</p>
-            <p className="text-xl font-bold text-stone-900 mt-0.5">{data.total.toLocaleString()}</p>
-          </div>
-          <div className="card px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Retail Value</p>
-            <p className="text-xl font-bold text-stone-900 mt-0.5">{fmt(data.totals.retailValue)}</p>
-          </div>
-          <div className="card px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Cost Value</p>
-            <p className="text-xl font-bold text-stone-900 mt-0.5">{fmt(data.totals.costValue)}</p>
-          </div>
-          <div className="card px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Low / Out</p>
-            <p className="text-xl font-bold mt-0.5">
-              <span className={data.totals.lowStockCount > 0 ? 'text-amber-600' : 'text-stone-900'}>{data.totals.lowStockCount}</span>
-              <span className="text-stone-300 mx-1">/</span>
-              <span className={data.totals.outOfStock > 0 ? 'text-red-600' : 'text-stone-900'}>{data.totals.outOfStock}</span>
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className="card">
         {isLoading ? (
           <PageLoader />
@@ -737,6 +711,18 @@ export default function ProductsPage() {
                   <tr><td colSpan={7} className="text-center text-stone-400 py-8">{t('products.noProducts')}</td></tr>
                 )}
               </tbody>
+              {data && products.length > 0 && (
+                <tfoot>
+                  <tr className="border-t-2 border-stone-200 bg-stone-50 font-semibold text-stone-700 text-xs">
+                    <td className="px-3 py-2.5 text-stone-400 text-[10px] uppercase tracking-wide">Total</td>
+                    <td className="hidden sm:table-cell" />
+                    <td />
+                    <td className="hidden sm:table-cell" />
+                    <td className="px-3 py-2.5">{data.totals.totalStock.toLocaleString()} units</td>
+                    <td /><td />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
           {(data?.total ?? 0) > 0 && (
