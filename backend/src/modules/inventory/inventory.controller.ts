@@ -83,14 +83,32 @@ export async function listProducts(req: AuthRequest, res: Response) {
     ...(category && { category }),
     ...(type && { type: type as never }),
   };
-  const [items, total] = await Promise.all([
+  const [items, total, allForTotals] = await Promise.all([
     prisma.product.findMany({
       where, skip, take: Number(limit), orderBy: { name: 'asc' },
       include: { inventory: true, _count: { select: { txItems: { where: { transaction: { status: { not: 'VOIDED' } } } } } } },
     }),
     prisma.product.count({ where }),
+    prisma.product.findMany({
+      where,
+      select: { sellPrice: true, costPrice: true, reorderPoint: true, inventory: { select: { quantity: true } } },
+    }),
   ]);
-  return R.ok(res, items.map(p => ({ ...normaliseProduct(p, p.inventory), inUse: p._count.txItems > 0 })), { total, page: Number(page), limit: Number(limit) });
+
+  const totals = allForTotals.reduce(
+    (acc, p) => {
+      const qty = p.inventory.reduce((s, i) => s + i.quantity, 0);
+      return {
+        retailValue:   acc.retailValue   + qty * p.sellPrice,
+        costValue:     acc.costValue     + qty * (p.costPrice ?? 0),
+        lowStockCount: acc.lowStockCount + (qty > 0 && qty <= p.reorderPoint ? 1 : 0),
+        outOfStock:    acc.outOfStock    + (qty === 0 ? 1 : 0),
+      };
+    },
+    { retailValue: 0, costValue: 0, lowStockCount: 0, outOfStock: 0 },
+  );
+
+  return R.ok(res, items.map(p => ({ ...normaliseProduct(p, p.inventory), inUse: p._count.txItems > 0 })), { total, page: Number(page), limit: Number(limit), totals });
 }
 
 export async function lookupByBarcode(req: AuthRequest, res: Response) {

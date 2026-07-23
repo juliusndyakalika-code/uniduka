@@ -424,11 +424,13 @@ export default function ProductsPage() {
 
   const activeParam = activeFilter === 'all' ? undefined : activeFilter === 'active' ? 'true' : 'false';
 
-  const { data, isLoading } = useQuery<{ items: Product[]; total: number }>({
+  interface ProductTotals { retailValue: number; costValue: number; lowStockCount: number; outOfStock: number; }
+  const { data, isLoading } = useQuery<{ items: Product[]; total: number; totals: ProductTotals }>({
     queryKey: ['products', shopId, search, activeFilter, page, pageSize],
     queryFn: () => api.get('/inventory/products', { params: { search, limit: pageSize, page, active: activeParam } }).then(r => ({
-      items: r.data.data as Product[],
-      total: (r.data.meta?.total ?? r.data.data?.length ?? 0) as number,
+      items:  r.data.data as Product[],
+      total:  (r.data.meta?.total ?? r.data.data?.length ?? 0) as number,
+      totals: (r.data.meta?.totals ?? { retailValue: 0, costValue: 0, lowStockCount: 0, outOfStock: 0 }) as ProductTotals,
     })),
     enabled: !!shopId,
   });
@@ -601,6 +603,32 @@ export default function ProductsPage() {
           ))}
         </div>
       </div>
+
+      {/* ── Stock totals aligned with current search/filter ── */}
+      {!isLoading && data && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="card px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Products</p>
+            <p className="text-xl font-bold text-stone-900 mt-0.5">{data.total.toLocaleString()}</p>
+          </div>
+          <div className="card px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Retail Value</p>
+            <p className="text-xl font-bold text-stone-900 mt-0.5">{fmt(data.totals.retailValue)}</p>
+          </div>
+          <div className="card px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Cost Value</p>
+            <p className="text-xl font-bold text-stone-900 mt-0.5">{fmt(data.totals.costValue)}</p>
+          </div>
+          <div className="card px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Low / Out</p>
+            <p className="text-xl font-bold mt-0.5">
+              <span className={data.totals.lowStockCount > 0 ? 'text-amber-600' : 'text-stone-900'}>{data.totals.lowStockCount}</span>
+              <span className="text-stone-300 mx-1">/</span>
+              <span className={data.totals.outOfStock > 0 ? 'text-red-600' : 'text-stone-900'}>{data.totals.outOfStock}</span>
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         {isLoading ? (
