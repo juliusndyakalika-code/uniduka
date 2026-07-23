@@ -584,21 +584,35 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* ── Total stock card ── */}
-      <div className="card px-5 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center">
-            <Package size={16} className="text-primary-600" />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Total Items in Stock</p>
-            <p className="text-2xl font-bold text-stone-900 leading-tight">
-              {isLoading ? '—' : (data?.totals.totalStock ?? 0).toLocaleString()}
-              <span className="ml-1.5 text-sm font-normal text-stone-400">pcs</span>
-            </p>
-          </div>
+      {/* ── Summary cards ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="card px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Products</p>
+          <p className="text-xl font-bold text-stone-900 mt-0.5">{isLoading ? '—' : (data?.total ?? 0).toLocaleString()}</p>
         </div>
-        <p className="text-xs text-stone-400 hidden sm:block">{data?.total ?? 0} product{(data?.total ?? 0) !== 1 ? 's' : ''}</p>
+        <div className="card px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Total Items</p>
+          <p className="text-xl font-bold text-stone-900 mt-0.5">
+            {isLoading ? '—' : (data?.totals.totalStock ?? 0).toLocaleString()}
+            <span className="ml-1 text-xs font-normal text-stone-400">pcs</span>
+          </p>
+        </div>
+        <div className="card px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Retail Value</p>
+          <p className="text-xl font-bold text-stone-900 mt-0.5">{isLoading ? '—' : fmt(data?.totals.retailValue ?? 0)}</p>
+        </div>
+        <div className="card px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Cost Value</p>
+          <p className="text-xl font-bold text-stone-900 mt-0.5">{isLoading ? '—' : fmt(data?.totals.costValue ?? 0)}</p>
+        </div>
+        <div className="card px-4 py-3 col-span-2 sm:col-span-1">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Low / Out</p>
+          <p className="text-xl font-bold mt-0.5">
+            <span className={(data?.totals.lowStockCount ?? 0) > 0 ? 'text-amber-600' : 'text-stone-900'}>{isLoading ? '—' : (data?.totals.lowStockCount ?? 0)}</span>
+            <span className="text-stone-300 mx-1">/</span>
+            <span className={(data?.totals.outOfStock ?? 0) > 0 ? 'text-red-600' : 'text-stone-900'}>{isLoading ? '—' : (data?.totals.outOfStock ?? 0)}</span>
+          </p>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
