@@ -1,6 +1,5 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useState } from 'react';
 import AppLoader from './components/ui/AppLoader';
 import { PageLoader } from './components/ui/Loader';
 import ProtectedRoute from './components/layout/ProtectedRoute';
@@ -63,6 +62,16 @@ const PlatformMonitor      = lazy(() => import('./pages/platform/PlatformMonitor
 
 export default function App() {
   const [loading, setLoading] = useState(true);
+
+  // Reload the page whenever a new service worker takes over so users
+  // always run the latest deployed version without having to hard-refresh.
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+      });
+    }
+  }, []);
 
   if (loading) return <AppLoader onDone={() => setLoading(false)} />;
 
