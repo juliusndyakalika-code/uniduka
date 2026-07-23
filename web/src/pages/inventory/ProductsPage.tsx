@@ -584,6 +584,23 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      {/* ── Total stock card ── */}
+      <div className="card px-5 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center">
+            <Package size={16} className="text-primary-600" />
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Total Items in Stock</p>
+            <p className="text-2xl font-bold text-stone-900 leading-tight">
+              {isLoading ? '—' : (data?.totals.totalStock ?? 0).toLocaleString()}
+              <span className="ml-1.5 text-sm font-normal text-stone-400">pcs</span>
+            </p>
+          </div>
+        </div>
+        <p className="text-xs text-stone-400 hidden sm:block">{data?.total ?? 0} product{(data?.total ?? 0) !== 1 ? 's' : ''}</p>
+      </div>
+
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-3 text-stone-400" />
