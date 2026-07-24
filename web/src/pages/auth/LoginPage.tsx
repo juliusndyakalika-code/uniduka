@@ -23,9 +23,9 @@ export default function LoginPage() {
     setLoading(true); setError('');
     try {
       const res = await api.post('/auth/login', data);
-      const { accessToken, user, account, shopId, require2fa } = res.data.data;
+      const { accessToken, refreshToken, user, account, shopId, require2fa } = res.data.data;
       if (require2fa) { setNeed2fa(true); setLoading(false); return; }
-      setAuth(accessToken, user, account, shopId);
+      setAuth(accessToken, user, account, shopId, refreshToken);
       navigate(user.role === 'PLATFORM_ADMIN' ? '/platform' : '/dashboard');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '';

@@ -16,7 +16,7 @@ interface AuthState {
   shopId: string | null;
   shops: ShopMeta[];
   isAuthenticated: boolean;
-  setAuth: (token: string, user: User, account: Account, shopId?: string) => void;
+  setAuth: (token: string, user: User, account: Account, shopId?: string, refreshToken?: string) => void;
   setShopId: (shopId: string, token?: string) => void;
   setShops: (shops: ShopMeta[]) => void;
   logout: () => void;
@@ -44,12 +44,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   shops:           [],
   isAuthenticated: !!lsGet('ud_token'),
 
-  setAuth: (token, user, account, shopId) => {
+  setAuth: (token, user, account, shopId, refreshToken) => {
     lsSet('ud_token', token);
     lsSet('ud_user', JSON.stringify(user));
     lsSet('ud_account', JSON.stringify(account));
     if (shopId) lsSet('ud_shop', shopId);
-    // Always update in-memory state even if storage failed
+    if (refreshToken) lsSet('ud_refresh', refreshToken);
     set({ token, user, account, shopId: shopId || null, isAuthenticated: true });
   },
 

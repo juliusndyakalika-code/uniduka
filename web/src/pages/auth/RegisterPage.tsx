@@ -21,8 +21,8 @@ export default function RegisterPage() {
     setLoading(true); setError('');
     try {
       const res = await api.post('/auth/register', data);
-      const { accessToken, user, account } = res.data.data;
-      setAuth(accessToken, user, account);
+      const { accessToken, refreshToken, user, account } = res.data.data;
+      setAuth(accessToken, user, account, undefined, refreshToken);
       navigate('/setup/wizard');
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Registration failed');

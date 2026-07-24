@@ -12,18 +12,26 @@ function tokenExpired(token: string | null): boolean {
   }
 }
 
+function hasRefreshToken(): boolean {
+  try { return !!localStorage.getItem('ud_refresh'); } catch { return false; }
+}
+
 interface Props { roles?: string[]; }
 export default function ProtectedRoute({ roles }: Props) {
   const { isAuthenticated, token, user, account, logout } = useAuthStore();
   const { pathname } = useLocation();
   const expired = tokenExpired(token);
 
-  // Flush stale localStorage if the stored token is expired
+  // Only hard-logout when the access token is expired AND there's no refresh
+  // token to silently renew it. If a refresh token exists, the API client's
+  // 401 interceptor will handle renewal on the next API call.
+  const canRefresh = hasRefreshToken();
+
   useEffect(() => {
-    if (isAuthenticated && expired) logout();
+    if (isAuthenticated && expired && !canRefresh) logout();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!isAuthenticated || expired) return <Navigate to="/login" replace />;
+  if (!isAuthenticated || (expired && !canRefresh)) return <Navigate to="/login" replace />;
   // Platform admins belong in the /platform section
   if (user?.role === 'PLATFORM_ADMIN') return <Navigate to="/platform" replace />;
   // Block access to shop functionality until subscription approved — but allow setup wizard
