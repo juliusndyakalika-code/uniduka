@@ -370,7 +370,7 @@ export default function LandingPage() {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
                 style={{ ...neu.card, color: '#a66624' }}>
-                <Zap size={12} className="fill-amber-700" /> Built for East African businesses
+                <Zap size={12} className="fill-amber-700" /> Built for all business types
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight mb-6">
                 Run your business
