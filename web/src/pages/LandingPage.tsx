@@ -821,7 +821,6 @@ export default function LandingPage() {
           </div>
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-stone-200/60">
             <p className="text-xs text-stone-400">© 2026 MauzoSmart. All rights reserved.</p>
-            <p className="text-xs text-stone-400 flex items-center gap-1.5"><Printer size={11} /> Made in Tanzania</p>
           </div>
         </div>
       </footer>
