@@ -60,7 +60,7 @@ const PLANS = [
 
 const STATS = [
   { value: '11',   label: 'Business types supported' },
-  { value: '100%', label: 'TRA-compliant receipts' },
+  { value: '100%', label: 'TAX-compliant receipts' },
   { value: '20s',  label: 'Average checkout time' },
 ];
 
