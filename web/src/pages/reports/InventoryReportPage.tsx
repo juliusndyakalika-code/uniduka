@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AlertTriangle, Package, TrendingDown, TrendingUp, Users, BarChart2, Download } from 'lucide-react';
 import { downloadCsv } from '../../utils/exportCsv';
@@ -49,6 +50,16 @@ export default function InventoryReportPage() {
     initialSort: { field: 'value', dir: 'desc' },
     pageSize: 10,
   });
+  const valuationTotals = useMemo(() => {
+    const source = data?.valuation ?? [];
+    const q = valuationTable.search.toLowerCase();
+    const filtered = q ? source.filter(p => p.name.toLowerCase().includes(q)) : source;
+    return filtered.reduce(
+      (acc, p) => ({ totalStock: acc.totalStock + p.stock, totalValue: acc.totalValue + p.value }),
+      { totalStock: 0, totalValue: 0 },
+    );
+  }, [data?.valuation, valuationTable.search]);
+
   const expiringTable = useDataTable(data?.expiring ?? [], {
     searchable: e => [e.name, e.batchNo],
     sortValues: { name: e => e.name, batchNo: e => e.batchNo, qty: e => e.qty, expiresAt: e => new Date(e.expiresAt) },
@@ -186,6 +197,15 @@ export default function InventoryReportPage() {
                     ))}
                     {valuationTable.total === 0 && <tr><td colSpan={3} className="text-center text-stone-400 py-6">{t('common.noData')}</td></tr>}
                   </tbody>
+                  {valuationTable.total > 0 && (
+                    <tfoot>
+                      <tr className="border-t-2 border-stone-200 bg-stone-50 font-semibold text-stone-700 text-xs">
+                        <td className="px-3 py-2.5 text-stone-400 text-[10px] uppercase tracking-wide">Total</td>
+                        <td className="px-3 py-2.5">{valuationTotals.totalStock.toLocaleString()}</td>
+                        <td className="px-3 py-2.5">{fmt(valuationTotals.totalValue)}</td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
               <TablePagination page={valuationTable.page} pageCount={valuationTable.pageCount} total={valuationTable.total} pageSize={valuationTable.pageSize} onPage={valuationTable.setPage} onPageSize={valuationTable.setPageSize} />
