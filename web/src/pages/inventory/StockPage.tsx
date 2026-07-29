@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpDown, Plus, Search, X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, X, Download, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
-import { useDataTable, SortableTh } from '../../components/ui/DataTable';
+import { SortableTh, useDataTable } from '../../components/ui/DataTable';
 import { PageLoader } from '../../components/ui/Loader';
 
 interface Movement {
   id: string; type: string; quantity: number; note?: string;
+  balanceAfter?: number;
   product: { name: string; sku: string; unit: string };
   user?: { fullName: string } | null;
   createdAt: string;
@@ -22,6 +23,8 @@ const TYPE_BADGE: Record<string, string> = {
   SALE:             'bg-red-100 text-red-700',
   PURCHASE:         'bg-emerald-100 text-emerald-700',
   ADJUSTMENT:       'bg-blue-100 text-blue-700',
+  ADJUSTMENT_IN:    'bg-blue-100 text-blue-700',
+  ADJUSTMENT_OUT:   'bg-orange-100 text-orange-700',
   TRANSFER_IN:      'bg-violet-100 text-violet-700',
   TRANSFER_OUT:     'bg-orange-100 text-orange-700',
   RETURN:           'bg-amber-100 text-amber-700',
@@ -33,18 +36,23 @@ function typeLabel(type: string) {
   return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-function downloadCsv(rows: Movement[]) {
-  const headers = ['Date', 'Type', 'Product', 'SKU', 'Qty', 'Unit', 'Note', 'By'];
-  const lines = rows.map(m => [
-    format(new Date(m.createdAt), 'yyyy-MM-dd HH:mm'),
-    m.type,
-    m.product.name,
-    m.product.sku,
-    m.quantity,
-    m.product.unit,
-    m.note || '',
-    m.user?.fullName || '',
-  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+function downloadCsv(rows: Movement[], hasBalance: boolean) {
+  const headers = hasBalance
+    ? ['Date', 'Type', 'Product', 'SKU', 'Qty', 'Unit', 'Balance', 'Note', 'By']
+    : ['Date', 'Type', 'Product', 'SKU', 'Qty', 'Unit', 'Note', 'By'];
+  const lines = rows.map(m => {
+    const base = [
+      format(new Date(m.createdAt), 'yyyy-MM-dd HH:mm'),
+      m.type,
+      m.product.name,
+      m.product.sku,
+      m.quantity,
+      m.product.unit,
+    ];
+    if (hasBalance) base.push(String(m.balanceAfter ?? ''));
+    base.push(m.note || '', m.user?.fullName || '');
+    return base.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+  });
   const csv = [headers.join(','), ...lines].join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
@@ -57,6 +65,7 @@ export default function StockPage() {
   const { shopId } = useAuthStore();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
+  const [selectedProductId, setSelectedProductId] = useState('');
   const [page, setPage] = useState(1);
   const [showAdj, setShowAdj] = useState(false);
   const [error, setError] = useState('');
@@ -64,26 +73,33 @@ export default function StockPage() {
   const { register, handleSubmit, reset } = useForm<AdjustForm>({ defaultValues: { type: 'ADJUSTMENT_IN' } });
 
   const { data, isLoading } = useQuery<{ data: Movement[]; meta: Meta }>({
-    queryKey: ['stock-movements', shopId, search, page],
+    queryKey: ['stock-movements', shopId, search, selectedProductId, page],
     queryFn: () =>
-      api.get('/inventory/movements', { params: { search: search || undefined, page, limit: 50 } })
-        .then(r => ({ data: r.data.data, meta: r.data.meta })),
+      api.get('/inventory/movements', {
+        params: {
+          search: search || undefined,
+          productId: selectedProductId || undefined,
+          page,
+          limit: 50,
+        },
+      }).then(r => ({ data: r.data.data, meta: r.data.meta })),
     enabled: !!shopId,
     placeholderData: prev => prev,
   });
 
   const movements = data?.data ?? [];
   const meta = data?.meta;
+  const hasBalance = selectedProductId !== '' && movements.some(m => m.balanceAfter !== undefined);
 
-  // Client-side column sorting over the current page (search + paging are server-side)
   const stockSort = useDataTable(movements, {
     sortValues: {
-      type: m => m.type,
-      product: m => m.product.name,
+      type:     m => m.type,
+      product:  m => m.product.name,
       quantity: m => m.quantity,
-      note: m => m.note,
-      user: m => m.user?.fullName,
-      date: m => new Date(m.createdAt),
+      balance:  m => m.balanceAfter,
+      note:     m => m.note,
+      user:     m => m.user?.fullName,
+      date:     m => new Date(m.createdAt),
     },
     pageSize: movements.length || 1,
   });
@@ -105,11 +121,20 @@ export default function StockPage() {
     onError: (e: unknown) => setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed'),
   });
 
-  // Export all matching movements (fetch without pagination)
   async function handleExport() {
-    const res = await api.get('/inventory/movements', { params: { search: search || undefined, limit: 5000 } });
-    downloadCsv(res.data.data);
+    const res = await api.get('/inventory/movements', {
+      params: { search: search || undefined, productId: selectedProductId || undefined, limit: 5000 },
+    });
+    downloadCsv(res.data.data, hasBalance);
   }
+
+  function clearProductFilter() {
+    setSelectedProductId('');
+    setSearch('');
+    setPage(1);
+  }
+
+  const selectedProduct = products.find(p => p.id === selectedProductId);
 
   return (
     <div className="space-y-4">
@@ -118,6 +143,7 @@ export default function StockPage() {
           <h1 className="page-title">{t('stock.title')}</h1>
           <p className="page-subtitle">
             {meta ? `${meta.total.toLocaleString()} total movements` : 'Inventory ledger'}
+            {hasBalance && selectedProduct && ` · ${selectedProduct.name}`}
           </p>
         </div>
         <div className="flex gap-2">
@@ -130,15 +156,48 @@ export default function StockPage() {
         </div>
       </div>
 
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-3 text-stone-400" />
-        <input
-          className="input pl-8"
-          placeholder="Search by product name…"
-          value={search}
-          onChange={e => { setSearch(e.target.value); setPage(1); }}
-        />
+      {/* Filters row */}
+      <div className="flex flex-wrap gap-3">
+        {/* Product filter — enables running balance */}
+        <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+          <Filter size={14} className="text-stone-400 shrink-0" />
+          <select
+            className="select flex-1"
+            value={selectedProductId}
+            onChange={e => { setSelectedProductId(e.target.value); setSearch(''); setPage(1); }}
+          >
+            <option value="">All products (no balance)</option>
+            {products.map(p => (
+              <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
+            ))}
+          </select>
+          {selectedProductId && (
+            <button onClick={clearProductFilter} className="text-stone-400 hover:text-stone-700 shrink-0">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Text search — only shown when no product selected */}
+        {!selectedProductId && (
+          <div className="relative flex-1 min-w-[200px]">
+            <Search size={14} className="absolute left-3 top-3 text-stone-400" />
+            <input
+              className="input pl-8"
+              placeholder="Search by product name…"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+            />
+          </div>
+        )}
       </div>
+
+      {hasBalance && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-700">
+          <span className="font-semibold">Running balance enabled</span>
+          <span className="text-blue-500">· Showing oldest → newest · Balance column reflects stock after each movement</span>
+        </div>
+      )}
 
       <div className="card">
         {isLoading ? (
@@ -149,48 +208,66 @@ export default function StockPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <SortableTh field="type" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.type')}</SortableTh>
-                    <SortableTh field="product" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.product')}</SortableTh>
+                    <SortableTh field="date"     sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.date')}</SortableTh>
+                    <SortableTh field="type"     sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.type')}</SortableTh>
+                    {!selectedProductId && (
+                      <SortableTh field="product" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.product')}</SortableTh>
+                    )}
                     <SortableTh field="quantity" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.quantity')}</SortableTh>
-                    <SortableTh field="note" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.note')}</SortableTh>
-                    <SortableTh field="user" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.user')}</SortableTh>
-                    <SortableTh field="date" sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.date')}</SortableTh>
+                    {hasBalance && (
+                      <SortableTh field="balance" sort={stockSort.sort} onSort={stockSort.toggleSort}>Balance</SortableTh>
+                    )}
+                    <SortableTh field="note"     sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.note')}</SortableTh>
+                    <SortableTh field="user"     sort={stockSort.sort} onSort={stockSort.toggleSort}>{t('stock.user')}</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
                   {stockSort.sorted.map(m => (
                     <tr key={m.id}>
+                      <td className="text-stone-500 text-xs whitespace-nowrap">
+                        {format(new Date(m.createdAt), 'MMM d, yyyy')}
+                        <span className="text-stone-400 ml-1">{format(new Date(m.createdAt), 'HH:mm')}</span>
+                      </td>
                       <td>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${TYPE_BADGE[m.type] ?? 'bg-stone-100 text-stone-600'}`}>
                           {typeLabel(m.type)}
                         </span>
                       </td>
-                      <td>
-                        <p className="font-medium text-stone-900">{m.product.name}</p>
-                        <p className="text-xs text-stone-400 font-mono">{m.product.sku}</p>
-                      </td>
+                      {!selectedProductId && (
+                        <td>
+                          <p className="font-medium text-stone-900">{m.product.name}</p>
+                          <p className="text-xs text-stone-400 font-mono">{m.product.sku}</p>
+                        </td>
+                      )}
                       <td className={`font-mono font-semibold ${m.quantity < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                        {m.quantity > 0 ? '+' : ''}{m.quantity} <span className="font-normal text-stone-400">{m.product.unit}</span>
+                        {m.quantity > 0 ? '+' : ''}{m.quantity}
+                        <span className="font-normal text-stone-400 ml-1">{m.product.unit}</span>
                       </td>
+                      {hasBalance && (
+                        <td className={`font-mono font-bold tabular-nums ${(m.balanceAfter ?? 0) < 0 ? 'text-red-600' : (m.balanceAfter ?? 0) === 0 ? 'text-stone-400' : 'text-stone-800'}`}>
+                          {m.balanceAfter ?? '—'}
+                          <span className="font-normal text-stone-400 ml-1 text-xs">{m.product.unit}</span>
+                        </td>
+                      )}
                       <td className="text-stone-500 text-xs max-w-[160px] truncate">{m.note || '—'}</td>
                       <td className="text-stone-600 text-xs">{m.user?.fullName || '—'}</td>
-                      <td className="text-stone-500 text-xs whitespace-nowrap">
-                        {format(new Date(m.createdAt), 'MMM d, yyyy')}
-                        <span className="text-stone-400 ml-1">{format(new Date(m.createdAt), 'HH:mm')}</span>
-                      </td>
                     </tr>
                   ))}
                   {movements.length === 0 && (
-                    <tr><td colSpan={6} className="text-center text-stone-400 py-10">{t('stock.noMovements')}</td></tr>
+                    <tr>
+                      <td colSpan={hasBalance ? 7 : 6} className="text-center text-stone-400 py-10">
+                        {t('stock.noMovements')}
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
             </div>
 
-            {/* Pagination */}
             {meta && meta.pages > 1 && (
               <div className="flex items-center justify-between px-4 py-3 border-t border-stone-100">
                 <p className="text-xs text-stone-500">
+                  {hasBalance ? 'Oldest first · ' : ''}
                   Showing {(page - 1) * meta.limit + 1}–{Math.min(page * meta.limit, meta.total)} of {meta.total.toLocaleString()}
                 </p>
                 <div className="flex items-center gap-1">

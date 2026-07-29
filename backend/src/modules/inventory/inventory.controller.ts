@@ -890,6 +890,30 @@ export async function listMovements(req: AuthRequest, res: Response) {
     ...(to && { createdAt: { lte: new Date(to) } }),
     ...(search && { product: { name: { contains: search, mode: 'insensitive' as const } } }),
   };
+
+  // When a single product is selected, fetch all its movements chronologically,
+  // compute the running balance, then paginate oldest-first so the ledger reads naturally.
+  if (productId) {
+    const all = await prisma.stockMovement.findMany({
+      where,
+      include: {
+        product: { select: { name: true, sku: true, unit: true } },
+        user:    { select: { fullName: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    let running = 0;
+    const withBalance = all.map(m => {
+      running += m.quantity;
+      return { ...m, balanceAfter: running };
+    });
+    // Return oldest-first so the ledger reads top→bottom and balance grows correctly.
+    // Reverse so page 1 = oldest, last page = most recent.
+    const total = withBalance.length;
+    const page_items = withBalance.slice(skip, skip + take);
+    return R.ok(res, page_items, { total, page: Number(page), limit: take, pages: Math.ceil(total / take) });
+  }
+
   const [movements, total] = await Promise.all([
     prisma.stockMovement.findMany({
       where,
@@ -943,7 +967,7 @@ export async function inventoryAudit(req: AuthRequest, res: Response) {
       existing.currentStock += r.quantity;
     } else {
       byProduct.set(r.productId, {
-        name: r.product.name, sku: r.product.sku, unit: r.product.unit, isActive: r.product.isActive,
+        name: r.product.name, sku: r.product.sku ?? '', unit: r.product.unit ?? 'pcs', isActive: r.product.isActive,
         rowCount: 1, currentStock: r.quantity,
       });
     }
