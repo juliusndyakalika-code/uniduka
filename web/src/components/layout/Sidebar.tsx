@@ -6,7 +6,7 @@ import {
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
-  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck,
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ShieldCheck,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
@@ -301,6 +301,7 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
                   <NavItem to="/inventory/stock"           icon={<ArrowUpDown size={14} />}   label={t('nav.stockMovements')} />
                   <NavItem to="/inventory/purchase-orders" icon={<ClipboardList size={14} />} label={t('nav.purchaseOrders')} />
                   <NavItem to="/inventory/suppliers"      icon={<Truck size={14} />}         label="Suppliers" />
+                  <NavItem to="/inventory/audit"          icon={<ShieldCheck size={14} />}   label="Stock Audit" />
                   {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
                     <NavItem to="/inventory/recipes" icon={<Utensils size={14} />} label={t('nav.recipes')} />
                   )}
