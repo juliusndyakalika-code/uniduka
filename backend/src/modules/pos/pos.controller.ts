@@ -66,10 +66,25 @@ export async function createTransaction(req: AuthRequest, res: Response) {
     include: { items: true, payments: true, customer: true },
   });
 
-  // Deduct stock
+  // Deduct stock — FIFO across inventory rows so multi-row products
+  // don't get decremented once per row (which caused negative stock).
   for (const item of txItems) {
     await prisma.stockMovement.create({ data: { shopId: shop(req), productId: item.productId, type: 'SALE', quantity: -item.quantity, reference: tx.id, userId: req.user!.sub } });
-    await prisma.inventoryItem.updateMany({ where: { shopId: shop(req), productId: item.productId }, data: { quantity: { decrement: item.quantity } } });
+    let remaining = item.quantity;
+    const rows = await prisma.inventoryItem.findMany({
+      where: { shopId: shop(req), productId: item.productId },
+      orderBy: { createdAt: 'asc' },
+    });
+    for (const row of rows) {
+      if (remaining <= 0) break;
+      const take = Math.min(row.quantity, remaining);
+      await prisma.inventoryItem.update({ where: { id: row.id }, data: { quantity: { decrement: take } } });
+      remaining -= take;
+    }
+    // Allow oversell: deduct any leftover from the first row (goes negative)
+    if (remaining > 0 && rows.length > 0) {
+      await prisma.inventoryItem.update({ where: { id: rows[0].id }, data: { quantity: { decrement: remaining } } });
+    }
   }
 
   // Update customer spend
@@ -152,11 +167,14 @@ export async function voidTransaction(req: AuthRequest, res: Response) {
     await prisma.stockMovement.create({
       data: { shopId: shop(req), productId: item.productId, type: 'RETURN', quantity: item.quantity, reference: tx.id, note: `Void: ${reason || 'No reason'}`, userId: req.user!.sub },
     });
-    // Actually restore the inventory quantity
-    await prisma.inventoryItem.updateMany({
+    // Restore stock to the first inventory row only (mirrors FIFO deduction)
+    const firstRow = await prisma.inventoryItem.findFirst({
       where: { shopId: shop(req), productId: item.productId },
-      data: { quantity: { increment: item.quantity } },
+      orderBy: { createdAt: 'asc' },
     });
+    if (firstRow) {
+      await prisma.inventoryItem.update({ where: { id: firstRow.id }, data: { quantity: { increment: item.quantity } } });
+    }
   }
   return R.ok(res, { message: 'Transaction voided and stock restored' });
 }

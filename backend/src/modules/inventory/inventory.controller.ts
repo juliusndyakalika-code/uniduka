@@ -560,10 +560,22 @@ export async function addProductStock(req: AuthRequest, res: Response) {
   });
   if (!product) return R.notFound(res, 'Product not found');
 
-  // Persist inventory item and movement
-  await prisma.inventoryItem.create({
-    data: { shopId: shop(req), productId, quantity: qty, costPrice: cost, batchNo, expiryDate: expiryDate ? new Date(expiryDate) : undefined },
-  });
+  // Persist inventory and movement.
+  // When no batch/expiry is specified, update the existing row so that the
+  // POS FIFO deduction stays correct. Only create a new row for tracked lots.
+  const existingRow = !batchNo && !expiryDate
+    ? await prisma.inventoryItem.findFirst({ where: { shopId: shop(req), productId }, orderBy: { createdAt: 'asc' } })
+    : null;
+  if (existingRow) {
+    await prisma.inventoryItem.update({
+      where: { id: existingRow.id },
+      data: { quantity: { increment: qty }, costPrice: cost || existingRow.costPrice },
+    });
+  } else {
+    await prisma.inventoryItem.create({
+      data: { shopId: shop(req), productId, quantity: qty, costPrice: cost, batchNo, expiryDate: expiryDate ? new Date(expiryDate) : undefined },
+    });
+  }
   await prisma.stockMovement.create({
     data: { shopId: shop(req), productId, type: 'PURCHASE', quantity: qty, unitCost: cost, batchNo, note: note || 'Manual restock', userId: req.user!.sub },
   });
