@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, X, Download, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Plus, Search, X, Download, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,105 @@ import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { SortableTh, useDataTable } from '../../components/ui/DataTable';
 import { PageLoader } from '../../components/ui/Loader';
+
+interface Product { id: string; name: string; sku: string }
+
+function ProductCombobox({ products, value, onChange }: {
+  products: Product[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen]   = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const selected = products.find(p => p.id === value);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, []);
+
+  const filtered = query.trim()
+    ? products.filter(p =>
+        p.name.toLowerCase().includes(query.toLowerCase()) ||
+        p.sku.toLowerCase().includes(query.toLowerCase())
+      )
+    : products;
+
+  function select(id: string) {
+    onChange(id);
+    setQuery('');
+    setOpen(false);
+  }
+
+  function clear(e: React.MouseEvent) {
+    e.stopPropagation();
+    onChange('');
+    setQuery('');
+    setOpen(false);
+  }
+
+  return (
+    <div ref={ref} className="relative flex-1 min-w-[240px]">
+      <div
+        className="input flex items-center gap-2 cursor-pointer pr-2"
+        onClick={() => { setOpen(o => !o); }}
+      >
+        <Search size={13} className="text-stone-400 shrink-0" />
+        {open ? (
+          <input
+            autoFocus
+            className="flex-1 bg-transparent outline-none text-sm text-stone-800 placeholder:text-stone-400"
+            placeholder="Search product…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onClick={e => e.stopPropagation()}
+          />
+        ) : (
+          <span className={`flex-1 text-sm truncate ${selected ? 'text-stone-800' : 'text-stone-400'}`}>
+            {selected ? `${selected.name} (${selected.sku})` : 'All products (no balance)'}
+          </span>
+        )}
+        {value ? (
+          <button onClick={clear} className="text-stone-400 hover:text-stone-700 shrink-0 p-0.5">
+            <X size={13} />
+          </button>
+        ) : (
+          <ChevronDown size={13} className="text-stone-400 shrink-0" />
+        )}
+      </div>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-stone-200 rounded-lg shadow-lg overflow-hidden">
+          <div className="max-h-60 overflow-y-auto">
+            <button
+              className="w-full text-left px-3 py-2 text-sm text-stone-400 hover:bg-stone-50"
+              onClick={() => select('')}
+            >
+              All products (no balance)
+            </button>
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-stone-400">No products match</p>
+            ) : filtered.map(p => (
+              <button
+                key={p.id}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-stone-50 flex items-baseline gap-2 ${p.id === value ? 'bg-primary-50 text-primary-700 font-medium' : 'text-stone-800'}`}
+                onClick={() => select(p.id)}
+              >
+                <span className="truncate">{p.name}</span>
+                <span className="text-xs text-stone-400 font-mono shrink-0">{p.sku}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Movement {
   id: string; type: string; quantity: number; note?: string;
@@ -104,7 +203,7 @@ export default function StockPage() {
     pageSize: movements.length || 1,
   });
 
-  const { data: products = [] } = useQuery<{ id: string; name: string; sku: string }[]>({
+  const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['products-min', shopId],
     queryFn: () => api.get('/inventory/products', { params: { limit: 500 } }).then(r => r.data.data),
     enabled: !!shopId,
@@ -126,12 +225,6 @@ export default function StockPage() {
       params: { search: search || undefined, productId: selectedProductId || undefined, limit: 5000 },
     });
     downloadCsv(res.data.data, hasBalance);
-  }
-
-  function clearProductFilter() {
-    setSelectedProductId('');
-    setSearch('');
-    setPage(1);
   }
 
   const selectedProduct = products.find(p => p.id === selectedProductId);
@@ -158,25 +251,11 @@ export default function StockPage() {
 
       {/* Filters row */}
       <div className="flex flex-wrap gap-3">
-        {/* Product filter — enables running balance */}
-        <div className="flex items-center gap-2 flex-1 min-w-[220px]">
-          <Filter size={14} className="text-stone-400 shrink-0" />
-          <select
-            className="select flex-1"
-            value={selectedProductId}
-            onChange={e => { setSelectedProductId(e.target.value); setSearch(''); setPage(1); }}
-          >
-            <option value="">All products (no balance)</option>
-            {products.map(p => (
-              <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-            ))}
-          </select>
-          {selectedProductId && (
-            <button onClick={clearProductFilter} className="text-stone-400 hover:text-stone-700 shrink-0">
-              <X size={14} />
-            </button>
-          )}
-        </div>
+        <ProductCombobox
+          products={products}
+          value={selectedProductId}
+          onChange={id => { setSelectedProductId(id); setSearch(''); setPage(1); }}
+        />
 
         {/* Text search — only shown when no product selected */}
         {!selectedProductId && (
