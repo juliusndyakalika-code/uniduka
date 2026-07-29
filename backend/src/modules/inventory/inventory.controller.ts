@@ -691,6 +691,15 @@ export async function adjustStock(req: AuthRequest, res: Response) {
   const delta = isOut ? -rawQty : rawQty;
   const actualNote = note || reason;
 
+  // Block removals that would push total stock below zero
+  if (isOut) {
+    const allRows = await prisma.inventoryItem.findMany({ where: { shopId: shop(req), productId } });
+    const currentStock = allRows.reduce((s, r) => s + r.quantity, 0);
+    if (rawQty > currentStock) {
+      return R.badRequest(res, `Cannot remove ${rawQty} — only ${currentStock} in stock`);
+    }
+  }
+
   // Find existing inventory item for this product in this shop
   const existing = await prisma.inventoryItem.findFirst({ where: { shopId: shop(req), productId } });
   if (existing) {
