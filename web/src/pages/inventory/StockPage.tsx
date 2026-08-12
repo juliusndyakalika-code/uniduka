@@ -51,28 +51,32 @@ function ProductCombobox({ products, value, onChange }: {
   }
 
   return (
-    <div ref={ref} className="relative flex-1 min-w-[240px]">
+    <div ref={ref} className="relative w-full">
       <div
-        className="input flex items-center gap-2 cursor-pointer pr-2"
+        className="input flex items-center gap-2 cursor-pointer pr-2 min-h-[38px]"
+        title={selected ? `${selected.name} (${selected.sku})` : ''}
         onClick={() => { setOpen(o => !o); }}
       >
         <Search size={13} className="text-stone-400 shrink-0" />
         {open ? (
           <input
             autoFocus
-            className="flex-1 bg-transparent outline-none text-sm text-stone-800 placeholder:text-stone-400"
-            placeholder="Search product…"
+            className="flex-1 min-w-0 bg-transparent outline-none text-sm text-stone-800 placeholder:text-stone-400"
+            placeholder="Type product name or SKU…"
             value={query}
             onChange={e => setQuery(e.target.value)}
             onClick={e => e.stopPropagation()}
           />
+        ) : selected ? (
+          <div className="flex-1 min-w-0 flex items-baseline gap-2 overflow-hidden">
+            <span className="text-sm font-medium text-stone-800 truncate">{selected.name}</span>
+            <span className="text-xs text-stone-400 font-mono shrink-0">{selected.sku}</span>
+          </div>
         ) : (
-          <span className={`flex-1 text-sm truncate ${selected ? 'text-stone-800' : 'text-stone-400'}`}>
-            {selected ? `${selected.name} (${selected.sku})` : 'All products (no balance)'}
-          </span>
+          <span className="flex-1 text-sm text-stone-400 truncate">All products (no balance)</span>
         )}
         {value ? (
-          <button onClick={clear} className="text-stone-400 hover:text-stone-700 shrink-0 p-0.5">
+          <button onClick={clear} className="text-stone-400 hover:text-stone-700 shrink-0 p-0.5 ml-1">
             <X size={13} />
           </button>
         ) : (
@@ -250,20 +254,22 @@ export default function StockPage() {
       </div>
 
       {/* Filters row */}
-      <div className="flex flex-wrap gap-3">
-        <ProductCombobox
-          products={products}
-          value={selectedProductId}
-          onChange={id => { setSelectedProductId(id); setSearch(''); setPage(1); }}
-        />
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex-1">
+          <ProductCombobox
+            products={products}
+            value={selectedProductId}
+            onChange={id => { setSelectedProductId(id); setSearch(''); setPage(1); }}
+          />
+        </div>
 
         {/* Text search — only shown when no product selected */}
         {!selectedProductId && (
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative sm:w-56 shrink-0">
             <Search size={14} className="absolute left-3 top-3 text-stone-400" />
             <input
-              className="input pl-8"
-              placeholder="Search by product name…"
+              className="input pl-8 w-full"
+              placeholder="Search by name…"
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); }}
             />
