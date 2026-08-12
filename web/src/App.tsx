@@ -21,6 +21,7 @@ const MyAccountPage        = lazy(() => import('./pages/account/MyAccountPage'))
 const PosPage              = lazy(() => import('./pages/pos/PosPage'));
 const DebtsPage            = lazy(() => import('./pages/pos/DebtsPage'));
 const VoidsPage            = lazy(() => import('./pages/pos/VoidsPage'));
+const TransactionsPage     = lazy(() => import('./pages/pos/TransactionsPage'));
 
 const InventoryDashboard   = lazy(() => import('./pages/inventory/InventoryDashboard'));
 const ProductsPage         = lazy(() => import('./pages/inventory/ProductsPage'));
@@ -115,6 +116,7 @@ export default function App() {
               <Route path="/pos"        element={<PosPage />} />
               <Route path="/pos/debts"  element={<DebtsPage />} />
               <Route path="/pos/voids"  element={<VoidsPage />} />
+              <Route path="/pos/transactions" element={<TransactionsPage />} />
 
               <Route path="/inventory"                    element={<InventoryDashboard />} />
               <Route path="/inventory/products"           element={<ProductsPage />} />

@@ -222,7 +222,7 @@ export default function Dashboard() {
           <h3 className="text-sm font-semibold text-stone-700">{isHotel ? 'Recent Check-ins' : t('dashboard.recentTransactions')}</h3>
           <div className="flex items-center gap-3">
             <TableSearch value={txTable.search} onChange={txTable.setSearch} placeholder="Search receipt, cashier…" className="max-w-[12rem]" />
-            <a href="/reports/sales" className="text-xs text-primary-600 hover:underline shrink-0">{t('dashboard.viewAll')}</a>
+            <Link to="/pos/transactions" className="text-xs text-primary-600 hover:underline shrink-0">{t('dashboard.viewAll')}</Link>
           </div>
         </div>
         <div className="table-wrapper">

@@ -104,29 +104,53 @@ export async function listTransactions(req: AuthRequest, res: Response) {
   // Use start-of-day for `from` and end-of-day for `to` to match the reporting date range
   const fromDate = from ? new Date(`${from}T00:00:00.000Z`) : undefined;
   const toDate   = to   ? new Date(`${to}T23:59:59.999Z`)   : undefined;
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      shopId: shop(req),
-      ...(status        && { status:    status as never }),
-      ...(cashierId     && { cashierId }),
-      ...((fromDate || toDate) && {
-        createdAt: {
-          ...(fromDate && { gte: fromDate }),
-          ...(toDate   && { lte: toDate   }),
-        },
-      }),
-      ...(search        && { receiptNo: { contains: search, mode: 'insensitive' as never } }),
-      ...(paymentMethod && { payments: { some: { method: paymentMethod as never } } }),
-    },
-    include: {
-      items: { include: { product: { select: { costPrice: true } } } },
-      payments: true,
-      customer: { select: { fullName: true } },
-      cashier: { select: { fullName: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-    skip, take: Number(limit),
+
+  // Search matches receipt number, customer name, or the cashier who rang it up.
+  const like = { contains: search, mode: 'insensitive' as never };
+  const where = {
+    shopId: shop(req),
+    ...(status        && { status:    status as never }),
+    ...(cashierId     && { cashierId }),
+    ...((fromDate || toDate) && {
+      createdAt: {
+        ...(fromDate && { gte: fromDate }),
+        ...(toDate   && { lte: toDate   }),
+      },
+    }),
+    ...(search && {
+      OR: [
+        { receiptNo: like },
+        { customerName: like },
+        { customer: { fullName: like } },
+        { cashier:  { fullName: like } },
+      ],
+    }),
+    ...(paymentMethod && { payments: { some: { method: paymentMethod as never } } }),
+  };
+
+  const [transactions, total] = await Promise.all([
+    prisma.transaction.findMany({
+      where,
+      include: {
+        items: { include: { product: { select: { costPrice: true } } } },
+        payments: true,
+        customer: { select: { fullName: true } },
+        cashier: { select: { fullName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip, take: Number(limit),
+    }),
+    prisma.transaction.count({ where }),
+  ]);
+
+  // Totals across the whole filtered set, not just the current page, so the
+  // summary cards stay correct while paging.
+  const totalsAgg = await prisma.transaction.aggregate({
+    where: { ...where, status: 'COMPLETED' },
+    _sum: { total: true },
+    _count: { id: true },
   });
+
   const result = transactions.map(tx => ({
     ...tx,
     cashierName: tx.cashier?.fullName ?? null,
@@ -137,7 +161,14 @@ export async function listTransactions(req: AuthRequest, res: Response) {
     })),
     cashier: undefined,
   }));
-  return R.ok(res, result);
+  return R.ok(res, result, {
+    total,
+    page:  Number(page),
+    limit: Number(limit),
+    pages: Math.ceil(total / Number(limit)),
+    sumCompleted:   totalsAgg._sum.total ?? 0,
+    countCompleted: totalsAgg._count.id,
+  });
 }
 
 export async function getTransaction(req: AuthRequest, res: Response) {

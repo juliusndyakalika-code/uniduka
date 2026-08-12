@@ -6,7 +6,7 @@ import {
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
-  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ShieldCheck,
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ShieldCheck, ReceiptText,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
@@ -248,7 +248,10 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
           {role === 'CASHIER' && (
             <>
               {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
-                <NavItem to="/pos" icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
+                <>
+                  <NavItem to="/pos" icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
+                  <NavItem to="/pos/transactions" icon={<ReceiptText size={16} />} label="Transactions" />
+                </>
               )}
               <NavItem to="/customers" icon={<Users size={16} />} label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'Guests' : t('nav.customers')} />
               {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
@@ -280,9 +283,10 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
             <>
               {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
                 <>
-                  <NavItem to="/pos"       icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
-                  <NavItem to="/pos/debts" icon={<Clock size={16} />}        label={t('nav.debts')} />
-                  <NavItem to="/pos/voids" icon={<Trash2 size={16} />}       label={t('nav.voidedSales')} />
+                  <NavItem to="/pos"              icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
+                  <NavItem to="/pos/transactions" icon={<ReceiptText size={16} />}  label="Transactions" />
+                  <NavItem to="/pos/debts"        icon={<Clock size={16} />}        label={t('nav.debts')} />
+                  <NavItem to="/pos/voids"        icon={<Trash2 size={16} />}       label={t('nav.voidedSales')} />
                 </>
               )}
               {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
