@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, X, Users, Package, AlertCircle, Trash2, Trophy, Calendar } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -239,6 +239,50 @@ export default function ConsignmentPage() {
     pageSize: 12,
   });
 
+  // ── Report totals — sum every row in the selected date range (all pages,
+  //    respecting the table search) so the figures match what is on screen.
+  const sellerTotals = useMemo(
+    () => sellerTable.sorted.reduce(
+      (a, r) => ({
+        salesCount:   a.salesCount   + r.salesCount,
+        totalQty:     a.totalQty     + r.totalQty,
+        totalRevenue: a.totalRevenue + r.totalRevenue,
+        totalProfit:  a.totalProfit  + r.totalProfit,
+      }),
+      { salesCount: 0, totalQty: 0, totalRevenue: 0, totalProfit: 0 },
+    ),
+    [sellerTable.sorted],
+  );
+
+  const paymentTotals = useMemo(
+    () => paymentTable.sorted.reduce(
+      (a, p) => ({
+        salesCount:   a.salesCount   + p.salesCount,
+        totalQty:     a.totalQty     + p.totalQty,
+        totalRevenue: a.totalRevenue + p.totalRevenue,
+        totalProfit:  a.totalProfit  + p.totalProfit,
+      }),
+      { salesCount: 0, totalQty: 0, totalRevenue: 0, totalProfit: 0 },
+    ),
+    [paymentTable.sorted],
+  );
+
+  // The summary cards follow whichever tab's date range is active, so the
+  // headline profit never disagrees with the table underneath it.
+  const onReportTab  = tab === 'Profit Report';
+  const cardProfit   = onReportTab ? sellerTotals.totalProfit  : totalProfit;
+  const cardRevenue  = onReportTab ? sellerTotals.totalRevenue : totalRevenue;
+  const cardCount    = onReportTab ? sellerTotals.salesCount   : sales.length;
+
+  function rangeLabel(from: string, to: string) {
+    if (!from && !to) return 'All time';
+    if (from && to)   return from === to ? date(from) : `${date(from)} → ${date(to)}`;
+    return from ? `From ${date(from)}` : `Up to ${date(to)}`;
+  }
+  const cardRange = onReportTab
+    ? rangeLabel(reportFrom, reportTo)
+    : rangeLabel(salesFrom, salesTo);
+
   // Tab label helper
   function tabLabel(tabKey: Tab): string {
     if (tabKey === 'Sales') return t('consignment.salesTab');
@@ -270,20 +314,27 @@ export default function ConsignmentPage() {
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="card p-4">
-          <p className="text-xs text-stone-500 mb-1">{t('consignment.totalProfit')}</p>
-          <p className="text-xl font-bold text-green-600">{fmt(totalProfit)}</p>
+      {/* Summary cards — always scoped to the active tab's date range */}
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="card p-4">
+            <p className="text-xs text-stone-500 mb-1">{t('consignment.totalProfit')}</p>
+            <p className="text-xl font-bold text-green-600">{fmt(cardProfit)}</p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs text-stone-500 mb-1">Sales Recorded</p>
+            <p className="text-xl font-bold text-stone-800">{cardCount}</p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs text-stone-500 mb-1">{t('consignment.totalRevenue')}</p>
+            <p className="text-xl font-bold text-stone-800">{fmt(cardRevenue)}</p>
+          </div>
         </div>
-        <div className="card p-4">
-          <p className="text-xs text-stone-500 mb-1">Sales Recorded</p>
-          <p className="text-xl font-bold text-stone-800">{sales.length}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-stone-500 mb-1">{t('consignment.totalRevenue')}</p>
-          <p className="text-xl font-bold text-stone-800">{fmt(totalRevenue)}</p>
-        </div>
+        <p className="text-[11px] text-stone-400 px-1 flex items-center gap-1.5">
+          <Calendar size={11} className="shrink-0" />
+          Showing <span className="font-semibold text-stone-500">{cardRange}</span>
+          {onReportTab && (sellerTable.search) && <span className="text-stone-400">· filtered by search</span>}
+        </p>
       </div>
 
       {/* Date range — scopes the cards above and the Sales list below (default: today) */}
@@ -533,6 +584,17 @@ export default function ConsignmentPage() {
                     <tr><td colSpan={5} className="text-center text-stone-400 py-8">{t('common.noData')}</td></tr>
                   )}
                 </tbody>
+                {sellerTable.total > 0 && (
+                  <tfoot>
+                    <tr className="border-t-2 border-stone-200 bg-stone-50 font-semibold text-stone-700 text-xs">
+                      <td className="px-3 py-2.5 text-stone-400 text-[10px] uppercase tracking-wide">Total</td>
+                      <td className="px-3 py-2.5">{sellerTotals.salesCount}</td>
+                      <td className="px-3 py-2.5">{sellerTotals.totalQty}</td>
+                      <td className="px-3 py-2.5">{fmt(sellerTotals.totalRevenue)}</td>
+                      <td className="px-3 py-2.5 text-green-700">{fmt(sellerTotals.totalProfit)}</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
             <TablePagination page={sellerTable.page} pageCount={sellerTable.pageCount} total={sellerTable.total} pageSize={sellerTable.pageSize} onPage={sellerTable.setPage} onPageSize={sellerTable.setPageSize} />
@@ -569,6 +631,17 @@ export default function ConsignmentPage() {
                     </tr>
                   ))}
                 </tbody>
+                {paymentTable.total > 0 && (
+                  <tfoot>
+                    <tr className="border-t-2 border-stone-200 bg-stone-50 font-semibold text-stone-700 text-xs">
+                      <td className="px-3 py-2.5 text-stone-400 text-[10px] uppercase tracking-wide">Total</td>
+                      <td className="px-3 py-2.5">{paymentTotals.salesCount}</td>
+                      <td className="px-3 py-2.5">{paymentTotals.totalQty}</td>
+                      <td className="px-3 py-2.5">{fmt(paymentTotals.totalRevenue)}</td>
+                      <td className="px-3 py-2.5 text-green-700">{fmt(paymentTotals.totalProfit)}</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
             <TablePagination page={paymentTable.page} pageCount={paymentTable.pageCount} total={paymentTable.total} pageSize={paymentTable.pageSize} onPage={paymentTable.setPage} onPageSize={paymentTable.setPageSize} />
