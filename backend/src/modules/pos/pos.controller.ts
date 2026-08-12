@@ -3,10 +3,17 @@ import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import { io } from '../../app';
 import * as R from '../../utils/response';
+import * as tz from '../../utils/tz';
 
 const shop = (req: AuthRequest) => req.user!.shopId!;
 
 function receiptNo() { return `RCP-${Date.now()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`; }
+
+/** The shop's IANA timezone, used to resolve calendar-date filters. */
+async function shopTimezone(shopId: string): Promise<string> {
+  const s = await prisma.shop.findUnique({ where: { id: shopId }, select: { timezone: true } });
+  return s?.timezone || tz.DEFAULT_TZ;
+}
 
 export async function createTransaction(req: AuthRequest, res: Response) {
   const { items, payments, customerId, customerName: rawCustomerName, registerId, tableNo, coverCount, rxRef, tabId, note, discountAmount = 0, customerTin } = req.body;
@@ -101,9 +108,11 @@ export async function createTransaction(req: AuthRequest, res: Response) {
 export async function listTransactions(req: AuthRequest, res: Response) {
   const { from, to, status, cashierId, search, paymentMethod, page = '1', limit = '50' } = req.query as Record<string, string>;
   const skip = (Number(page) - 1) * Number(limit);
-  // Use start-of-day for `from` and end-of-day for `to` to match the reporting date range
-  const fromDate = from ? new Date(`${from}T00:00:00.000Z`) : undefined;
-  const toDate   = to   ? new Date(`${to}T23:59:59.999Z`)   : undefined;
+  // `from`/`to` are calendar dates as the user sees them, so resolve them in
+  // the shop's timezone rather than UTC.
+  const shopTz = await shopTimezone(shop(req));
+  const fromDate = from ? tz.startOfDateString(from, shopTz) : undefined;
+  const toDate   = to   ? tz.endOfDateString(to, shopTz)     : undefined;
 
   // Search matches receipt number, customer name, or the cashier who rang it up.
   const like = { contains: search, mode: 'insensitive' as never };

@@ -2,18 +2,49 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
+import * as tz from '../../utils/tz';
 
 const shop = (req: AuthRequest) => req.user!.shopId!;
-const dateRange = (req: AuthRequest) => {
+
+/** The shop's IANA timezone, used to resolve calendar-date filters. */
+async function shopTimezone(shopId: string): Promise<string> {
+  const s = await prisma.shop.findUnique({ where: { id: shopId }, select: { timezone: true } });
+  return s?.timezone || tz.DEFAULT_TZ;
+}
+
+/**
+ * `from`/`to` are calendar dates as the user picked them, so they resolve in
+ * the shop's timezone — not UTC, which would shift the day boundary by the
+ * zone's offset (3 hours for EAT).
+ */
+const dateRange = async (req: AuthRequest) => {
   const { from, to } = req.query as Record<string, string>;
-  const start = from ? new Date(`${from}T00:00:00.000Z`) : new Date(Date.now() - 30 * 86_400_000);
+  const zone  = await shopTimezone(shop(req));
+  const start = from ? tz.startOfDateString(from, zone) : new Date(Date.now() - 30 * 86_400_000);
   // end = end-of-day so a single-day range includes all transactions on that day
-  const end = to ? new Date(`${to}T23:59:59.999Z`) : new Date();
+  const end   = to ? tz.endOfDateString(to, zone) : new Date();
   return { gte: start, lte: end };
 };
 
+/**
+ * Bucket key for day/week/month grouping, computed in the shop's timezone so a
+ * sale at 01:00 EAT lands on that calendar day rather than the previous one.
+ */
+function periodKey(d: Date, period: string, zone: string): string {
+  const ymd = tz.ymdInTz(d, zone);              // "YYYY-MM-DD" in the shop's zone
+  if (period === 'month') return ymd.slice(0, 7);
+  if (period === 'week') {
+    // Step back to the Sunday of that local week.
+    const [y, m, day] = ymd.split('-').map(Number);
+    const noon = new Date(Date.UTC(y, m - 1, day, 12));   // midday avoids DST edges
+    noon.setUTCDate(noon.getUTCDate() - noon.getUTCDay());
+    return noon.toISOString().slice(0, 10);
+  }
+  return ymd;
+}
+
 export async function dashboardStats(req: AuthRequest, res: Response) {
-  const range = dateRange(req);
+  const range = await dateRange(req);
   const [txAgg, txCount, customerCount, lowStockCount, topProducts] = await Promise.all([
     prisma.transaction.aggregate({ where: { shopId: shop(req), status: 'COMPLETED', createdAt: range }, _sum: { total: true, taxAmount: true, discountAmount: true } }),
     prisma.transaction.count({ where: { shopId: shop(req), status: 'COMPLETED', createdAt: range } }),
@@ -42,18 +73,11 @@ async function hotelSalesReport(req: AuthRequest, res: Response, range: { gte: D
   const revenue = folios.reduce((s, f) => s + f.grandTotal, 0);
   const folioCount = folios.length;
 
-  // Group by period
+  // Group by period, in the shop's timezone
+  const zone = await shopTimezone(shop(req));
   const grouped: Record<string, { date: string; revenue: number; txCount: number; grossProfit: number }> = {};
   for (const folio of folios) {
-    const d = folio.createdAt;
-    let key: string;
-    if (period === 'month') {
-      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    } else if (period === 'week') {
-      const wk = new Date(d); wk.setDate(wk.getDate() - wk.getDay()); key = wk.toISOString().slice(0, 10);
-    } else {
-      key = d.toISOString().slice(0, 10);
-    }
+    const key = periodKey(folio.createdAt, period, zone);
     if (!grouped[key]) grouped[key] = { date: key, revenue: 0, txCount: 0, grossProfit: 0 };
     grouped[key].revenue     += folio.grandTotal;
     grouped[key].grossProfit += folio.grandTotal; // no product cost for room stays
@@ -113,7 +137,7 @@ async function hotelSalesReport(req: AuthRequest, res: Response, range: { gte: D
 
 export async function salesReport(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const range = dateRange(req);
+    const range = await dateRange(req);
     const { period = 'day', paymentMethod } = req.query as Record<string, string>;
 
     // Hotel/Guesthouse revenue lives in RoomFolio, not Transaction
@@ -228,18 +252,11 @@ export async function salesReport(req: AuthRequest, res: Response, next: NextFun
     });
     const inventoryValue = inventoryItems.reduce((s, i) => s + i.quantity * i.costPrice, 0);
 
-    // Group by period → byDay
+    // Group by period → byDay, in the shop's timezone
+    const zone = await shopTimezone(shop(req));
     const grouped: Record<string, { date: string; revenue: number; txCount: number; grossProfit: number }> = {};
     for (const tx of transactions) {
-      const d = tx.createdAt;
-      let key: string;
-      if (period === 'month') {
-        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      } else if (period === 'week') {
-        const wk = new Date(d); wk.setDate(wk.getDate() - wk.getDay()); key = wk.toISOString().slice(0, 10);
-      } else {
-        key = d.toISOString().slice(0, 10);
-      }
+      const key = periodKey(tx.createdAt, period, zone);
       if (!grouped[key]) grouped[key] = { date: key, revenue: 0, txCount: 0, grossProfit: 0 };
       const txCost     = tx.items.reduce((cs, i) => cs + (i.product?.costPrice ?? 0) * i.quantity, 0);
       grouped[key].revenue     += tx.total;            // full sale value (accrual)
@@ -342,7 +359,7 @@ export async function inventoryReport(req: AuthRequest, res: Response) {
 }
 
 export async function staffReport(req: AuthRequest, res: Response) {
-  const range = dateRange(req);
+  const range = await dateRange(req);
 
   // Hotel: group folios by receptionist (checkedInBy) instead of POS cashier
   const shopData = await prisma.shop.findUnique({ where: { id: shop(req) }, select: { businessType: true } });
@@ -398,7 +415,7 @@ export async function staffReport(req: AuthRequest, res: Response) {
 export async function businessTypeReport(req: AuthRequest, res: Response) {
   const shopData = await prisma.shop.findUnique({ where: { id: shop(req) }, select: { businessType: true } });
   const type = shopData?.businessType;
-  const range = dateRange(req);
+  const range = await dateRange(req);
 
   if (type === 'RESTAURANT' || type === 'CAFE_QSR') {
     const covers = await prisma.transaction.aggregate({ where: { shopId: shop(req), createdAt: range }, _sum: { coverCount: true }, _avg: { total: true } });
@@ -424,7 +441,7 @@ export async function businessTypeReport(req: AuthRequest, res: Response) {
 }
 
 export async function productSalesReport(req: AuthRequest, res: Response) {
-  const range = dateRange(req);
+  const range = await dateRange(req);
   const items = await prisma.transactionItem.findMany({
     where: { transaction: { shopId: shop(req), status: 'COMPLETED', createdAt: range } },
     select: {

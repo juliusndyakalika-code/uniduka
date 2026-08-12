@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
+import * as tz from '../../utils/tz';
 
 const PLAN_LIMITS = {
   STARTER:    { shops: 1,  branches: 1,  staff: 3,  registers: 1 },
@@ -111,13 +112,17 @@ export async function getDashboard(req: AuthRequest, res: Response) {
   const shopId = req.user!.shopId;
   if (!shopId) return R.ok(res, { revenue: { today: 0, week: 0, month: 0 }, transactions: { today: 0, week: 0 }, customers: { total: 0, new: 0 }, lowStock: 0, topProducts: [], recentTransactions: [], salesChart: [] });
 
-  const shopData = await prisma.shop.findUnique({ where: { id: shopId }, select: { businessType: true } });
+  const shopData = await prisma.shop.findUnique({ where: { id: shopId }, select: { businessType: true, timezone: true } });
 
+  // All boundaries are midnight in the shop's own timezone. Using the server's
+  // zone (UTC on Railway) would start the business day at 03:00 EAT and push
+  // after-midnight trade onto the previous day.
+  const zone = shopData?.timezone || tz.DEFAULT_TZ;
   const now = new Date();
-  const startOfDay   = new Date(now); startOfDay.setHours(0,0,0,0);
-  const startOfWeek  = new Date(now); startOfWeek.setDate(now.getDate() - 7);
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-  const startOf14d   = new Date(now); startOf14d.setDate(now.getDate() - 14);
+  const startOfDay   = tz.startOfDay(zone, now);
+  const startOfWeek  = tz.startOfDaysAgo(6,  zone, now);  // today + 6 prior days
+  const startOfMonth = tz.startOfMonth(zone, now);
+  const startOf14d   = tz.startOfDaysAgo(13, zone, now);
 
   // ── Hotel/Guesthouse: all stats from RoomFolio ──────────────────────────
   if (shopData?.businessType === 'HOTEL_GUESTHOUSE') {
@@ -154,10 +159,9 @@ export async function getDashboard(req: AuthRequest, res: Response) {
 
     const chartMap: Record<string, number> = {};
     for (let i = 13; i >= 0; i--) {
-      const d = new Date(now); d.setDate(now.getDate() - i);
-      chartMap[d.toISOString().split('T')[0]] = 0;
+      chartMap[tz.ymdInTz(tz.startOfDaysAgo(i, zone, now), zone)] = 0;
     }
-    dailyFolios.forEach(f => { const k = f.createdAt.toISOString().split('T')[0]; if (chartMap[k] !== undefined) chartMap[k] += f.grandTotal; });
+    dailyFolios.forEach(f => { const k = tz.ymdInTz(f.createdAt, zone); if (chartMap[k] !== undefined) chartMap[k] += f.grandTotal; });
 
     return R.ok(res, {
       revenue: {
@@ -228,10 +232,9 @@ export async function getDashboard(req: AuthRequest, res: Response) {
   });
   const chartMap: Record<string, number> = {};
   for (let i = 13; i >= 0; i--) {
-    const d = new Date(now); d.setDate(now.getDate() - i);
-    chartMap[d.toISOString().split('T')[0]] = 0;
+    chartMap[tz.ymdInTz(tz.startOfDaysAgo(i, zone, now), zone)] = 0;
   }
-  dailyTx.forEach(tx => { const k = tx.createdAt.toISOString().split('T')[0]; if (chartMap[k] !== undefined) chartMap[k] += tx.total; });
+  dailyTx.forEach(tx => { const k = tz.ymdInTz(tx.createdAt, zone); if (chartMap[k] !== undefined) chartMap[k] += tx.total; });
   const salesChart = Object.entries(chartMap).map(([date, revenue]) => ({ label: date.slice(5), revenue }));
 
   // ── Net profit this month (products + consignment − expenses) ──────────────
