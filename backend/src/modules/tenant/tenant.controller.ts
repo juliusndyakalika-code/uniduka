@@ -116,7 +116,7 @@ export async function getDashboard(req: AuthRequest, res: Response) {
   const now = new Date();
   const startOfDay   = new Date(now); startOfDay.setHours(0,0,0,0);
   const startOfWeek  = new Date(now); startOfWeek.setDate(now.getDate() - 7);
-  const startOfMonth = new Date(now); startOfMonth.setDate(now.getDate() - 30);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
   const startOf14d   = new Date(now); startOf14d.setDate(now.getDate() - 14);
 
   // ── Hotel/Guesthouse: all stats from RoomFolio ──────────────────────────
