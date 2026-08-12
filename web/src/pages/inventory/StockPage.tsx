@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, X, Download, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -17,49 +16,11 @@ function ProductCombobox({ products, value, onChange }: {
   value: string;
   onChange: (id: string) => void;
 }) {
-  const [query, setQuery]         = useState('');
-  const [open, setOpen]           = useState(false);
-  const [dropdownStyle, setStyle] = useState<React.CSSProperties>({});
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState('');
+  const [open, setOpen]   = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const selected = products.find(p => p.id === value);
-
-  // Position the portal dropdown directly below the trigger
-  const reposition = useCallback(() => {
-    if (!triggerRef.current) return;
-    const r = triggerRef.current.getBoundingClientRect();
-    setStyle({
-      position: 'fixed',
-      top:  r.bottom + 4,
-      left: r.left,
-      width: r.width,
-      zIndex: 9999,
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    reposition();
-    window.addEventListener('scroll', reposition, true);
-    window.addEventListener('resize', reposition);
-    return () => {
-      window.removeEventListener('scroll', reposition, true);
-      window.removeEventListener('resize', reposition);
-    };
-  }, [open, reposition]);
-
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      const t = e.target as Node;
-      if (
-        triggerRef.current && !triggerRef.current.contains(t) &&
-        dropdownRef.current && !dropdownRef.current.contains(t)
-      ) setOpen(false);
-    }
-    document.addEventListener('mousedown', handle);
-    return () => document.removeEventListener('mousedown', handle);
-  }, []);
 
   const filtered = query.trim()
     ? products.filter(p =>
@@ -74,79 +35,85 @@ function ProductCombobox({ products, value, onChange }: {
     setOpen(false);
   }
 
-  function clear(e: React.MouseEvent) {
-    e.stopPropagation();
+  function clear() {
     onChange('');
     setQuery('');
     setOpen(false);
   }
 
-  const dropdown = open ? createPortal(
-    <div
-      ref={dropdownRef}
-      style={dropdownStyle}
-      className="bg-white border border-stone-200 rounded-lg shadow-xl overflow-hidden"
-    >
-      <div className="max-h-64 overflow-y-auto">
-        <button
-          className="w-full text-left px-3 py-2.5 text-sm text-stone-400 hover:bg-stone-50 border-b border-stone-100"
-          onMouseDown={e => e.preventDefault()}
-          onClick={() => select('')}
-        >
-          All products (no balance)
-        </button>
-        {filtered.length === 0 ? (
-          <p className="px-3 py-3 text-xs text-stone-400">No products match</p>
-        ) : filtered.map(p => (
-          <button
-            key={p.id}
-            className={`w-full text-left px-3 py-2.5 text-sm hover:bg-stone-50 flex items-baseline gap-2 ${p.id === value ? 'bg-primary-50 text-primary-700 font-medium' : 'text-stone-800'}`}
-            onMouseDown={e => e.preventDefault()}
-            onClick={() => select(p.id)}
-          >
-            <span className="truncate">{p.name}</span>
-            <span className="text-xs text-stone-400 font-mono shrink-0">{p.sku}</span>
-          </button>
-        ))}
-      </div>
-    </div>,
-    document.body
-  ) : null;
-
   return (
-    <div ref={triggerRef} className="relative w-full">
+    <div className="w-full">
+      {/* Trigger row */}
       <div
         className="input flex items-center gap-2 cursor-pointer pr-2 min-h-[38px]"
         title={selected ? `${selected.name} (${selected.sku})` : ''}
-        onClick={() => setOpen(o => !o)}
+        onClick={() => { setOpen(o => { if (!o) setTimeout(() => inputRef.current?.focus(), 0); return !o; }); }}
       >
         <Search size={13} className="text-stone-400 shrink-0" />
-        {open ? (
-          <input
-            autoFocus
-            className="flex-1 min-w-0 bg-transparent outline-none text-sm text-stone-800 placeholder:text-stone-400"
-            placeholder="Type product name or SKU…"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onClick={e => e.stopPropagation()}
-          />
-        ) : selected ? (
+        {selected ? (
           <div className="flex-1 min-w-0 flex items-baseline gap-2 overflow-hidden">
             <span className="text-sm font-medium text-stone-800 truncate">{selected.name}</span>
             <span className="text-xs text-stone-400 font-mono shrink-0">{selected.sku}</span>
           </div>
         ) : (
-          <span className="flex-1 text-sm text-stone-400 truncate">All products (no balance)</span>
+          <span className="flex-1 text-sm text-stone-400 truncate">All products — filter for running balance</span>
         )}
         {value ? (
-          <button onClick={clear} className="text-stone-400 hover:text-stone-700 shrink-0 p-0.5 ml-1">
+          <button
+            onClick={e => { e.stopPropagation(); clear(); }}
+            className="text-stone-400 hover:text-stone-700 shrink-0 p-0.5 ml-1"
+          >
             <X size={13} />
           </button>
         ) : (
-          <ChevronDown size={13} className="text-stone-400 shrink-0" />
+          <ChevronDown size={13} className={`text-stone-400 shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
         )}
       </div>
-      {dropdown}
+
+      {/* Inline expandable list — grows with the page, never clipped */}
+      {open && (
+        <div className="mt-1 border border-stone-200 rounded-lg bg-white shadow-sm overflow-hidden">
+          {/* Search input inside the list */}
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-stone-100">
+            <Search size={13} className="text-stone-400 shrink-0" />
+            <input
+              ref={inputRef}
+              autoFocus
+              className="flex-1 bg-transparent outline-none text-sm text-stone-800 placeholder:text-stone-400"
+              placeholder="Type product name or SKU…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
+            {query && (
+              <button onClick={() => setQuery('')} className="text-stone-400 hover:text-stone-600 shrink-0">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-56 overflow-y-auto">
+            <button
+              className="w-full text-left px-3 py-2.5 text-sm text-stone-400 hover:bg-stone-50 border-b border-stone-50"
+              onClick={() => select('')}
+            >
+              All products (no balance)
+            </button>
+            {filtered.length === 0 ? (
+              <p className="px-3 py-3 text-xs text-stone-400">No products match "{query}"</p>
+            ) : filtered.map(p => (
+              <button
+                key={p.id}
+                className={`w-full text-left px-3 py-2.5 text-sm flex items-baseline gap-2 border-b border-stone-50 last:border-0
+                  ${p.id === value ? 'bg-primary-50 text-primary-700 font-medium' : 'text-stone-800 hover:bg-stone-50'}`}
+                onClick={() => select(p.id)}
+              >
+                <span className="truncate">{p.name}</span>
+                <span className="text-xs text-stone-400 font-mono shrink-0">{p.sku}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
