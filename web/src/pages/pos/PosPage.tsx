@@ -607,10 +607,10 @@ export default function PosPage() {
 
       {/* ── Cart + payment ───────────────────────────────────────────────── */}
       <div className={`flex flex-col overflow-hidden md:w-72 xl:w-80 md:shrink-0 ${mobileView === 'cart' ? 'flex-1' : 'hidden md:flex'}`}>
-        <div className="card flex flex-col flex-1 overflow-hidden">
+        <div className="card flex flex-col flex-1 overflow-y-auto">
 
           {/* Cart header */}
-          <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
+          <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between shrink-0">
             <h3 className="text-sm font-semibold text-stone-800 flex items-center gap-2">
               {t('pos.cart')}
               {totalItems > 0 && (
@@ -671,8 +671,8 @@ export default function PosPage() {
             )}
           </div>
 
-          {/* Cart items */}
-          <div className="flex-1 overflow-y-auto px-3 py-1 space-y-1">
+          {/* Cart items — no inner scroll; the whole cart column scrolls instead */}
+          <div className="px-3 py-1 space-y-1 shrink-0">
             {cart.length === 0 && (
               <p className="text-center text-xs text-stone-400 py-8">{t('pos.addProductsHint')}</p>
             )}
@@ -760,8 +760,8 @@ export default function PosPage() {
             ))}
           </div>
 
-          {/* Totals + payment */}
-          <div className="border-t border-stone-100 px-4 py-3 space-y-2.5">
+          {/* Totals + payment — mt-auto keeps it at the bottom when the cart is short */}
+          <div className="border-t border-stone-100 px-4 py-3 space-y-2.5 mt-auto shrink-0">
 
             {/* Totals */}
             <div className="space-y-1">
