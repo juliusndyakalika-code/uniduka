@@ -22,12 +22,18 @@ function ProductCombobox({ products, value, onChange }: {
 
   const selected = products.find(p => p.id === value);
 
-  const filtered = query.trim()
+  const matches = query.trim()
     ? products.filter(p =>
         p.name.toLowerCase().includes(query.toLowerCase()) ||
         p.sku.toLowerCase().includes(query.toLowerCase())
       )
     : products;
+
+  // With no search term the full catalogue would be very long, so show a
+  // first slice and let typing narrow it. Any active search shows every match.
+  const CAP = 40;
+  const capped = !query.trim() && matches.length > CAP;
+  const filtered = capped ? matches.slice(0, CAP) : matches;
 
   function select(id: string) {
     onChange(id);
@@ -91,7 +97,7 @@ function ProductCombobox({ products, value, onChange }: {
             )}
           </div>
 
-          <div className="max-h-56 overflow-y-auto">
+          <div>
             <button
               className="w-full text-left px-3 py-2.5 text-sm text-stone-400 hover:bg-stone-50 border-b border-stone-50"
               onClick={() => select('')}
@@ -111,6 +117,11 @@ function ProductCombobox({ products, value, onChange }: {
                 <span className="text-xs text-stone-400 font-mono shrink-0">{p.sku}</span>
               </button>
             ))}
+            {capped && (
+              <p className="px-3 py-2.5 text-xs text-stone-400 bg-stone-50 border-t border-stone-100">
+                Showing {CAP} of {matches.length} products. Type above to find any product.
+              </p>
+            )}
           </div>
         </div>
       )}
