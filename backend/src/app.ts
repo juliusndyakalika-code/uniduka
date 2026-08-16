@@ -34,6 +34,7 @@ import timeclockRoutes  from './modules/timeclock/timeclock.routes';
 import workOrderRoutes  from './modules/work-orders/workOrders.routes';
 import hotelRoutes      from './modules/hotel/hotel.routes';
 import expensesRoutes   from './modules/expenses/expenses.routes';
+import storefrontRoutes from './modules/storefront/storefront.routes';
 
 const app  = express();
 const http = createServer(app);
@@ -64,6 +65,10 @@ app.use(`${v1}/tenant`,     tenantRoutes);
 app.use(`${v1}/shops`,      shopRoutes);
 app.use(`${v1}/business`,   businessRoutes);
 app.use(`${v1}/units`,      unitsRoutes);
+// PUBLIC storefront — intentionally unauthenticated. Only serves shops that
+// opted in via storefrontEnabled, and only their published products. Each
+// endpoint carries its own rate limit (see storefront.routes.ts).
+app.use(`${v1}/public`,     storefrontRoutes);
 // All routes below this line require an active subscription
 const subscriptionGate = [authenticate, requireActiveSubscription];
 app.use(`${v1}/inventory`,    subscriptionGate, inventoryRoutes);

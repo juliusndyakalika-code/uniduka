@@ -11,9 +11,9 @@ datasource db {
 // ─── ENUMS ────────────────────────────────────────────────────────────────────
 
 enum SubscriptionPlan {
-  STARTER    // 1 shop, 1 branch, 3 staff, 1 register/branch
-  GROWTH     // 3 shops, 3 branches each, 15 staff, 3 registers/branch
-  BUSINESS   // 10 shops, unlimited branches, 100 staff, unlimited registers
+  STARTER // 1 shop, 1 branch, 3 staff, 1 register/branch
+  GROWTH // 3 shops, 3 branches each, 15 staff, 3 registers/branch
+  BUSINESS // 10 shops, unlimited branches, 100 staff, unlimited registers
   ENTERPRISE // Unlimited everything + custom hardware + 24/7 SLA
 }
 
@@ -32,26 +32,26 @@ enum BusinessType {
 }
 
 enum UserRole {
-  PLATFORM_ADMIN   // UniDuka platform ops — manages all tenants
-  ACCOUNT_OWNER    // Business owner — full access, billing, shop setup, reports
-  CASHIER          // POS and sales only
-  INVENTORY_STAFF  // Stock, purchase orders, stocktake only
-  RECEPTIONIST     // Hotel/Guesthouse front desk — check-in/out, guests
+  PLATFORM_ADMIN // UniDuka platform ops — manages all tenants
+  ACCOUNT_OWNER // Business owner — full access, billing, shop setup, reports
+  CASHIER // POS and sales only
+  INVENTORY_STAFF // Stock, purchase orders, stocktake only
+  RECEPTIONIST // Hotel/Guesthouse front desk — check-in/out, guests
 }
 
 enum BranchMode {
-  INDEPENDENT       // Own stock, staff, pricing, registers
-  SHARED_CATALOGUE  // Shared master catalogue; separate inventory
-  SHARED_INVENTORY  // Shared inventory pool; inter-branch transfers
+  INDEPENDENT // Own stock, staff, pricing, registers
+  SHARED_CATALOGUE // Shared master catalogue; separate inventory
+  SHARED_INVENTORY // Shared inventory pool; inter-branch transfers
 }
 
 enum InventoryModel {
-  SKU_VARIANT       // Retail, Wholesale, Grocery packaged
+  SKU_VARIANT // Retail, Wholesale, Grocery packaged
   RECIPE_INGREDIENT // Restaurant, Cafe, Bar
-  BATCH_LOT         // Pharmacy, Food manufacturing
-  CONSUMABLE        // Salon, Spa, Clinic
-  ASSET_SERIAL      // Repair Workshop
-  AMENITY           // Hotel
+  BATCH_LOT // Pharmacy, Food manufacturing
+  CONSUMABLE // Salon, Spa, Clinic
+  ASSET_SERIAL // Repair Workshop
+  AMENITY // Hotel
 }
 
 enum PricingMode {
@@ -95,6 +95,23 @@ enum TxType {
   SALE
   RETURN
   EXCHANGE
+}
+
+// Online storefront orders. Distinct from TxStatus: an order is a *request*
+// until the shop accepts it. Stock only moves on FULFILLED.
+enum OrderStatus {
+  PENDING_VERIFICATION // buyer phone not yet confirmed
+  PENDING // awaiting shop response
+  ACCEPTED // shop confirmed, preparing
+  REJECTED // shop declined
+  FULFILLED // handed over + paid; converted to a Transaction
+  CANCELLED // buyer pulled out
+  EXPIRED // no shop response before expiresAt
+}
+
+enum FulfilmentType {
+  DELIVERY
+  PICKUP
 }
 
 enum PaymentMethod {
@@ -203,18 +220,18 @@ enum RoomStatus {
 // ─── OWNER ACCOUNT (TIER 2 TENANT) ──────────────────────────────────────────
 
 model OwnerAccount {
-  id               String           @id @default(cuid())
-  legalName        String
-  email            String           @unique
-  phone            String?
-  profilePhoto     String?
-  subscriptionPlan SubscriptionPlan @default(STARTER)
-  billingEmail     String?
-  billingCycle     String?          @default("monthly")
-  stripeCustomerId String?
+  id                    String           @id @default(cuid())
+  legalName             String
+  email                 String           @unique
+  phone                 String?
+  profilePhoto          String?
+  subscriptionPlan      SubscriptionPlan @default(STARTER)
+  billingEmail          String?
+  billingCycle          String?          @default("monthly")
+  stripeCustomerId      String?
   isActive              Boolean          @default(true)
   subscriptionActive    Boolean          @default(false)
-  subscriptionExpiresAt DateTime?        // null = never expires (paid/enterprise); set for trial & renewals
+  subscriptionExpiresAt DateTime? // null = never expires (paid/enterprise); set for trial & renewals
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
@@ -228,83 +245,97 @@ model OwnerAccount {
 // ─── SHOP / BRANCH (TIER 3) ──────────────────────────────────────────────────
 
 model Shop {
-  id              String       @id @default(cuid())
-  ownerAccountId  String
-  ownerAccount    OwnerAccount @relation(fields: [ownerAccountId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  ownerAccountId String
+  ownerAccount   OwnerAccount @relation(fields: [ownerAccountId], references: [id], onDelete: Cascade)
 
-  tradingName     String
-  legalName       String?
-  logoUrl         String?
-  contactEmail    String?
-  phone           String?
+  tradingName  String
+  legalName    String?
+  logoUrl      String?
+  contactEmail String?
+  phone        String?
 
   // Tanzania Revenue Authority compliance
-  tin             String?   // Taxpayer Identification Number
-  vrn             String?   // VAT Registration Number (VAT-registered shops only)
+  tin String? // Taxpayer Identification Number
+  vrn String? // VAT Registration Number (VAT-registered shops only)
 
   // Location
-  addressLine1    String?
-  addressLine2    String?
-  city            String?
-  region          String?
-  country         String       @default("TZ")
-  timezone        String       @default("Africa/Dar_es_Salaam")
-  currency        String       @default("TZS")
+  addressLine1         String?
+  addressLine2         String?
+  city                 String?
+  region               String?
+  country              String  @default("TZ")
+  timezone             String  @default("Africa/Dar_es_Salaam")
+  currency             String  @default("TZS")
   mobileMoneyProviders Json    @default("[\"M-Pesa\",\"Airtel Money\",\"Tigo Pesa\",\"Halopesa\"]")
 
   // Business type drives configuration profile
-  businessType    BusinessType
-  inventoryModel  InventoryModel
-  pricingMode     PricingMode
-  taxMode         TaxMode
+  businessType   BusinessType
+  inventoryModel InventoryModel
+  pricingMode    PricingMode
+  taxMode        TaxMode
 
   // Branch relationship
-  branchMode      BranchMode   @default(INDEPENDENT)
-  parentShopId    String?
-  parentShop      Shop?        @relation("BranchChildren", fields: [parentShopId], references: [id])
-  childShops      Shop[]       @relation("BranchChildren")
+  branchMode   BranchMode @default(INDEPENDENT)
+  parentShopId String?
+  parentShop   Shop?      @relation("BranchChildren", fields: [parentShopId], references: [id])
+  childShops   Shop[]     @relation("BranchChildren")
 
   // Hotel configuration
-  hotelCheckoutHour Int        @default(12)  // hour of day (0-23) when a hotel "day" ends / checkout time
+  hotelCheckoutHour Int @default(12) // hour of day (0-23) when a hotel "day" ends / checkout time
 
   // POS: automatically print the receipt on checkout / debt settlement
-  autoPrintReceipts Boolean    @default(true)
+  autoPrintReceipts Boolean @default(true)
+
+  // ── Public storefront ──────────────────────────────────────────────────
+  // Off by default: a shop must opt in before anything of theirs is public.
+  storefrontEnabled Boolean @default(false)
+  slug              String? @unique // public URL: /s/<slug>
+  storefrontBio     String?
+  storefrontBanner  String?
+  acceptsDelivery   Boolean @default(true)
+  acceptsPickup     Boolean @default(true)
+  deliveryFee       Float   @default(0)
+  deliveryNote      String? // "Within Dar es Salaam only"
+  minOrderValue     Float   @default(0)
+  orderPhone        String? // where order alerts go; falls back to phone
 
   // Config Health Score 0-100
-  configScore     Int          @default(0)
-  isActive        Boolean      @default(true)
-  wizardCompleted Boolean      @default(false)
+  configScore     Int     @default(0)
+  isActive        Boolean @default(true)
+  wizardCompleted Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  shopModules     ShopModule[]
-  unitProfiles    UnitProfile[]
-  users           UserShopAccess[]
-  products        Product[]
-  inventory       InventoryItem[]
-  transactions    Transaction[]
-  customers       Customer[]
-  appointments    Appointment[]
-  purchaseOrders  PurchaseOrder[]
-  stockMovements  StockMovement[]
-  inventoryImports InventoryImport[]
-  registers       Register[]
-  taxRules        TaxRule[]
-  discountRules   DiscountRule[]
-  loyaltyProgram  LoyaltyProgram?
-  kdsOrders       KdsOrder[]
-  workOrders      WorkOrder[]
-  rooms           Room[]
-  suppliers       Supplier[]
-  auditLogs       AuditLog[]
-  webhooks        Webhook[]
-  recipes               Recipe[]
-  consignmentPartners   ConsignmentPartner[]
-  consignmentSales      ConsignmentSale[]
-  timeClocks            TimeClock[]
-  expenses              Expense[]
+  shopModules         ShopModule[]
+  unitProfiles        UnitProfile[]
+  users               UserShopAccess[]
+  products            Product[]
+  inventory           InventoryItem[]
+  transactions        Transaction[]
+  customers           Customer[]
+  appointments        Appointment[]
+  purchaseOrders      PurchaseOrder[]
+  stockMovements      StockMovement[]
+  inventoryImports    InventoryImport[]
+  registers           Register[]
+  taxRules            TaxRule[]
+  discountRules       DiscountRule[]
+  loyaltyProgram      LoyaltyProgram?
+  kdsOrders           KdsOrder[]
+  workOrders          WorkOrder[]
+  rooms               Room[]
+  suppliers           Supplier[]
+  auditLogs           AuditLog[]
+  webhooks            Webhook[]
+  recipes             Recipe[]
+  consignmentPartners ConsignmentPartner[]
+  consignmentSales    ConsignmentSale[]
+  timeClocks          TimeClock[]
+  expenses            Expense[]
+  orders              Order[]
 
   @@map("shops")
 }
@@ -327,19 +358,19 @@ model ShopModule {
 // ─── MEASUREMENT UNIT PROFILES ────────────────────────────────────────────────
 
 model UnitProfile {
-  id           String        @id @default(cuid())
-  shopId       String
-  shop         Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  name         String        // e.g. "Kilogram", "Bottle", "Service"
-  abbreviation String        // e.g. "kg", "btl", "svc"
-  dimension    UnitDimension
-  conversionFactor Float     @default(1.0) // relative to base unit of dimension
-  baseUnit     String?       // e.g. "kg" is base; "g" has factor 0.001
-  isDefault    Boolean       @default(false)
-  showInPos    Boolean       @default(true)
-  showOnPO     Boolean       @default(true)
-  isCustom     Boolean       @default(false)
-  createdAt    DateTime      @default(now())
+  id               String        @id @default(cuid())
+  shopId           String
+  shop             Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name             String // e.g. "Kilogram", "Bottle", "Service"
+  abbreviation     String // e.g. "kg", "btl", "svc"
+  dimension        UnitDimension
+  conversionFactor Float         @default(1.0) // relative to base unit of dimension
+  baseUnit         String? // e.g. "kg" is base; "g" has factor 0.001
+  isDefault        Boolean       @default(false)
+  showInPos        Boolean       @default(true)
+  showOnPO         Boolean       @default(true)
+  isCustom         Boolean       @default(false)
+  createdAt        DateTime      @default(now())
 
   @@unique([shopId, abbreviation])
   @@map("unit_profiles")
@@ -352,28 +383,28 @@ model User {
   ownerAccountId String
   ownerAccount   OwnerAccount @relation(fields: [ownerAccountId], references: [id], onDelete: Cascade)
 
-  email          String?      @unique
-  passwordHash   String
-  fullName       String
-  phone          String?      @unique
-  avatarUrl      String?
-  role           UserRole     @default(CASHIER)
-  twoFaSecret    String?
-  twoFaEnabled   Boolean      @default(false)
-  isActive       Boolean      @default(true)
-  lastLoginAt    DateTime?
-  lastSeenAt     DateTime?
+  email        String?   @unique
+  passwordHash String
+  fullName     String
+  phone        String?   @unique
+  avatarUrl    String?
+  role         UserRole  @default(CASHIER)
+  twoFaSecret  String?
+  twoFaEnabled Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  lastSeenAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  shopAccess     UserShopAccess[]
-  transactions   Transaction[]
-  auditLogs      AuditLog[]
-  appointments   Appointment[]   @relation("StaffAppointments")
+  shopAccess       UserShopAccess[]
+  transactions     Transaction[]
+  auditLogs        AuditLog[]
+  appointments     Appointment[]     @relation("StaffAppointments")
   consignmentSales ConsignmentSale[]
-  timeClocks     TimeClock[]
-  stockMovements StockMovement[]
+  timeClocks       TimeClock[]
+  stockMovements   StockMovement[]
   inventoryImports InventoryImport[]
 
   @@map("users")
@@ -394,9 +425,9 @@ model UserShopAccess {
 // ─── PRODUCTS / SERVICES / INGREDIENTS ──────────────────────────────────────
 
 model Product {
-  id          String      @id @default(cuid())
-  shopId      String
-  shop        Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   sku         String?
   barcode     String?
@@ -407,7 +438,7 @@ model Product {
   category    String?
   brand       String?
 
-  unit           String?  // display unit label (ea, kg, L, session…)
+  unit String? // display unit label (ea, kg, L, session…)
 
   // Unit configuration
   purchaseUnitId String?
@@ -415,38 +446,45 @@ model Product {
   sellUnitId     String?
 
   // Pricing
-  costPrice      Float   @default(0)
-  sellPrice      Float   @default(0)
-  taxRuleId      String?
-  taxRule        TaxRule? @relation(fields: [taxRuleId], references: [id])
-  taxInclusive   Boolean @default(false)
+  costPrice    Float    @default(0)
+  sellPrice    Float    @default(0)
+  taxRuleId    String?
+  taxRule      TaxRule? @relation(fields: [taxRuleId], references: [id])
+  taxInclusive Boolean  @default(false)
 
   // Inventory control
-  trackStock     Boolean @default(true)
-  minStockLevel  Float   @default(0)
-  reorderPoint   Float   @default(0)
-  reorderQty     Float   @default(0)
-  supplierId     String?
-  supplier       Supplier? @relation(fields: [supplierId], references: [id])
+  trackStock    Boolean   @default(true)
+  minStockLevel Float     @default(0)
+  reorderPoint  Float     @default(0)
+  reorderQty    Float     @default(0)
+  supplierId    String?
+  supplier      Supplier? @relation(fields: [supplierId], references: [id])
 
   // Service/appointment fields
   durationMinutes Int?
   requiresStaff   Boolean @default(false)
 
   // Pharmacy specific
-  requiresRx      Boolean @default(false)
-  isControlled    Boolean @default(false)
-  genericName     String?
+  requiresRx   Boolean @default(false)
+  isControlled Boolean @default(false)
+  genericName  String?
+
+  // ── Storefront ─────────────────────────────────────────────────────────
+  // Opt-in per product. publicPrice lets a shop list online at a different
+  // price than the counter; null means fall back to sellPrice.
+  isPublished Boolean @default(false)
+  publicPrice Float?
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  inventory       InventoryItem[]
-  txItems         TransactionItem[]
-  recipeLines     RecipeLine[]      @relation("RecipeIngredient")
-  recipeProducts  RecipeLine[]      @relation("RecipeProduct")
-  stockMovements  StockMovement[]
+  inventory           InventoryItem[]
+  txItems             TransactionItem[]
+  orderItems          OrderItem[]
+  recipeLines         RecipeLine[]         @relation("RecipeIngredient")
+  recipeProducts      RecipeLine[]         @relation("RecipeProduct")
+  stockMovements      StockMovement[]
   appointmentServices AppointmentService[]
 
   @@unique([shopId, sku])
@@ -456,11 +494,11 @@ model Product {
 // ─── INVENTORY ────────────────────────────────────────────────────────────────
 
 model InventoryItem {
-  id         String   @id @default(cuid())
-  shopId     String
-  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  shopId    String
+  shop      Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   // Batch / lot tracking
   batchNo    String?
@@ -468,10 +506,10 @@ model InventoryItem {
   expiryDate DateTime?
 
   // Serial (asset) tracking
-  serialNo   String?
+  serialNo String?
 
-  quantity   Float    @default(0)
-  costPrice  Float    @default(0)
+  quantity  Float @default(0)
+  costPrice Float @default(0)
 
   receivedAt DateTime @default(now())
   createdAt  DateTime @default(now())
@@ -481,41 +519,41 @@ model InventoryItem {
 }
 
 model StockMovement {
-  id          String       @id @default(cuid())
-  shopId      String
-  shop        Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  productId   String
-  product     Product      @relation(fields: [productId], references: [id])
-  userId      String?
-  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  type        MovementType
-  quantity    Float
-  unitCost    Float        @default(0)
-  reference   String?
-  note        String?
-  batchNo     String?
-  createdAt   DateTime     @default(now())
+  id        String       @id @default(cuid())
+  shopId    String
+  shop      Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product      @relation(fields: [productId], references: [id])
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type      MovementType
+  quantity  Float
+  unitCost  Float        @default(0)
+  reference String?
+  note      String?
+  batchNo   String?
+  createdAt DateTime     @default(now())
 
   @@map("stock_movements")
 }
 
 // Log of bulk inventory imports (CSV product import & shipment import) for history.
 model InventoryImport {
-  id         String   @id @default(cuid())
-  shopId     String
-  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  userId           String?
-  user             User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-  purchaseOrderId  String?
-  purchaseOrder    PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
-  type             String   // 'CSV' | 'SHIPMENT'
-  fileName         String?
-  imported         Int      @default(0)
-  skipped          Int      @default(0)
-  totalQty         Float?   // shipment: total pieces received
-  totalValue       Float?   // shipment: total landed value
-  note             String?  // free-text summary (e.g. exchange rate, errors)
-  createdAt        DateTime @default(now())
+  id              String         @id @default(cuid())
+  shopId          String
+  shop            Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  type            String // 'CSV' | 'SHIPMENT'
+  fileName        String?
+  imported        Int            @default(0)
+  skipped         Int            @default(0)
+  totalQty        Float? // shipment: total pieces received
+  totalValue      Float? // shipment: total landed value
+  note            String? // free-text summary (e.g. exchange rate, errors)
+  createdAt       DateTime       @default(now())
 
   @@index([shopId, createdAt])
   @@map("inventory_imports")
@@ -524,15 +562,15 @@ model InventoryImport {
 // ─── RECIPES (Bill of Materials) ─────────────────────────────────────────────
 
 model Recipe {
-  id          String       @id @default(cuid())
+  id          String   @id @default(cuid())
   shopId      String
-  shop        Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   name        String
-  yieldQty    Float        @default(1)
+  yieldQty    Float    @default(1)
   yieldUnitId String?
-  wasteFactor Float        @default(0) // percentage 0-100
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  wasteFactor Float    @default(0) // percentage 0-100
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   lines RecipeLine[]
 
@@ -540,16 +578,16 @@ model Recipe {
 }
 
 model RecipeLine {
-  id          String  @id @default(cuid())
-  recipeId    String
-  recipe      Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  productId   String  // ingredient
-  product     Product @relation("RecipeIngredient", fields: [productId], references: [id])
+  id              String   @id @default(cuid())
+  recipeId        String
+  recipe          Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  productId       String // ingredient
+  product         Product  @relation("RecipeIngredient", fields: [productId], references: [id])
   outputProductId String? // final menu item
-  outputProduct Product? @relation("RecipeProduct", fields: [outputProductId], references: [id])
-  quantity    Float
-  unitId      String?
-  isSubRecipe Boolean @default(false)
+  outputProduct   Product? @relation("RecipeProduct", fields: [outputProductId], references: [id])
+  quantity        Float
+  unitId          String?
+  isSubRecipe     Boolean  @default(false)
 
   @@map("recipe_lines")
 }
@@ -557,16 +595,16 @@ model RecipeLine {
 // ─── SUPPLIERS ────────────────────────────────────────────────────────────────
 
 model Supplier {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   shopId    String
-  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   name      String
   email     String?
   phone     String?
   address   String?
   taxNo     String?
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
 
   products       Product[]
   purchaseOrders PurchaseOrder[]
@@ -584,11 +622,11 @@ model PurchaseOrder {
   supplier     Supplier?           @relation(fields: [supplierId], references: [id])
   poNumber     String
   status       PurchaseOrderStatus @default(DRAFT)
-  type         String              @default("LOCAL")   // LOCAL | IMPORT
+  type         String              @default("LOCAL") // LOCAL | IMPORT
   totalAmount  Float               @default(0)
-  amountPaid   Float               @default(0)         // paid to supplier; outstanding = totalAmount - amountPaid
-  exchangeRate Float?              // CNY→TZS for IMPORT POs
-  sharedCosts  Json?               // {shipping, clearance, transport, other}
+  amountPaid   Float               @default(0) // paid to supplier; outstanding = totalAmount - amountPaid
+  exchangeRate Float? // CNY→TZS for IMPORT POs
+  sharedCosts  Json? // {shipping, clearance, transport, other}
   notes        String?
   orderedAt    DateTime?
   expectedAt   DateTime?
@@ -596,7 +634,7 @@ model PurchaseOrder {
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 
-  lines           PurchaseOrderLine[]
+  lines            PurchaseOrderLine[]
   inventoryImports InventoryImport[]
 
   @@map("purchase_orders")
@@ -606,11 +644,11 @@ model PurchaseOrderLine {
   id              String        @id @default(cuid())
   purchaseOrderId String
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  productId       String?       // null for new-product lines (CSV workflow)
-  style           String?       // product name / style code
+  productId       String? // null for new-product lines (CSV workflow)
+  style           String? // product name / style code
   orderedQty      Float
   receivedQty     Float         @default(0)
-  unitCost        Float         // TZS for LOCAL, CNY for IMPORT
+  unitCost        Float // TZS for LOCAL, CNY for IMPORT
   sellingPrice    Float?
   color           String?
   sizeRange       String?
@@ -624,14 +662,14 @@ model PurchaseOrderLine {
 // ─── TAX & DISCOUNTS ──────────────────────────────────────────────────────────
 
 model TaxRule {
-  id         String   @id @default(cuid())
-  shopId     String
-  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  name       String   // "Standard VAT", "Zero-rated food", "Alcohol excise"
-  rate       Float    // percentage e.g. 16.0
-  isDefault  Boolean  @default(false)
-  isExempt   Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name      String // "Standard VAT", "Zero-rated food", "Alcohol excise"
+  rate      Float // percentage e.g. 16.0
+  isDefault Boolean  @default(false)
+  isExempt  Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   products Product[]
 
@@ -639,21 +677,21 @@ model TaxRule {
 }
 
 model DiscountRule {
-  id              String   @id @default(cuid())
-  shopId          String
-  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  name            String
-  type            String   // "percentage" | "fixed" | "bogo" | "multi-buy"
-  value           Float
-  minQty          Float?
-  maxQty          Float?
-  minAmount       Float?
-  requiresApproval Boolean @default(false)
-  approvalRole    UserRole @default(ACCOUNT_OWNER)
-  validFrom       DateTime?
-  validTo         DateTime?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  id               String    @id @default(cuid())
+  shopId           String
+  shop             Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name             String
+  type             String // "percentage" | "fixed" | "bogo" | "multi-buy"
+  value            Float
+  minQty           Float?
+  maxQty           Float?
+  minAmount        Float?
+  requiresApproval Boolean   @default(false)
+  approvalRole     UserRole  @default(ACCOUNT_OWNER)
+  validFrom        DateTime?
+  validTo          DateTime?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
 
   @@map("discount_rules")
 }
@@ -661,16 +699,16 @@ model DiscountRule {
 // ─── POS REGISTERS ────────────────────────────────────────────────────────────
 
 model Register {
-  id        String   @id @default(cuid())
-  shopId    String
-  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  name      String
-  isActive  Boolean  @default(true)
-  openedAt  DateTime?
-  closedAt  DateTime?
-  openingFloat Float @default(0)
-  closingFloat Float @default(0)
-  createdAt DateTime @default(now())
+  id           String    @id @default(cuid())
+  shopId       String
+  shop         Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name         String
+  isActive     Boolean   @default(true)
+  openedAt     DateTime?
+  closedAt     DateTime?
+  openingFloat Float     @default(0)
+  closingFloat Float     @default(0)
+  createdAt    DateTime  @default(now())
 
   transactions Transaction[]
 
@@ -680,39 +718,39 @@ model Register {
 // ─── TRANSACTIONS (POS) ──────────────────────────────────────────────────────
 
 model Transaction {
-  id           String        @id @default(cuid())
-  shopId       String
-  shop         Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  registerId   String?
-  register     Register?     @relation(fields: [registerId], references: [id])
-  cashierId    String
-  cashier      User          @relation(fields: [cashierId], references: [id])
-  customerId   String?
-  customer     Customer?     @relation(fields: [customerId], references: [id])
+  id         String    @id @default(cuid())
+  shopId     String
+  shop       Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  registerId String?
+  register   Register? @relation(fields: [registerId], references: [id])
+  cashierId  String
+  cashier    User      @relation(fields: [cashierId], references: [id])
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
 
-  type         TxType        @default(SALE)
-  status       TxStatus      @default(COMPLETED)
+  type   TxType   @default(SALE)
+  status TxStatus @default(COMPLETED)
 
-  subtotal     Float
-  discountAmount Float       @default(0)
-  taxAmount    Float         @default(0)
-  total        Float
-  roundingAdj  Float         @default(0)
+  subtotal       Float
+  discountAmount Float @default(0)
+  taxAmount      Float @default(0)
+  total          Float
+  roundingAdj    Float @default(0)
 
   // Business-type specific
-  tableNo      String?       // Restaurant
-  coverCount   Int?          // Restaurant
-  rxRef        String?       // Pharmacy
-  jobRef       String?       // Repair
-  roomFolioId  String?       // Hotel
-  tabId        String?       // Bar
+  tableNo     String? // Restaurant
+  coverCount  Int? // Restaurant
+  rxRef       String? // Pharmacy
+  jobRef      String? // Repair
+  roomFolioId String? // Hotel
+  tabId       String? // Bar
 
   note         String?
-  customerName String?       // Free-text name when no customerId (typed at POS)
-  customerTin  String?       // Buyer TIN for B2B / TRA tax invoice
-  receiptNo    String        @unique
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  customerName String? // Free-text name when no customerId (typed at POS)
+  customerTin  String? // Buyer TIN for B2B / TRA tax invoice
+  receiptNo    String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   items    TransactionItem[]
   payments TransactionPayment[]
@@ -727,17 +765,17 @@ model TransactionItem {
   productId     String
   product       Product     @relation(fields: [productId], references: [id])
 
-  name          String      // snapshot
-  quantity      Float
-  unitLabel     String      // e.g. "kg", "ml", "ea"
-  unitPrice     Float
-  discountPct   Float       @default(0)
-  taxAmount     Float       @default(0)
-  lineTotal     Float
+  name        String // snapshot
+  quantity    Float
+  unitLabel   String // e.g. "kg", "ml", "ea"
+  unitPrice   Float
+  discountPct Float  @default(0)
+  taxAmount   Float  @default(0)
+  lineTotal   Float
 
   // Modifiers (restaurant/cafe)
-  modifiers     Json?       // [{name, value, price}]
-  notes         String?
+  modifiers Json? // [{name, value, price}]
+  notes     String?
 
   @@map("transaction_items")
 }
@@ -746,10 +784,10 @@ model TransactionPayment {
   id            String        @id @default(cuid())
   transactionId String
   transaction   Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  method           PaymentMethod
-  amount           Float
-  reference        String?       // card auth code, M-Pesa ref, transaction ID
-  providerName     String?       // e.g. "M-Pesa", "Airtel Money", "Tigo Pesa"
+  method        PaymentMethod
+  amount        Float
+  reference     String? // card auth code, M-Pesa ref, transaction ID
+  providerName  String? // e.g. "M-Pesa", "Airtel Money", "Tigo Pesa"
   createdAt     DateTime      @default(now())
 
   @@map("transaction_payments")
@@ -758,36 +796,36 @@ model TransactionPayment {
 // ─── EXPENSES ────────────────────────────────────────────────────────────────
 
 enum ExpenseCategory {
-  RENT          // Rent / premises
-  SALARIES      // Staff wages & salaries
-  UTILITIES     // Electricity, water, internet, airtime
-  SUPPLIES      // Operating supplies, packaging
-  TRANSPORT     // Fuel, delivery, logistics
-  MARKETING     // Advertising & promotion
-  MAINTENANCE   // Repairs & equipment upkeep
-  TAX_LICENSE   // Taxes, licenses, government fees
-  BANK_FEES     // Bank & mobile money charges
-  OTHER         // Anything else
+  RENT // Rent / premises
+  SALARIES // Staff wages & salaries
+  UTILITIES // Electricity, water, internet, airtime
+  SUPPLIES // Operating supplies, packaging
+  TRANSPORT // Fuel, delivery, logistics
+  MARKETING // Advertising & promotion
+  MAINTENANCE // Repairs & equipment upkeep
+  TAX_LICENSE // Taxes, licenses, government fees
+  BANK_FEES // Bank & mobile money charges
+  OTHER // Anything else
 }
 
 model Expense {
-  id             String          @id @default(cuid())
-  shopId         String
-  shop           Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
-  category       ExpenseCategory @default(OTHER)
-  description    String
-  amount         Float
-  paymentMethod  String?         // CASH, MOBILE_MONEY, CARD, BANK
-  reference      String?         // receipt no, M-Pesa ref
-  vendor         String?         // who was paid
-  incurredAt     DateTime        @default(now())  // when the expense happened — drives the reporting period
+  category      ExpenseCategory @default(OTHER)
+  description   String
+  amount        Float
+  paymentMethod String? // CASH, MOBILE_MONEY, CARD, BANK
+  reference     String? // receipt no, M-Pesa ref
+  vendor        String? // who was paid
+  incurredAt    DateTime        @default(now()) // when the expense happened — drives the reporting period
 
-  recordedById   String?         // user who logged it (snapshot, no FK to survive user deletion)
+  recordedById   String? // user who logged it (snapshot, no FK to survive user deletion)
   recordedByName String?
 
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([shopId, incurredAt])
   @@map("expenses")
@@ -796,32 +834,33 @@ model Expense {
 // ─── CRM / CUSTOMERS ─────────────────────────────────────────────────────────
 
 model Customer {
-  id             String   @id @default(cuid())
-  shopId         String
-  shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
-  fullName       String
-  email          String?
-  phone          String?
-  dateOfBirth    DateTime?
-  gender         String?
-  address        String?
-  tags           String[]
-  notes          String?
+  fullName    String
+  email       String?
+  phone       String?
+  dateOfBirth DateTime?
+  gender      String?
+  address     String?
+  tags        String[]
+  notes       String?
 
-  loyaltyPoints  Float    @default(0)
-  totalSpend     Float    @default(0)
-  visitCount     Int      @default(0)
-  lastVisitAt    DateTime?
+  loyaltyPoints Float     @default(0)
+  totalSpend    Float     @default(0)
+  visitCount    Int       @default(0)
+  lastVisitAt   DateTime?
 
-  isActive       Boolean  @default(true)
-  consentMarketing Boolean @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isActive         Boolean  @default(true)
+  consentMarketing Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  transactions   Transaction[]
-  appointments   Appointment[]
+  transactions     Transaction[]
+  appointments     Appointment[]
   consignmentSales ConsignmentSale[]
+  orders           Order[]
 
   @@map("customers")
 }
@@ -829,15 +868,15 @@ model Customer {
 // ─── LOYALTY PROGRAM ─────────────────────────────────────────────────────────
 
 model LoyaltyProgram {
-  id              String   @id @default(cuid())
-  shopId          String   @unique
-  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  name            String   @default("Loyalty Program")
-  pointsPerUnit   Float    @default(1)  // points per currency unit spent
-  redeemRate      Float    @default(100) // points needed to redeem 1 currency unit
-  sharedAcrossBranches Boolean @default(false)
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  id                   String   @id @default(cuid())
+  shopId               String   @unique
+  shop                 Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name                 String   @default("Loyalty Program")
+  pointsPerUnit        Float    @default(1) // points per currency unit spent
+  redeemRate           Float    @default(100) // points needed to redeem 1 currency unit
+  sharedAcrossBranches Boolean  @default(false)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
 
   tiers LoyaltyTier[]
 
@@ -845,15 +884,15 @@ model LoyaltyProgram {
 }
 
 model LoyaltyTier {
-  id             String         @id @default(cuid())
-  programId      String
-  program        LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
-  name           String         // "Bronze", "Silver", "Gold"
-  minPoints      Float
-  discountPct    Float          @default(0)
-  bonusMultiplier Float         @default(1.0)
-  perks          String[]
-  createdAt      DateTime       @default(now())
+  id              String         @id @default(cuid())
+  programId       String
+  program         LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  name            String // "Bronze", "Silver", "Gold"
+  minPoints       Float
+  discountPct     Float          @default(0)
+  bonusMultiplier Float          @default(1.0)
+  perks           String[]
+  createdAt       DateTime       @default(now())
 
   @@map("loyalty_tiers")
 }
@@ -861,13 +900,13 @@ model LoyaltyTier {
 // ─── APPOINTMENTS ────────────────────────────────────────────────────────────
 
 model Appointment {
-  id          String            @id @default(cuid())
-  shopId      String
-  shop        Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  customerId  String?
-  customer    Customer?         @relation(fields: [customerId], references: [id])
-  staffId     String?
-  staff       User?             @relation("StaffAppointments", fields: [staffId], references: [id])
+  id         String    @id @default(cuid())
+  shopId     String
+  shop       Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  staffId    String?
+  staff      User?     @relation("StaffAppointments", fields: [staffId], references: [id])
 
   startTime   DateTime
   endTime     DateTime
@@ -888,7 +927,7 @@ model AppointmentService {
   id            String      @id @default(cuid())
   appointmentId String
   appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  productId     String      // service product
+  productId     String // service product
   product       Product     @relation(fields: [productId], references: [id])
   price         Float
   durationMin   Int
@@ -899,17 +938,17 @@ model AppointmentService {
 // ─── KITCHEN DISPLAY SYSTEM ──────────────────────────────────────────────────
 
 model KdsOrder {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   shopId        String
-  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop          Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
   transactionId String?
-  station       String   @default("kitchen")
+  station       String    @default("kitchen")
   tableNo       String?
   orderNo       String
-  status        String   @default("PENDING") // PENDING|PREPARING|READY|SERVED
+  status        String    @default("PENDING") // PENDING|PREPARING|READY|SERVED
   items         Json
-  priority      Int      @default(0)
-  sentAt        DateTime @default(now())
+  priority      Int       @default(0)
+  sentAt        DateTime  @default(now())
   readyAt       DateTime?
   servedAt      DateTime?
 
@@ -919,13 +958,13 @@ model KdsOrder {
 // ─── BAR TABS ────────────────────────────────────────────────────────────────
 
 model BarTab {
-  id         String   @id @default(cuid())
-  shopId     String
-  name       String   // customer name or table
-  isOpen     Boolean  @default(true)
-  totalAmount Float   @default(0)
-  openedAt   DateTime @default(now())
-  closedAt   DateTime?
+  id          String    @id @default(cuid())
+  shopId      String
+  name        String // customer name or table
+  isOpen      Boolean   @default(true)
+  totalAmount Float     @default(0)
+  openedAt    DateTime  @default(now())
+  closedAt    DateTime?
 
   @@map("bar_tabs")
 }
@@ -971,15 +1010,15 @@ model WorkOrderPart {
 // ─── HOTEL ROOMS & FOLIOS ────────────────────────────────────────────────────
 
 model Room {
-  id        String     @id @default(cuid())
-  shopId    String
-  shop      Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  roomNo    String
-  roomType  String
-  floor     Int?
-  status    RoomStatus @default(AVAILABLE)
+  id           String     @id @default(cuid())
+  shopId       String
+  shop         Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  roomNo       String
+  roomType     String
+  floor        Int?
+  status       RoomStatus @default(AVAILABLE)
   ratePerNight Float
-  createdAt DateTime   @default(now())
+  createdAt    DateTime   @default(now())
 
   folios      RoomFolio[]
   reservation RoomReservation?
@@ -1006,26 +1045,26 @@ model RoomReservation {
 }
 
 model RoomFolio {
-  id          String   @id @default(cuid())
-  roomId      String
-  room        Room     @relation(fields: [roomId], references: [id])
-  guestName   String
-  guestEmail  String?
+  id              String    @id @default(cuid())
+  roomId          String
+  room            Room      @relation(fields: [roomId], references: [id])
+  guestName       String
+  guestEmail      String?
   guestId         String?
   guestPhone      String?
   customerId      String?
   checkedInBy     String?
   checkedInByName String?
   paymentMethod   String?
-  checkIn     DateTime
-  checkOut    DateTime?
-  nights      Int      @default(1)
-  roomTotal   Float    @default(0)
-  fbTotal     Float    @default(0)
-  grandTotal  Float    @default(0)
-  isPaid      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  checkIn         DateTime
+  checkOut        DateTime?
+  nights          Int       @default(1)
+  roomTotal       Float     @default(0)
+  fbTotal         Float     @default(0)
+  grandTotal      Float     @default(0)
+  isPaid          Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   charges RoomCharge[]
 
@@ -1033,13 +1072,13 @@ model RoomFolio {
 }
 
 model RoomCharge {
-  id         String    @id @default(cuid())
-  folioId    String
-  folio      RoomFolio @relation(fields: [folioId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  folioId     String
+  folio       RoomFolio @relation(fields: [folioId], references: [id], onDelete: Cascade)
   description String
-  amount     Float
-  chargeType String    // "room_rate" | "minibar" | "restaurant" | "service"
-  chargedAt  DateTime  @default(now())
+  amount      Float
+  chargeType  String // "room_rate" | "minibar" | "restaurant" | "service"
+  chargedAt   DateTime  @default(now())
 
   @@map("room_charges")
 }
@@ -1079,19 +1118,19 @@ model Webhook {
 // ─── AUDIT LOG ────────────────────────────────────────────────────────────────
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  shopId     String?
-  shop       Shop?    @relation(fields: [shopId], references: [id])
-  userId     String?
-  user       User?    @relation(fields: [userId], references: [id])
-  action     String
-  entity     String
-  entityId   String?
-  before     Json?
-  after      Json?
-  ip         String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  shopId    String?
+  shop      Shop?    @relation(fields: [shopId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
 
   @@map("audit_logs")
 }
@@ -1122,14 +1161,14 @@ model ConsignmentSale {
   partner   ConsignmentPartner @relation(fields: [partnerId], references: [id])
 
   productName  String
-  costPrice    Float   // owed to partner per unit
-  sellingPrice Float   // sold to customer for
+  costPrice    Float // owed to partner per unit
+  sellingPrice Float // sold to customer for
   qty          Float
-  profit       Float   // (sellingPrice - costPrice) * qty
+  profit       Float // (sellingPrice - costPrice) * qty
   notes        String?
 
   paymentMethod PaymentMethod @default(CASH)
-  amountPaid    Float         @default(0)   // collected from customer; < sellingPrice*qty means outstanding (credit)
+  amountPaid    Float         @default(0) // collected from customer; < sellingPrice*qty means outstanding (credit)
 
   // Debtor — captured only for credit (DEBIT) sales so the balance is collectable
   customerId String?
@@ -1142,6 +1181,86 @@ model ConsignmentSale {
   createdAt DateTime @default(now())
 
   @@map("consignment_sales")
+}
+
+// ─── STOREFRONT ORDERS ───────────────────────────────────────────────────────
+
+// An online order placed from a shop's public storefront by someone with no
+// account. It is a *request* until the shop accepts it, and it never touches
+// inventory until FULFILLED — otherwise fake orders could zero out real POS
+// stock. On fulfilment it converts into a Transaction so it flows through all
+// existing reporting.
+model Order {
+  id      String @id @default(cuid())
+  shopId  String
+  shop    Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderNo String @unique
+
+  status     OrderStatus    @default(PENDING_VERIFICATION)
+  fulfilment FulfilmentType @default(DELIVERY)
+
+  // Buyer — free-text, no platform account. customerId is linked opportunistically
+  // when the phone matches an existing CRM record for this shop.
+  buyerName  String
+  buyerPhone String
+  buyerEmail String?
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  // Delivery
+  deliveryAddress String?
+  deliveryNote    String?
+
+  // Phone verification. Fields exist so the OTP flow can be switched on as soon
+  // as an SMS provider is configured; until then orders start at PENDING and
+  // abuse is held back by rate limiting plus mandatory shop approval.
+  phoneVerified Boolean   @default(false)
+  otpHash       String?
+  otpExpiresAt  DateTime?
+  otpAttempts   Int       @default(0)
+
+  // Amounts, snapshotted at order time so later price edits don't rewrite history
+  subtotal    Float
+  deliveryFee Float @default(0)
+  total       Float
+
+  // Set once fulfilled, linking the order to the sale it became
+  transactionId String? @unique
+
+  note         String?
+  cancelReason String?
+
+  // Unanswered orders expire so they don't sit in the inbox forever
+  expiresAt   DateTime
+  confirmedAt DateTime? // buyer verified their phone
+  acceptedAt  DateTime?
+  fulfilledAt DateTime?
+  closedAt    DateTime? // rejected / cancelled / expired
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items OrderItem[]
+
+  @@index([shopId, status])
+  @@index([buyerPhone])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  name      String // snapshot — the listing as the buyer saw it
+  quantity  Float
+  unitLabel String
+  unitPrice Float
+  lineTotal Float
+
+  @@map("order_items")
 }
 
 // ─── SUPPORT TICKETS ─────────────────────────────────────────────────────────
