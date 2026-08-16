@@ -200,6 +200,9 @@ export async function updateProduct(req: AuthRequest, res: Response) {
   if ('isControlled'    in b) data.isControlled     = bool(b.isControlled) ?? false;
   if ('durationMinutes' in b) data.durationMinutes  = num(b.durationMinutes) ?? null;
   if ('requiresStaff'   in b) data.requiresStaff    = bool(b.requiresStaff) ?? false;
+  // Storefront: publish toggle and optional online-only price
+  if ('isPublished'     in b) data.isPublished      = bool(b.isPublished) ?? false;
+  if ('publicPrice'     in b) data.publicPrice      = num(b.publicPrice) ?? null;
 
   // Selling price — only validate if it was actually provided
   if ('sellingPrice' in b || 'sellPrice' in b) {

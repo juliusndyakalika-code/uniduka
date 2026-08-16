@@ -22,6 +22,8 @@ const PosPage              = lazy(() => import('./pages/pos/PosPage'));
 const DebtsPage            = lazy(() => import('./pages/pos/DebtsPage'));
 const VoidsPage            = lazy(() => import('./pages/pos/VoidsPage'));
 const TransactionsPage     = lazy(() => import('./pages/pos/TransactionsPage'));
+const StorefrontPage       = lazy(() => import('./pages/storefront/StorefrontPage'));
+const StorefrontSettings   = lazy(() => import('./pages/storefront/StorefrontSettingsPage'));
 
 const InventoryDashboard   = lazy(() => import('./pages/inventory/InventoryDashboard'));
 const ProductsPage         = lazy(() => import('./pages/inventory/ProductsPage'));
@@ -83,6 +85,9 @@ export default function App() {
         <Routes>
           {/* Receipt print page — no app chrome */}
           <Route path="/print-receipt" element={<PrintReceiptPage />} />
+
+          {/* Public shop storefront — no auth, no app chrome */}
+          <Route path="/s/:slug" element={<StorefrontPage />} />
 
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
@@ -147,6 +152,7 @@ export default function App() {
               </Route>
 
               <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER']} />}>
+                <Route path="/storefront"       element={<StorefrontSettings />} />
                 <Route path="/admin/users"      element={<UsersPage />} />
                 <Route path="/admin/shops"      element={<ShopsPage />} />
                 <Route path="/admin/shop"       element={<ShopSettingsPage />} />

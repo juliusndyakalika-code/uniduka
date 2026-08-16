@@ -78,8 +78,68 @@ export async function createShop(req: AuthRequest, res: Response) {
   return R.created(res, { shop, accessToken: newToken });
 }
 
+// Slugs that would collide with real app routes or look official.
+const RESERVED_SLUGS = new Set([
+  'admin', 'api', 'app', 'login', 'register', 'dashboard', 'pos', 'inventory',
+  'reports', 'settings', 'platform', 'support', 'help', 'about', 'pricing',
+  'mauzosmart', 'uniduka', 's', 'public', 'www', 'shop', 'store',
+]);
+
+/**
+ * Normalise a user-typed slug to a safe public URL segment.
+ *
+ * Order matters: accents are folded to ASCII before filtering (so "Café" gives
+ * "cafe", not "caf"), and separators are converted to hyphens before unknown
+ * characters are stripped (so "MAMA_DUKA" gives "mama-duka", not "mamaduka").
+ */
+export function normaliseSlug(raw: string): string {
+  return String(raw)
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')                 // é → e + combining accent
+    .replace(/[̀-ͯ]/g, '')  // drop the combining accents
+    .replace(/[\s_-]+/g, '-')         // spaces/underscores/hyphens → single hyphen
+    .replace(/[^a-z0-9-]/g, '')       // drop anything still not URL-safe
+    .replace(/-+/g, '-')              // collapse runs left by removals
+    .slice(0, 48)
+    .replace(/^-+|-+$/g, '');         // trim after slicing, so truncation can't leave a trailing hyphen
+}
+
 export async function updateShop(req: AuthRequest, res: Response) {
-  const { tradingName, legalName, phone, contactEmail, logoUrl, addressLine1, city, region, currency, timezone, isActive, tin, vrn, mobileMoneyProviders, autoPrintReceipts } = req.body;
+  const {
+    tradingName, legalName, phone, contactEmail, logoUrl, addressLine1, city, region,
+    currency, timezone, isActive, tin, vrn, mobileMoneyProviders, autoPrintReceipts,
+    // Storefront
+    storefrontEnabled, slug, storefrontBio, storefrontBanner,
+    acceptsDelivery, acceptsPickup, deliveryFee, deliveryNote, minOrderValue, orderPhone,
+  } = req.body;
+
+  // The slug is a public URL and globally unique, so validate before writing.
+  let slugValue: string | undefined;
+  if (slug !== undefined) {
+    const clean = normaliseSlug(slug);
+    if (!clean) return R.badRequest(res, 'Storefront link must contain letters or numbers');
+    if (clean.length < 3) return R.badRequest(res, 'Storefront link must be at least 3 characters');
+    if (RESERVED_SLUGS.has(clean)) return R.badRequest(res, `"${clean}" is reserved. Please choose another link.`);
+    const taken = await prisma.shop.findFirst({
+      where: { slug: clean, id: { not: req.params.id } },
+      select: { id: true },
+    });
+    if (taken) return R.badRequest(res, `"${clean}" is already taken. Please choose another link.`);
+    slugValue = clean;
+  }
+
+  // A storefront with no link would be unreachable, so require one to enable it.
+  if (storefrontEnabled === true) {
+    const current = await prisma.shop.findFirst({
+      where: { id: req.params.id, ownerAccountId: req.user!.accountId },
+      select: { slug: true },
+    });
+    if (!slugValue && !current?.slug) {
+      return R.badRequest(res, 'Set a storefront link before opening your shop online');
+    }
+  }
+
   const shop = await prisma.shop.updateMany({
     where: { id: req.params.id, ownerAccountId: req.user!.accountId },
     data: {
@@ -87,6 +147,16 @@ export async function updateShop(req: AuthRequest, res: Response) {
       ...(isActive !== undefined && { isActive }),
       ...(mobileMoneyProviders !== undefined && { mobileMoneyProviders }),
       ...(autoPrintReceipts !== undefined && { autoPrintReceipts }),
+      ...(slugValue !== undefined && { slug: slugValue }),
+      ...(storefrontEnabled !== undefined && { storefrontEnabled }),
+      ...(storefrontBio !== undefined && { storefrontBio }),
+      ...(storefrontBanner !== undefined && { storefrontBanner }),
+      ...(acceptsDelivery !== undefined && { acceptsDelivery }),
+      ...(acceptsPickup !== undefined && { acceptsPickup }),
+      ...(deliveryFee !== undefined && { deliveryFee: Number(deliveryFee) || 0 }),
+      ...(deliveryNote !== undefined && { deliveryNote }),
+      ...(minOrderValue !== undefined && { minOrderValue: Number(minOrderValue) || 0 }),
+      ...(orderPhone !== undefined && { orderPhone }),
     },
   });
   if (!shop.count) return R.notFound(res, 'Shop not found');
