@@ -6,11 +6,12 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Globe, Copy, Check, ExternalLink, Search, Loader2, AlertCircle,
-  Truck, Package, ShoppingBag,
+  Truck, Package, ShoppingBag, Bell, BellOff,
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { PageLoader } from '../../components/ui/Loader';
+import { requestOrderNotifications } from '../../hooks/useOrderAlerts';
 
 interface ShopConfig {
   id: string; tradingName: string; phone?: string; currency: string;
@@ -45,6 +46,9 @@ export default function StorefrontSettingsPage() {
   const [saved, setSaved]   = useState(false);
   const [copied, setCopied] = useState(false);
   const [search, setSearch] = useState('');
+  const [notifyPerm, setNotifyPerm] = useState<NotificationPermission | 'unsupported'>(
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
+  );
 
   const { data: config, isLoading } = useQuery<ShopConfig>({
     queryKey: ['shop-config', shopId],
@@ -180,6 +184,37 @@ export default function StorefrontSettingsPage() {
           </p>
         )}
       </div>
+
+      {/* Order alerts */}
+      {notifyPerm !== 'unsupported' && (
+        <div className="card p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            {notifyPerm === 'granted'
+              ? <Bell size={18} className="text-emerald-500 mt-0.5 shrink-0" />
+              : <BellOff size={18} className="text-stone-400 mt-0.5 shrink-0" />}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-stone-900">
+                {notifyPerm === 'granted' ? 'Order alerts are on' : 'Turn on order alerts'}
+              </p>
+              <p className="text-xs text-stone-500 mt-0.5">
+                {notifyPerm === 'granted'
+                  ? 'You will get a pop-up and a chime when an order comes in, on any page.'
+                  : notifyPerm === 'denied'
+                  ? 'Blocked by your browser. Allow notifications for this site in your browser settings.'
+                  : 'Get a pop-up and a chime the moment a customer orders, even on another page.'}
+              </p>
+            </div>
+          </div>
+          {notifyPerm === 'default' && (
+            <button
+              onClick={async () => setNotifyPerm(await requestOrderNotifications())}
+              className="btn-secondary text-xs shrink-0"
+            >
+              <Bell size={12} className="mr-1.5" /> Enable
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Store details */}
       <div className="card p-5 space-y-4">

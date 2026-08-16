@@ -12,6 +12,7 @@
  */
 import { Request, Response } from 'express';
 import { prisma } from '../../core/prisma';
+import { io } from '../../app';
 import * as R from '../../utils/response';
 
 const LOW_STOCK_THRESHOLD = 5;
@@ -240,6 +241,19 @@ export async function placeOrder(req: Request, res: Response) {
     },
     select: { id: true, orderNo: true, status: true, total: true, createdAt: true },
   });
+
+  // Tell any open dashboard so the shop hears about this without refreshing.
+  // Emitting must never break order placement — the order is already committed.
+  try {
+    io.to(`shop:${shop.id}`).emit('order:new', {
+      id: order.id,
+      orderNo: order.orderNo,
+      buyerName: String(buyerName).trim(),
+      total: order.total,
+      itemCount: orderItems.length,
+      fulfilment: mode,
+    });
+  } catch { /* socket layer unavailable; the order still stands */ }
 
   // Deliberately minimal response — enough to show a confirmation, nothing more.
   return R.created(res, {

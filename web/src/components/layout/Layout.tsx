@@ -6,6 +6,8 @@ import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useIdleTimer } from '../../hooks/useIdleTimer';
 import IdleWarningModal from '../ui/IdleWarningModal';
+import OrderToast from '../ui/OrderToast';
+import { useOrderAlerts } from '../../hooks/useOrderAlerts';
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -58,6 +60,9 @@ export default function Layout() {
     handleReset();
   }
 
+  // Listens app-wide so an order is heard from any page, not just /orders.
+  const { latest: incomingOrder, dismiss: dismissOrder } = useOrderAlerts();
+
   useEffect(() => {
     api.get('/shops').then(r => {
       const shops = r.data.data;
@@ -84,6 +89,10 @@ export default function Layout() {
           onStay={handleStay}
           fadingOut={fadingOut}
         />
+      )}
+
+      {incomingOrder && (
+        <OrderToast order={incomingOrder} onDismiss={dismissOrder} />
       )}
     </div>
   );

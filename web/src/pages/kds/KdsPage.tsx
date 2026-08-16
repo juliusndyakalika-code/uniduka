@@ -41,7 +41,8 @@ export default function KdsPage() {
     if (!shopId || !token) return;
     const socket = io({ auth: { token } });
     socket.emit('join:shop', shopId);
-    socket.on('transaction:new', () => qc.invalidateQueries({ queryKey: ['kds-orders'] }));
+    // The server emits 'kds_update'; the old 'transaction:new' listener never fired.
+    socket.on('kds_update', () => qc.invalidateQueries({ queryKey: ['kds-orders'] }));
     return () => { socket.disconnect(); };
   }, [shopId, token, qc]);
 

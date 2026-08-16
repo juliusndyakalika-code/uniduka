@@ -8,6 +8,7 @@ import {
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
   ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ShieldCheck, ReceiptText, Globe, Inbox,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
 import i18n from '../../i18n';
@@ -26,14 +27,19 @@ const BUSINESS_ICONS: Record<string, React.ReactNode> = {
   HOTEL_GUESTHOUSE:    <HotelIcon size={14} />,
 };
 
-interface NavItemProps { to: string; icon: React.ReactNode; label: string; end?: boolean; }
-function NavItem({ to, icon, label, end }: NavItemProps) {
+interface NavItemProps { to: string; icon: React.ReactNode; label: string; end?: boolean; badge?: number; }
+function NavItem({ to, icon, label, end, badge }: NavItemProps) {
   return (
     <NavLink to={to} end={end}
       className={({ isActive }) => isActive ? 'nav-item-active' : 'nav-item'}
     >
       {icon}
       <span>{label}</span>
+      {!!badge && badge > 0 && (
+        <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold grid place-items-center">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </NavLink>
   );
 }
@@ -84,6 +90,18 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
   const role = user?.role ?? '';
   const isOwner = role === 'ACCOUNT_OWNER';
   const currentShop = shops.find(s => s.id === shopId);
+
+  // Pending online orders, shown as a badge. Shares the ['orders'] key so the
+  // socket alert invalidating that key refreshes this count too.
+  const { data: orderCounts } = useQuery<Record<string, number>>({
+    queryKey: ['orders', shopId, 'sidebar-count'],
+    queryFn: () => api.get('/orders', { params: { limit: 1 } })
+      .then(r => r.data.meta?.counts ?? {}),
+    enabled: !!shopId && currentShop?.businessType !== 'HOTEL_GUESTHOUSE',
+    refetchInterval: 120_000,
+    staleTime: 60_000,
+  });
+  const pendingOrders = orderCounts?.PENDING ?? 0;
 
   function toggleLang() {
     const next = currentLang === 'en' ? 'sw' : 'en';
@@ -251,7 +269,7 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
                 <>
                   <NavItem to="/pos" icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
                   <NavItem to="/pos/transactions" icon={<ReceiptText size={16} />} label="Transactions" />
-                  <NavItem to="/orders" icon={<Inbox size={16} />} label="Online Orders" />
+                  <NavItem to="/orders" icon={<Inbox size={16} />} label="Online Orders" badge={pendingOrders} />
                 </>
               )}
               <NavItem to="/customers" icon={<Users size={16} />} label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'Guests' : t('nav.customers')} />
@@ -286,7 +304,7 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
                 <>
                   <NavItem to="/pos"              icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
                   <NavItem to="/pos/transactions" icon={<ReceiptText size={16} />}  label="Transactions" />
-                  <NavItem to="/orders"           icon={<Inbox size={16} />}        label="Online Orders" />
+                  <NavItem to="/orders"           icon={<Inbox size={16} />}        label="Online Orders" badge={pendingOrders} />
                   <NavItem to="/pos/debts"        icon={<Clock size={16} />}        label={t('nav.debts')} />
                   <NavItem to="/pos/voids"        icon={<Trash2 size={16} />}       label={t('nav.voidedSales')} />
                 </>

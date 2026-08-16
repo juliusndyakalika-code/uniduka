@@ -106,7 +106,11 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // ── Socket.IO (KDS + real-time POS) ──────────────────────────────────────────
 io.on('connection', (socket) => {
   logger.info(`Socket connected: ${socket.id}`);
-  socket.on('join_shop', (shopId: string) => socket.join(`shop:${shopId}`));
+  // Clients have historically emitted both spellings; accept either so a
+  // mismatch can't silently leave a page out of its shop room.
+  const join = (shopId: string) => { if (shopId) socket.join(`shop:${shopId}`); };
+  socket.on('join_shop', join);
+  socket.on('join:shop', join);
   socket.on('disconnect', () => logger.info(`Socket disconnected: ${socket.id}`));
 });
 
