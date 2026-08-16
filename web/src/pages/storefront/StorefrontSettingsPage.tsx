@@ -6,12 +6,13 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Globe, Copy, Check, ExternalLink, Search, Loader2, AlertCircle,
-  Truck, Package, ShoppingBag, Bell, BellOff,
+  Truck, Package, ShoppingBag, Bell, BellOff, MessageCircle,
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { PageLoader } from '../../components/ui/Loader';
 import { requestOrderNotifications } from '../../hooks/useOrderAlerts';
+import { waNumber } from '../../utils/whatsapp';
 
 interface ShopConfig {
   id: string; tradingName: string; phone?: string; currency: string;
@@ -111,6 +112,12 @@ export default function StorefrontSettingsPage() {
   const liveUrl = config?.slug ? `${window.location.origin}/s/${config.slug}` : '';
   const isLive  = !!config?.storefrontEnabled && !!config?.slug;
 
+  // The number customers actually reach. Without one there is no WhatsApp
+  // hand-off and no way for them to call, so this is worth shouting about.
+  const effectiveWhatsapp = (config?.orderPhone || config?.phone || '').trim();
+  const waPreview = waNumber(effectiveWhatsapp);
+  const missingContact = !waPreview;
+
   function copyLink() {
     navigator.clipboard.writeText(liveUrl).then(() => {
       setCopied(true);
@@ -132,6 +139,25 @@ export default function StorefrontSettingsPage() {
       {error && (
         <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
           <AlertCircle size={14} className="shrink-0 mt-0.5" /> <span>{error}</span>
+        </div>
+      )}
+
+      {/* Without a number there is no WhatsApp button and no way to call, and
+          previously that failed silently — the button just never appeared. */}
+      {missingContact && (
+        <div className="card p-4 border-l-4 border-amber-400 bg-amber-50 flex items-start gap-3">
+          <MessageCircle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-900">
+              No WhatsApp number set, so orders are not being sent to WhatsApp
+            </p>
+            <p className="text-xs text-amber-800 mt-1">
+              After checkout, customers normally get a <strong>Send to {config?.tradingName ?? 'your shop'}</strong> button
+              that delivers their order to you on WhatsApp. Without a number that button
+              does not appear, and customers have no way to call you either.
+              Add one under <strong>WhatsApp number for orders</strong> below.
+            </p>
+          </div>
         </div>
       )}
 
@@ -294,14 +320,29 @@ export default function StorefrontSettingsPage() {
         </div>
 
         <div>
-          <label className="label">WhatsApp number for orders</label>
-          <input className="input"
+          <label className="label">
+            WhatsApp number for orders
+            {missingContact && <span className="text-amber-600 ml-1">· required for WhatsApp orders</span>}
+          </label>
+          <input
+            className={`input ${missingContact ? 'border-amber-400' : ''}`}
             value={form.orderPhone}
             onChange={e => setForm(f => ({ ...f, orderPhone: e.target.value }))}
-            placeholder={config?.phone ? `Defaults to ${config.phone}` : '0712 345 678'} />
+            placeholder={config?.phone ? `Leave blank to use ${config.phone}` : '0712 345 678'} />
+          {waPreview ? (
+            <p className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1">
+              <Check size={11} />
+              Orders go to <span className="font-mono font-semibold">+{waPreview}</span>
+              {!config?.orderPhone && ' (your shop phone)'}
+            </p>
+          ) : (
+            <p className="text-[11px] text-amber-600 mt-1">
+              Set this so customers can send you their order on WhatsApp.
+            </p>
+          )}
           <p className="text-[11px] text-stone-400 mt-1">
-            After checkout the customer gets a button that sends their order here on WhatsApp.
-            Leave blank to use your shop phone.
+            The customer taps a button after checkout and their order arrives as a
+            WhatsApp message from their own number, so you can reply to them directly.
           </p>
         </div>
 
