@@ -35,6 +35,7 @@ import workOrderRoutes  from './modules/work-orders/workOrders.routes';
 import hotelRoutes      from './modules/hotel/hotel.routes';
 import expensesRoutes   from './modules/expenses/expenses.routes';
 import storefrontRoutes from './modules/storefront/storefront.routes';
+import ordersRoutes     from './modules/orders/orders.routes';
 
 const app  = express();
 const http = createServer(app);
@@ -86,6 +87,7 @@ app.use(`${v1}/timeclock`,    subscriptionGate, timeclockRoutes);
 app.use(`${v1}/work-orders`,  subscriptionGate, workOrderRoutes);
 app.use(`${v1}/hotel`,        subscriptionGate, hotelRoutes);
 app.use(`${v1}/expenses`,     subscriptionGate, expensesRoutes);
+app.use(`${v1}/orders`,       subscriptionGate, ordersRoutes);
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/', (_, res) => res.json({ status: 'ok', service: 'UniDuka API', version: '4.0.0' }));
