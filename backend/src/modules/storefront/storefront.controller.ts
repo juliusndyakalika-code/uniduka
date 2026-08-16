@@ -83,6 +83,9 @@ export async function getStorefront(req: Request, res: Response) {
     logoUrl:      shop.logoUrl,
     bannerUrl:    shop.storefrontBanner,
     phone:        shop.phone,
+    // Where order messages should go. Falls back to the public phone so a shop
+    // that never set a dedicated one still receives them.
+    whatsapp:     shop.orderPhone || shop.phone,
     city:         shop.city,
     region:       shop.region,
     addressLine1: shop.addressLine1,
@@ -255,14 +258,22 @@ export async function placeOrder(req: Request, res: Response) {
     });
   } catch { /* socket layer unavailable; the order still stands */ }
 
-  // Deliberately minimal response — enough to show a confirmation, nothing more.
+  // Enough to show a confirmation and compose the WhatsApp hand-off, nothing more.
   return R.created(res, {
     orderNo:   order.orderNo,
     status:    order.status,
+    subtotal,
+    deliveryFee,
     total:     order.total,
+    fulfilment: mode,
     placedAt:  order.createdAt,
+    buyerName: String(buyerName).trim(),
+    deliveryAddress: mode === 'DELIVERY' ? String(deliveryAddress).trim() : null,
+    items: orderItems.map(i => ({ name: i.name, quantity: i.quantity, unitLabel: i.unitLabel, lineTotal: i.lineTotal })),
     shopName:  shop.tradingName,
     shopPhone: shop.phone,
+    shopWhatsapp: shop.orderPhone || shop.phone,
+    currency:  shop.currency,
   });
 }
 

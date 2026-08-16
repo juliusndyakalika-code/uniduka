@@ -9,9 +9,10 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Search, ShoppingBag, Plus, Minus, X, MapPin, Phone, Store,
-  CheckCircle2, Truck, Package, Loader2, AlertCircle,
+  CheckCircle2, Truck, Package, Loader2, AlertCircle, MessageCircle,
 } from 'lucide-react';
 import publicApi from '../../api/publicClient';
+import { buildOrderMessage, waLink } from '../../utils/whatsapp';
 
 interface Shop {
   slug: string; name: string; bio?: string; logoUrl?: string; bannerUrl?: string;
@@ -28,7 +29,12 @@ interface Product {
 }
 interface Placed {
   orderNo: string; status: string; total: number;
+  subtotal: number; deliveryFee: number;
+  fulfilment: 'DELIVERY' | 'PICKUP';
   placedAt: string; shopName: string; shopPhone?: string;
+  shopWhatsapp?: string; currency?: string;
+  buyerName: string; deliveryAddress?: string | null;
+  items: { name: string; quantity: number; unitLabel: string; lineTotal: number }[];
 }
 
 type Line = { product: Product; qty: number };
@@ -157,31 +163,61 @@ export default function StorefrontPage() {
 
   // Order confirmation replaces the page — nothing else matters at this point.
   if (placed) {
+    const waHref = waLink(
+      placed.shopWhatsapp ?? placed.shopPhone,
+      buildOrderMessage({
+        orderNo: placed.orderNo,
+        buyerName: placed.buyerName,
+        buyerPhone: phone,
+        fulfilment: placed.fulfilment,
+        deliveryAddress: placed.deliveryAddress,
+        note: note || null,
+        items: placed.items,
+        subtotal: placed.subtotal,
+        deliveryFee: placed.deliveryFee,
+        total: placed.total,
+        currency: placed.currency,
+      }),
+    );
+
     return (
       <div className="min-h-screen bg-stone-50 grid place-items-center p-5">
         <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-7 max-w-sm w-full text-center">
           <CheckCircle2 size={44} className="mx-auto mb-3 text-emerald-500" />
           <h1 className="text-lg font-bold text-stone-900">Order placed</h1>
           <p className="text-sm text-stone-500 mt-1">
-            {placed.shopName} will call you to confirm.
+            {waHref
+              ? `Send it to ${placed.shopName} on WhatsApp so they see it straight away.`
+              : `${placed.shopName} will call you to confirm.`}
           </p>
           <div className="my-5 py-4 border-y border-stone-100 space-y-1">
             <p className="text-[11px] uppercase tracking-widest text-stone-400">Order number</p>
             <p className="font-mono font-bold text-stone-900">{placed.orderNo}</p>
             <p className="text-xl font-bold text-stone-900 pt-1">{money(placed.total, shop.currency)}</p>
-            <p className="text-xs text-stone-500">Pay on {mode === 'PICKUP' ? 'pickup' : 'delivery'}</p>
+            <p className="text-xs text-stone-500">Pay on {placed.fulfilment === 'PICKUP' ? 'pickup' : 'delivery'}</p>
           </div>
-          <p className="text-xs text-stone-400">
-            Save this number to track your order.
-          </p>
+
+          {waHref && (
+            <>
+              <a href={waHref} target="_blank" rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#25D366] text-white text-sm font-bold active:bg-[#1da851]">
+                <MessageCircle size={16} /> Send to {placed.shopName}
+              </a>
+              <p className="text-[11px] text-stone-400 mt-2">
+                Your order is saved either way. This just reaches them faster.
+              </p>
+            </>
+          )}
+
           {placed.shopPhone && (
             <a href={`tel:${placed.shopPhone}`}
-              className="mt-4 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-stone-900 text-white text-sm font-semibold">
-              <Phone size={14} /> Call {placed.shopName}
+              className={`inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold ${
+                waHref ? 'mt-2 border border-stone-200 text-stone-600' : 'mt-4 bg-stone-900 text-white'}`}>
+              <Phone size={14} /> Call instead
             </a>
           )}
           <button onClick={() => setPlaced(null)}
-            className="mt-2 w-full py-2.5 rounded-xl border border-stone-200 text-stone-600 text-sm font-semibold">
+            className="mt-2 w-full py-2.5 rounded-xl text-stone-500 text-sm font-semibold">
             Keep shopping
           </button>
         </div>

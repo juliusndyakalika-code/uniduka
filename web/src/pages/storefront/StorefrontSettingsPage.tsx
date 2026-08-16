@@ -40,7 +40,7 @@ export default function StorefrontSettingsPage() {
 
   const [form, setForm] = useState({
     slug: '', storefrontBio: '', acceptsDelivery: true, acceptsPickup: true,
-    deliveryFee: 0, deliveryNote: '', minOrderValue: 0,
+    deliveryFee: 0, deliveryNote: '', minOrderValue: 0, orderPhone: '',
   });
   const [error, setError]   = useState('');
   const [saved, setSaved]   = useState(false);
@@ -74,6 +74,7 @@ export default function StorefrontSettingsPage() {
         deliveryFee: config.deliveryFee,
         deliveryNote: config.deliveryNote ?? '',
         minOrderValue: config.minOrderValue,
+        orderPhone: config.orderPhone ?? '',
       });
     }
   }, [config]);
@@ -290,6 +291,18 @@ export default function StorefrontSettingsPage() {
               value={form.minOrderValue}
               onChange={e => setForm(f => ({ ...f, minOrderValue: Number(e.target.value) || 0 }))} />
           </div>
+        </div>
+
+        <div>
+          <label className="label">WhatsApp number for orders</label>
+          <input className="input"
+            value={form.orderPhone}
+            onChange={e => setForm(f => ({ ...f, orderPhone: e.target.value }))}
+            placeholder={config?.phone ? `Defaults to ${config.phone}` : '0712 345 678'} />
+          <p className="text-[11px] text-stone-400 mt-1">
+            After checkout the customer gets a button that sends their order here on WhatsApp.
+            Leave blank to use your shop phone.
+          </p>
         </div>
 
         <div>

@@ -8,11 +8,12 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Phone, MapPin, Truck, Package, Check, X, Loader2,
-  Inbox, ChevronLeft, ChevronRight, Clock, AlertCircle, Receipt,
+  Inbox, ChevronLeft, ChevronRight, Clock, AlertCircle, Receipt, MessageCircle,
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { PageLoader } from '../../components/ui/Loader';
+import { waLink } from '../../utils/whatsapp';
 
 interface OrderItem {
   id: string; productId: string; name: string;
@@ -186,6 +187,16 @@ export default function OrdersPage() {
                         className="text-xs text-primary-600 hover:underline flex items-center gap-1">
                         <Phone size={11} /> {o.buyerPhone}
                       </a>
+                      {(() => {
+                        const href = waLink(o.buyerPhone,
+                          `Hello ${o.buyerName}, about your order ${o.orderNo} from us — `);
+                        return href ? (
+                          <a href={href} target="_blank" rel="noreferrer"
+                            className="text-xs text-[#25D366] hover:underline flex items-center gap-1 font-semibold">
+                            <MessageCircle size={11} /> WhatsApp
+                          </a>
+                        ) : null;
+                      })()}
                       {o.deliveryAddress && (
                         <span className="text-xs text-stone-500 flex items-start gap-1">
                           <MapPin size={11} className="mt-0.5 shrink-0" /> {o.deliveryAddress}
