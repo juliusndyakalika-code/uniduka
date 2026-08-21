@@ -1,3 +1,4 @@
+import { issueTaxInvoice } from '../invoices/invoices.controller';
 import { Router } from 'express';
 import {
   createTransaction, listTransactions, getTransaction, voidTransaction, refundTransaction,
@@ -15,6 +16,8 @@ router.get('/transactions/:id',          getTransaction);
 router.post('/transactions/:id/void',    voidTransaction);
 router.post('/transactions/:id/refund',  refundTransaction);
 router.post('/transactions/:id/settle',  settleDebt);
+// Formal tax invoice number for a completed sale (see invoices module)
+router.post('/transactions/:id/tax-invoice', issueTaxInvoice);
 
 router.get('/debts', listDebts);
 

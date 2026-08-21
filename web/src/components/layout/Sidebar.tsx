@@ -6,7 +6,7 @@ import {
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
-  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ShieldCheck, ReceiptText, Globe, Inbox,
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ShieldCheck, ReceiptText, Globe, Inbox, FileText,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
@@ -270,6 +270,7 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
                   <NavItem to="/pos" icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
                   <NavItem to="/pos/transactions" icon={<ReceiptText size={16} />} label="Transactions" />
                   <NavItem to="/orders" icon={<Inbox size={16} />} label="Online Orders" badge={pendingOrders} />
+                  <NavItem to="/invoices" icon={<FileText size={16} />} label="Invoices" />
                 </>
               )}
               <NavItem to="/customers" icon={<Users size={16} />} label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'Guests' : t('nav.customers')} />

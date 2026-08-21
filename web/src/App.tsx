@@ -25,6 +25,9 @@ const TransactionsPage     = lazy(() => import('./pages/pos/TransactionsPage'));
 const StorefrontPage       = lazy(() => import('./pages/storefront/StorefrontPage'));
 const StorefrontSettings   = lazy(() => import('./pages/storefront/StorefrontSettingsPage'));
 const OnlineOrdersPage     = lazy(() => import('./pages/storefront/OrdersPage'));
+const InvoicesPage         = lazy(() => import('./pages/invoices/InvoicesPage'));
+const NewInvoicePage       = lazy(() => import('./pages/invoices/NewInvoicePage'));
+const InvoiceDetailPage    = lazy(() => import('./pages/invoices/InvoiceDetailPage'));
 
 const InventoryDashboard   = lazy(() => import('./pages/inventory/InventoryDashboard'));
 const ProductsPage         = lazy(() => import('./pages/inventory/ProductsPage'));
@@ -125,6 +128,9 @@ export default function App() {
               <Route path="/pos/transactions" element={<TransactionsPage />} />
               {/* Cashiers fulfil orders, so this is not owner-only */}
               <Route path="/orders" element={<OnlineOrdersPage />} />
+              <Route path="/invoices"     element={<InvoicesPage />} />
+              <Route path="/invoices/new" element={<NewInvoicePage />} />
+              <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
 
               <Route path="/inventory"                    element={<InventoryDashboard />} />
               <Route path="/inventory/products"           element={<ProductsPage />} />

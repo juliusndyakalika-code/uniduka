@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Search, X, Printer, Calendar, ChevronLeft, ChevronRight,
-  Receipt, Download, Loader2,
+  Receipt, Download, Loader2, FileText,
 } from 'lucide-react';
+import { printInvoice } from '../../utils/printInvoice';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -88,6 +89,43 @@ export default function TransactionsPage() {
 
   const [printTx, setPrintTx]       = useState<TxDetail | null>(null);
   const [loadingTxId, setLoadingId] = useState<string | null>(null);
+  const [taxTxId, setTaxTxId]       = useState<string | null>(null);
+
+  /**
+   * Assigns a formal tax invoice number to a completed sale and prints it.
+   * Asking twice returns the same number rather than consuming another, so a
+   * reprint is safe.
+   */
+  async function issueTaxInvoice(tx: Tx) {
+    setTaxTxId(tx.id);
+    try {
+      const [res, shopRes] = await Promise.all([
+        api.post(`/pos/transactions/${tx.id}/tax-invoice`, {}),
+        shopId ? api.get(`/shops/${shopId}`) : Promise.resolve(null),
+      ]);
+      const { transaction, shop } = res.data.data;
+      const shopInfo = shop ?? shopRes?.data?.data ?? { tradingName: account?.legalName ?? 'Shop' };
+      printInvoice({
+        title: 'TAX INVOICE',
+        number: transaction.taxInvoiceNo,
+        issuedAt: transaction.taxInvoiceAt ?? transaction.createdAt,
+        billToName: transaction.customer?.fullName || transaction.customerName || 'Cash sale',
+        billToTin: transaction.customerTin,
+        lines: (transaction.items ?? []).map((i: { name: string; quantity: number; unitLabel: string; unitPrice: number; discountPct: number; lineTotal: number }) => ({
+          name: i.name, quantity: i.quantity, unitLabel: i.unitLabel,
+          unitPrice: i.unitPrice, discountPct: i.discountPct, lineTotal: i.lineTotal,
+        })),
+        subtotal: transaction.subtotal,
+        discountAmount: transaction.discountAmount,
+        taxAmount: transaction.taxAmount,
+        total: transaction.total,
+        amountPaid: transaction.total,
+        balance: 0,
+        shop: shopInfo,
+      });
+    } catch { /* surfaced by the row staying unmarked */ }
+    setTaxTxId(null);
+  }
 
   const { data, isLoading, isFetching } = useQuery<{ data: Tx[]; meta: Meta }>({
     queryKey: ['transactions', shopId, search, from, to, status, method, page],
@@ -296,7 +334,7 @@ export default function TransactionsPage() {
                       <td className={`text-right font-semibold ${tx.status === 'VOIDED' ? 'text-stone-400 line-through' : 'text-stone-900'}`}>
                         {fmt(tx.total)}
                       </td>
-                      <td className="text-right">
+                      <td className="text-right whitespace-nowrap">
                         <button
                           onClick={() => fetchAndPrint(tx.id)}
                           disabled={loadingTxId === tx.id}
@@ -307,6 +345,18 @@ export default function TransactionsPage() {
                             ? <Loader2 size={14} className="animate-spin" />
                             : <Printer size={14} />}
                         </button>
+                        {tx.status === 'COMPLETED' && (
+                          <button
+                            onClick={() => issueTaxInvoice(tx)}
+                            disabled={taxTxId === tx.id}
+                            title="Tax invoice"
+                            className="p-1.5 rounded text-stone-400 hover:text-primary-600 hover:bg-primary-50 transition-colors disabled:opacity-40"
+                          >
+                            {taxTxId === tx.id
+                              ? <Loader2 size={14} className="animate-spin" />
+                              : <FileText size={14} />}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

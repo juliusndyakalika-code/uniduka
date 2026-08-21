@@ -114,6 +114,19 @@ enum FulfilmentType {
   PICKUP
 }
 
+// Payment lifecycle of an invoice. Fulfilment is tracked separately on the
+// model, because the two are independent: wholesale commonly delivers first
+// and is paid on terms, while other trades take payment before releasing goods.
+// OVERDUE is deliberately absent — it is derived from dueAt and the balance,
+// so it can never go stale the way a stored flag would.
+enum InvoiceStatus {
+  DRAFT // being prepared, not yet given to the customer
+  SENT // issued, awaiting payment
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
 enum PaymentMethod {
   CASH
   CARD
@@ -336,6 +349,8 @@ model Shop {
   timeClocks          TimeClock[]
   expenses            Expense[]
   orders              Order[]
+  invoices            Invoice[]
+  docSequences        DocumentSequence[]
 
   @@map("shops")
 }
@@ -406,6 +421,8 @@ model User {
   timeClocks       TimeClock[]
   stockMovements   StockMovement[]
   inventoryImports InventoryImport[]
+  Invoice          Invoice[]
+  InvoicePayment   InvoicePayment[]
 
   @@map("users")
 }
@@ -482,6 +499,7 @@ model Product {
   inventory           InventoryItem[]
   txItems             TransactionItem[]
   orderItems          OrderItem[]
+  invoiceItems        InvoiceItem[]
   recipeLines         RecipeLine[]         @relation("RecipeIngredient")
   recipeProducts      RecipeLine[]         @relation("RecipeProduct")
   stockMovements      StockMovement[]
@@ -748,9 +766,14 @@ model Transaction {
   note         String?
   customerName String? // Free-text name when no customerId (typed at POS)
   customerTin  String? // Buyer TIN for B2B / TRA tax invoice
-  receiptNo    String   @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  receiptNo    String  @unique
+
+  // A formal tax invoice issued against this sale. Assigned on demand rather
+  // than at sale time, so numbers are only consumed when actually needed.
+  taxInvoiceNo String?   @unique
+  taxInvoiceAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   items    TransactionItem[]
   payments TransactionPayment[]
@@ -861,6 +884,7 @@ model Customer {
   appointments     Appointment[]
   consignmentSales ConsignmentSale[]
   orders           Order[]
+  invoices         Invoice[]
 
   @@map("customers")
 }
@@ -1181,6 +1205,121 @@ model ConsignmentSale {
   createdAt DateTime @default(now())
 
   @@map("consignment_sales")
+}
+
+// ─── INVOICING ───────────────────────────────────────────────────────────────
+
+// Per-shop document numbering. Tax authorities expect invoice numbers to be
+// sequential with no gaps, so they cannot be derived from a row count (which
+// races) or from a timestamp. The counter is bumped with an atomic increment.
+model DocumentSequence {
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  kind   String // "INVOICE" | "TAX_INVOICE"
+  prefix String @default("INV")
+  next   Int    @default(1)
+
+  @@unique([shopId, kind])
+  @@map("document_sequences")
+}
+
+// A bill issued to a customer, typically before payment. Independent of
+// Transaction until fulfilment: issuing an invoice moves no stock and books no
+// revenue, so an unpaid or cancelled invoice can never distort inventory or
+// reporting. On fulfilment it deducts stock and creates the Transaction, the
+// same rule storefront orders follow.
+model Invoice {
+  id        String        @id @default(cuid())
+  shopId    String
+  shop      Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  invoiceNo String        @unique
+  status    InvoiceStatus @default(DRAFT)
+
+  // Bill-to. customerId links a CRM record when there is one; the snapshot
+  // fields are always written so the document stays accurate if the customer
+  // record is later edited or removed.
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  billToName    String
+  billToTin     String?
+  billToPhone   String?
+  billToEmail   String?
+  billToAddress String?
+
+  // Money, snapshotted at issue time
+  subtotal       Float
+  discountAmount Float @default(0)
+  taxAmount      Float @default(0)
+  total          Float
+
+  notes String?
+  terms String?
+
+  issuedAt     DateTime?
+  dueAt        DateTime?
+  paidAt       DateTime?
+  cancelledAt  DateTime?
+  cancelReason String?
+
+  // Goods handover — orthogonal to payment status
+  fulfilledAt   DateTime?
+  transactionId String?   @unique
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items    InvoiceItem[]
+  payments InvoicePayment[]
+
+  @@index([shopId, status])
+  @@index([shopId, dueAt])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id        String  @id @default(cuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  // Nullable: an invoice may carry lines that are not catalogue products,
+  // such as delivery, labour or a one-off charge.
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  name        String
+  description String?
+  quantity    Float
+  unitLabel   String  @default("ea")
+  unitPrice   Float
+  discountPct Float   @default(0)
+  taxRate     Float   @default(0)
+  taxAmount   Float   @default(0)
+  lineTotal   Float
+
+  @@map("invoice_items")
+}
+
+model InvoicePayment {
+  id        String  @id @default(cuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  method    PaymentMethod
+  amount    Float
+  reference String?
+  note      String?
+  paidAt    DateTime      @default(now())
+
+  recordedById String
+  recordedBy   User   @relation(fields: [recordedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("invoice_payments")
 }
 
 // ─── STOREFRONT ORDERS ───────────────────────────────────────────────────────
