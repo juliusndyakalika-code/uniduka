@@ -8,7 +8,7 @@ import {
 import api from '../../api/client';
 import { PageLoader } from '../../components/ui/Loader';
 import { printInvoice } from '../../utils/printInvoice';
-import { waLink } from '../../utils/whatsapp';
+import { waLink, waNumber } from '../../utils/whatsapp';
 
 interface Item {
   id: string; productId?: string | null; name: string; description?: string | null;
@@ -70,6 +70,8 @@ export default function InvoiceDetailPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [dueAt, setDueAt]     = useState('');
+  const [waPrompt, setWaPrompt] = useState(false);
+  const [waNumberInput, setWaNumberInput] = useState('');
 
   const { data: inv, isLoading } = useQuery<Invoice>({
     queryKey: ['invoice', id],
@@ -131,11 +133,27 @@ export default function InvoiceDetailPage() {
     });
   }
 
-  const waHref = waLink(
-    inv.billToPhone,
+  const waMessage =
     `Hello ${inv.billToName}, here is invoice ${inv.invoiceNo} for ${money(inv.total)}. ` +
-    (inv.balance > 0 ? `Balance due: ${money(inv.balance)}.` : 'Paid in full, thank you.'),
-  );
+    (inv.balance > 0 ? `Balance due: ${money(inv.balance)}.` : 'Paid in full, thank you.');
+
+  /**
+   * Send on WhatsApp. The bill-to phone is optional, so rather than hiding the
+   * button when it is missing — which just reads as the feature being broken —
+   * ask for a number at send time. It is used for this message only and not
+   * written back, since an issued invoice cannot be edited.
+   */
+  function sendWhatsApp() {
+    const href = waLink(inv!.billToPhone, waMessage);
+    if (href) { window.open(href, '_blank', 'noopener,noreferrer'); return; }
+    setWaPrompt(true);
+  }
+  function sendToTypedNumber() {
+    const href = waLink(waNumberInput, waMessage);
+    if (!href) { setError('That does not look like a phone number'); return; }
+    window.open(href, '_blank', 'noopener,noreferrer');
+    setWaPrompt(false); setWaNumberInput('');
+  }
 
   return (
     <div className="space-y-4 pb-8">
@@ -173,11 +191,9 @@ export default function InvoiceDetailPage() {
           <button className="btn-secondary" onClick={() => doPrint()}>
             <Printer size={14} className="mr-1.5" /> Print
           </button>
-          {waHref && (
-            <a href={waHref} target="_blank" rel="noreferrer" className="btn-secondary">
-              <MessageCircle size={14} className="mr-1.5" /> WhatsApp
-            </a>
-          )}
+          <button className="btn-secondary" onClick={sendWhatsApp}>
+            <MessageCircle size={14} className="mr-1.5" /> Send on WhatsApp
+          </button>
         </div>
       </div>
 
@@ -411,6 +427,46 @@ export default function InvoiceDetailPage() {
                 disabled={act.isPending || !(Number(payAmt) > 0)}
                 onClick={() => act.mutate({ action: 'payments', body: { amount: Number(payAmt), method: payMethod, reference: payRef || undefined } })}>
                 <Check size={12} className="mr-1.5" /> Record
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ask for a number when the invoice carries none */}
+      {waPrompt && (
+        <div className="fixed inset-0 bg-black/40 grid place-items-center z-50 p-4">
+          <div className="card p-5 w-full max-w-sm space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageCircle size={17} className="text-[#25D366]" />
+              <h3 className="text-sm font-bold text-stone-900">Send on WhatsApp</h3>
+            </div>
+            <p className="text-xs text-stone-500">
+              {inv.billToName} has no phone number on this invoice. Enter one to send to.
+            </p>
+            <input
+              className="input w-full" autoFocus inputMode="tel"
+              placeholder="0713 111 222"
+              value={waNumberInput}
+              onChange={e => setWaNumberInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendToTypedNumber()}
+            />
+            {waNumberInput && !waNumber(waNumberInput) && (
+              <p className="text-[11px] text-red-600">That does not look like a phone number</p>
+            )}
+            {isDraft && (
+              <p className="text-[11px] text-stone-400">
+                Add it to the invoice itself with Edit, so it is there next time.
+              </p>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button className="btn-secondary flex-1 text-xs" onClick={() => setWaPrompt(false)}>Cancel</button>
+              <button
+                className="flex-1 text-xs py-2 rounded-lg bg-[#25D366] text-white font-semibold disabled:opacity-40"
+                disabled={!waNumber(waNumberInput)}
+                onClick={sendToTypedNumber}
+              >
+                Open WhatsApp
               </button>
             </div>
           </div>

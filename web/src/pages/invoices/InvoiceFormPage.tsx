@@ -321,6 +321,11 @@ export default function InvoiceFormPage() {
           <div>
             <label className="label">Phone</label>
             <input className="input" value={billToPhone} onChange={e => setPhone(e.target.value)} placeholder="0713 111 222" />
+            <p className="text-[11px] text-stone-400 mt-1">
+              {billToPhone.trim()
+                ? 'You can send this invoice to them on WhatsApp.'
+                : 'Add one to send the invoice on WhatsApp in a tap.'}
+            </p>
           </div>
           <div>
             <label className="label">Email</label>
