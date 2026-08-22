@@ -49,7 +49,7 @@ const http = createServer(app);
  * origin would lock out whichever is not named. Leave it unset to allow any
  * origin — convenient locally, worth tightening once the domain is settled.
  *
- *   CORS_ORIGIN=https://mauzohalisi.dilikitaa.com,https://web-production-x.up.railway.app
+ *   CORS_ORIGIN=https://mauzohalisi.com,https://www.mauzohalisi.com
  */
 const allowedOrigins = (process.env.CORS_ORIGIN ?? '')
   .split(',')
@@ -74,7 +74,12 @@ export const io = new SocketServer(http, {
 
 // ── Static files & APK download ──────────────────────────────────────────────
 app.use(express.static('public'));
-app.get('/uniduka.apk', (_req, res) => res.redirect('https://web-production-a0a00.up.railway.app/uniduka.apk'));
+// Android build download. The target is configurable so it does not have to be
+// redeployed when the file moves; /uniduka.apk stays as a redirect because
+// links to it may already be shared.
+const APK_URL = process.env.APK_URL || 'https://mauzohalisi.com/mauzohalisi.apk';
+app.get('/mauzohalisi.apk', (_req, res) => res.redirect(APK_URL));
+app.get('/uniduka.apk',     (_req, res) => res.redirect(301, '/mauzohalisi.apk'));
 
 // ── Security ──────────────────────────────────────────────────────────────────
 app.set('trust proxy', 1);

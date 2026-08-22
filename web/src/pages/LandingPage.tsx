@@ -808,7 +808,7 @@ export default function LandingPage() {
               </ul>
               <div className="mt-5">
                 <p className="text-xs text-stone-400 mb-1">Reach us</p>
-                <p className="text-sm text-stone-700">info@mauzohalisi.co.tz</p>
+                <p className="text-sm text-stone-700">info@mauzohalisi.com</p>
               </div>
             </div>
           </div>

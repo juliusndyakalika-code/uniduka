@@ -23,8 +23,8 @@ export const neu = {
  * one. Fill these in as they become real.
  */
 export const CONTACT = {
-  email:   'info@mauzohalisi.co.tz',
-  support: 'support@mauzohalisi.co.tz',
+  email:   'info@mauzohalisi.com',
+  support: 'support@mauzohalisi.com',
   phone:   '',                          // published number, once there is one
   city:    'Dar es Salaam, Tanzania',
 } as const;
