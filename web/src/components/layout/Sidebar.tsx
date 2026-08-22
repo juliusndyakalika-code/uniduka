@@ -310,6 +310,8 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
                   <NavItem to="/pos/voids"        icon={<Trash2 size={16} />}       label={t('nav.voidedSales')} />
                 </>
               )}
+              {/* Every business type bills someone — hotels invoice corporate stays. */}
+              <NavItem to="/invoices" icon={<FileText size={16} />} label="Invoices" />
               {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
                 <NavItem to="/kds" icon={<ChefHat size={16} />} label={t('nav.kitchenDisplay')} />
               )}
