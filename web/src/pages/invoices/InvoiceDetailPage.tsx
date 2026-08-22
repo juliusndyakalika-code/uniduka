@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Printer, Send, Wallet, Package, XCircle, AlertCircle,
-  Check, Loader2, MessageCircle, Receipt,
+  Check, Loader2, MessageCircle, Receipt, Pencil, Copy,
 } from 'lucide-react';
 import api from '../../api/client';
 import { PageLoader } from '../../components/ui/Loader';
@@ -161,6 +161,15 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {isDraft && (
+            <Link to={`/invoices/${inv.id}/edit`} className="btn-secondary">
+              <Pencil size={14} className="mr-1.5" /> Edit
+            </Link>
+          )}
+          {/* Repeat customers re-order the same basket, so copying beats retyping */}
+          <Link to={`/invoices/new?from=${inv.id}`} className="btn-secondary">
+            <Copy size={14} className="mr-1.5" /> Duplicate
+          </Link>
           <button className="btn-secondary" onClick={() => doPrint()}>
             <Printer size={14} className="mr-1.5" /> Print
           </button>

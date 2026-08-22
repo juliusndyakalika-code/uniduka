@@ -1,9 +1,16 @@
-import { useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { Plus, Trash2, ArrowLeft, AlertCircle, Search, X } from 'lucide-react';
+/**
+ * One form for three jobs: raising a new invoice, editing a draft, and
+ * duplicating an existing one. They differ only in what the fields start as and
+ * where the save goes, so keeping them together avoids three copies of the line
+ * editor drifting apart.
+ */
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, Link, useParams, useSearchParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Trash2, ArrowLeft, AlertCircle, Search, X, Loader2 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { PageLoader } from '../../components/ui/Loader';
 
 interface Product { id: string; name: string; sku?: string; sellingPrice: number; unit?: string; stock: number }
 interface Customer { id: string; fullName: string; phone?: string; email?: string; address?: string }
@@ -28,9 +35,27 @@ function apiError(e: unknown, fallback: string) {
 }
 const newKey = () => Math.random().toString(36).slice(2);
 
-export default function NewInvoicePage() {
+interface LoadedInvoice {
+  id: string; status: string; invoiceNo: string;
+  customerId?: string | null;
+  billToName: string; billToTin?: string | null; billToPhone?: string | null;
+  billToEmail?: string | null; billToAddress?: string | null;
+  discountAmount: number; notes?: string | null; terms?: string | null;
+  dueAt?: string | null;
+  items: { productId?: string | null; name: string; quantity: number; unitLabel: string;
+           unitPrice: number; discountPct: number; taxRate: number }[];
+}
+
+export default function InvoiceFormPage() {
   const { shopId } = useAuthStore();
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { id } = useParams();                       // present when editing
+  const [params] = useSearchParams();
+  const copyFrom = params.get('from');              // present when duplicating
+
+  const mode: 'create' | 'edit' | 'duplicate' = id ? 'edit' : copyFrom ? 'duplicate' : 'create';
+  const sourceId = id ?? copyFrom ?? '';
 
   const [billToName, setName]     = useState('');
   const [billToTin, setTin]       = useState('');
@@ -65,11 +90,49 @@ export default function NewInvoicePage() {
 
   // What can still be promised: stock minus quantities already on other open
   // invoices. `available: null` means the product is not stock-tracked.
+  // When editing, this invoice's own lines are excluded so it is not measured
+  // against itself. A duplicate is a genuinely new claim, so nothing is excluded.
   const { data: avail = {} } = useQuery<Record<string, Availability>>({
-    queryKey: ['invoice-availability', shopId],
-    queryFn: () => api.get('/invoices/availability').then(r => r.data.data),
+    queryKey: ['invoice-availability', shopId, mode === 'edit' ? sourceId : null],
+    queryFn: () => api.get('/invoices/availability', {
+      params: mode === 'edit' ? { exclude: sourceId } : {},
+    }).then(r => r.data.data),
     enabled: !!shopId,
   });
+
+  const { data: source, isLoading: loadingSource } = useQuery<LoadedInvoice>({
+    queryKey: ['invoice', sourceId],
+    queryFn: () => api.get(`/invoices/${sourceId}`).then(r => r.data.data),
+    enabled: !!sourceId,
+  });
+
+  // Prefill once the source arrives. A duplicate drops dates and keeps only the
+  // shape of the bill; an edit restores everything as it was.
+  const [prefilled, setPrefilled] = useState(false);
+  useEffect(() => {
+    if (!source || prefilled) return;
+    setName(source.billToName);
+    setTin(source.billToTin ?? '');
+    setPhone(source.billToPhone ?? '');
+    setEmail(source.billToEmail ?? '');
+    setAddr(source.billToAddress ?? '');
+    setCustomerId(source.customerId ?? '');
+    setTerms(source.terms ?? '');
+    setNotes(source.notes ?? '');
+    setDisc(source.discountAmount ?? 0);
+    if (mode === 'edit' && source.dueAt) setDueAt(source.dueAt.slice(0, 10));
+    setLines(source.items.map(i => ({
+      key: newKey(),
+      productId: i.productId ?? undefined,
+      name: i.name,
+      quantity: i.quantity,
+      unitLabel: i.unitLabel,
+      unitPrice: i.unitPrice,
+      discountPct: i.discountPct,
+      taxRate: i.taxRate,
+    })));
+    setPrefilled(true);
+  }, [source, prefilled, mode]);
 
   /** Remaining headroom for a product, accounting for other lines on this invoice. */
   function headroom(productId: string, exceptKey?: string) {
@@ -93,24 +156,34 @@ export default function NewInvoicePage() {
   }, [lines, discountAmount]);
 
   const { mutate: save, isPending } = useMutation({
-    mutationFn: () => api.post('/invoices', {
-      customerId: customerId || undefined,
-      billToName, billToTin, billToPhone, billToEmail, billToAddress,
-      dueAt: dueAt || undefined,
-      terms: terms || undefined,
-      notes: notes || undefined,
-      discountAmount: totals.discount,
-      items: lines.map(l => ({
-        productId: l.productId,
-        name: l.name,
-        quantity: l.quantity,
-        unitLabel: l.unitLabel,
-        unitPrice: l.unitPrice,
-        discountPct: l.discountPct,
-        taxRate: l.taxRate,
-      })),
-    }),
-    onSuccess: (r) => navigate(`/invoices/${r.data.data.id}`),
+    mutationFn: () => {
+      const payload = {
+        customerId: customerId || undefined,
+        billToName, billToTin, billToPhone, billToEmail, billToAddress,
+        dueAt: dueAt || undefined,
+        terms: terms || undefined,
+        notes: notes || undefined,
+        discountAmount: totals.discount,
+        items: lines.map(l => ({
+          productId: l.productId,
+          name: l.name,
+          quantity: l.quantity,
+          unitLabel: l.unitLabel,
+          unitPrice: l.unitPrice,
+          discountPct: l.discountPct,
+          taxRate: l.taxRate,
+        })),
+      };
+      return mode === 'edit'
+        ? api.put(`/invoices/${sourceId}`, payload)
+        : api.post('/invoices', payload);
+    },
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      qc.invalidateQueries({ queryKey: ['invoice-availability'] });
+      if (mode === 'edit') qc.invalidateQueries({ queryKey: ['invoice', sourceId] });
+      navigate(`/invoices/${r.data.data.id}`);
+    },
     onError: (e) => setError(apiError(e, 'Could not save the invoice')),
   });
 
@@ -151,14 +224,47 @@ export default function NewInvoicePage() {
                   lines.every(l => l.name.trim() && l.quantity > 0 && l.unitPrice >= 0) &&
                   !overCommitted;
 
+  if (sourceId && loadingSource) return <PageLoader />;
+
+  // Only drafts are editable — an issued invoice is a document the customer
+  // already holds, so changing it underneath them would be dishonest.
+  if (mode === 'edit' && source && source.status !== 'DRAFT') {
+    return (
+      <div className="card p-10 text-center">
+        <AlertCircle size={30} className="mx-auto mb-3 text-amber-500" />
+        <p className="text-sm font-semibold text-stone-800">
+          {source.invoiceNo} has already been issued
+        </p>
+        <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
+          The customer holds this document, so it can no longer be edited.
+          Duplicate it to start a fresh draft, or cancel it and raise a new one.
+        </p>
+        <div className="flex gap-2 justify-center mt-4">
+          <Link to={`/invoices/${sourceId}`} className="btn-secondary text-xs">Back to invoice</Link>
+          <Link to={`/invoices/new?from=${sourceId}`} className="btn-primary text-xs">Duplicate it</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const heading = mode === 'edit' ? `Edit ${source?.invoiceNo ?? 'draft'}`
+                : mode === 'duplicate' ? 'Duplicate invoice'
+                : 'New invoice';
+  const blurb = mode === 'edit'
+    ? 'Still a draft. Nothing is sent and no stock moves until you issue it.'
+    : mode === 'duplicate'
+    ? `Copied from ${source?.invoiceNo ?? 'an invoice'}. Saves as a new draft with its own number.`
+    : 'Saved as a draft. Nothing is sent and no stock moves until you issue it.';
+
   return (
     <div className="space-y-4 pb-8">
       <div className="page-header">
         <div className="flex items-center gap-3">
-          <Link to="/invoices" className="text-stone-400 hover:text-stone-700"><ArrowLeft size={18} /></Link>
+          <Link to={mode === 'edit' ? `/invoices/${sourceId}` : '/invoices'}
+            className="text-stone-400 hover:text-stone-700"><ArrowLeft size={18} /></Link>
           <div>
-            <h1 className="page-title">New invoice</h1>
-            <p className="page-subtitle">Saved as a draft. Nothing is sent and no stock moves until you issue it.</p>
+            <h1 className="page-title">{heading}</h1>
+            <p className="page-subtitle">{blurb}</p>
           </div>
         </div>
       </div>
@@ -388,9 +494,10 @@ export default function NewInvoicePage() {
           <button
             onClick={() => { setError(''); save(); }}
             disabled={!canSave || isPending}
-            className="btn-primary w-full mt-3 disabled:opacity-40"
+            className="btn-primary w-full mt-3 disabled:opacity-40 flex items-center justify-center gap-2"
           >
-            {isPending ? 'Saving…' : 'Save draft'}
+            {isPending && <Loader2 size={13} className="animate-spin" />}
+            {isPending ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Save draft'}
           </button>
           <p className="text-[11px] text-stone-400 text-center">
             {overCommitted
