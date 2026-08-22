@@ -35,7 +35,6 @@ const StockPage            = lazy(() => import('./pages/inventory/StockPage'));
 const RecipesPage          = lazy(() => import('./pages/inventory/RecipesPage'));
 const PurchaseOrdersPage   = lazy(() => import('./pages/inventory/PurchaseOrdersPage'));
 const SuppliersPage        = lazy(() => import('./pages/inventory/SuppliersPage'));
-const InventoryAuditPage   = lazy(() => import('./pages/inventory/InventoryAuditPage'));
 
 const CustomersPage        = lazy(() => import('./pages/crm/CustomersPage'));
 const LoyaltyPage          = lazy(() => import('./pages/crm/LoyaltyPage'));
@@ -139,7 +138,6 @@ export default function App() {
               <Route path="/inventory/recipes"            element={<RecipesPage />} />
               <Route path="/inventory/purchase-orders"    element={<PurchaseOrdersPage />} />
               <Route path="/inventory/suppliers"          element={<SuppliersPage />} />
-              <Route path="/inventory/audit"             element={<InventoryAuditPage />} />
 
               <Route path="/consignment"   element={<ConsignmentPage />} />
               <Route path="/customers"     element={<CustomersPage />} />
