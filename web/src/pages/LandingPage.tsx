@@ -800,13 +800,15 @@ export default function LandingPage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-stone-700 mb-4">Company</p>
               <ul className="space-y-2.5">
-                {['About','Contact','Privacy Policy','Terms of Service'].map(l => (
-                  <li key={l}><a href="#" className="text-sm text-stone-500 hover:text-stone-900 transition-colors">{l}</a></li>
+                {([['About','/about'],['Contact','/contact'],['Privacy Policy','/privacy'],['Terms of Service','/terms']] as const).map(([l, to]) => (
+                  <li key={to}>
+                    <Link to={to} className="text-sm text-stone-500 hover:text-stone-900 transition-colors">{l}</Link>
+                  </li>
                 ))}
               </ul>
               <div className="mt-5">
                 <p className="text-xs text-stone-400 mb-1">Reach us</p>
-                <p className="text-sm text-stone-700">info@mauzosmart.co.tz</p>
+                <p className="text-sm text-stone-700">info@mauzohalisi.co.tz</p>
               </div>
             </div>
           </div>

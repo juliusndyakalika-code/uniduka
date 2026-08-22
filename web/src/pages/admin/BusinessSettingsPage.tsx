@@ -117,7 +117,7 @@ export default function BusinessSettingsPage() {
           <div className="text-right">
             <p className="text-xs text-stone-500 mb-2">To upgrade or renew your plan, contact support:</p>
             <div className="flex gap-2 flex-wrap justify-end">
-              <a href="mailto:support@mauzosmart.com" className="btn-secondary text-xs py-1.5 px-3">Email Support</a>
+              <a href="mailto:support@mauzohalisi.com" className="btn-secondary text-xs py-1.5 px-3">Email Support</a>
               <a href="https://wa.me/255700000000" target="_blank" rel="noreferrer" className="btn-primary text-xs py-1.5 px-3">WhatsApp</a>
             </div>
           </div>

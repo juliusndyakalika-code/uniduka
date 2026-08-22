@@ -82,6 +82,14 @@ export default function RegisterPage() {
             <button type="submit" disabled={loading} className="btn-primary w-full">
               {loading ? <Loader2 size={14} className="animate-spin" /> : t('auth.register')}
             </button>
+
+            {/* Consent has to be visible at the point of signing up, not buried in a footer */}
+            <p className="text-center text-[11px] text-stone-400 leading-relaxed">
+              By creating an account you agree to our{' '}
+              <Link to="/terms" className="text-stone-600 font-medium hover:underline">Terms of Service</Link>
+              {' '}and{' '}
+              <Link to="/privacy" className="text-stone-600 font-medium hover:underline">Privacy Policy</Link>.
+            </p>
           </form>
 
           <p className="text-center text-xs text-stone-400 mt-6">

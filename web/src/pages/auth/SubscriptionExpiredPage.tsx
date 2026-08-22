@@ -37,7 +37,7 @@ export default function SubscriptionExpiredPage() {
           {/* Contact options */}
           <div className="space-y-3 mb-8">
             <a
-              href="mailto:support@mauzosmart.com"
+              href="mailto:support@mauzohalisi.com"
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
