@@ -6,7 +6,7 @@
  * accountant. Printing goes through the same hidden-iframe route so it works
  * from an async callback without tripping popup blockers.
  */
-import { printHtmlInline } from './printReceipt';
+import { printHtmlInline, safeFileName } from './printReceipt';
 
 export interface InvoiceDocShop {
   tradingName: string; legalName?: string | null;
@@ -176,7 +176,18 @@ export function buildInvoiceHtml(d: InvoiceDoc): { bodyHtml: string; cssText: st
   return { bodyHtml, cssText };
 }
 
+/**
+ * Suggested filename when saving as PDF: customer name then document number,
+ * so a folder of invoices sorts and searches by who they are for.
+ * e.g. "Kilimanjaro Hotels Ltd - INV-000142"
+ */
+export function invoiceFileName(d: Pick<InvoiceDoc, 'billToName' | 'number' | 'title'>) {
+  const who = safeFileName(d.billToName, 'Customer');
+  const num = safeFileName(d.number || d.title || 'Invoice', 'Invoice');
+  return `${who} - ${num}`;
+}
+
 export function printInvoice(d: InvoiceDoc) {
   const { bodyHtml, cssText } = buildInvoiceHtml(d);
-  printHtmlInline(bodyHtml, cssText, 'invoice');
+  printHtmlInline(bodyHtml, cssText, 'invoice', invoiceFileName(d));
 }

@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Printer, Send, Wallet, Package, XCircle, AlertCircle,
-  Check, Loader2, MessageCircle, Receipt, Pencil, Copy,
+  Check, Loader2, MessageCircle, Receipt, Pencil, Copy, Trash2,
 } from 'lucide-react';
 import api from '../../api/client';
 import { PageLoader } from '../../components/ui/Loader';
@@ -25,7 +25,7 @@ interface ShopInfo {
   tin?: string | null; vrn?: string | null; currency?: string | null;
 }
 interface Invoice {
-  id: string; invoiceNo: string; status: string;
+  id: string; invoiceNo: string | null; status: string;
   billToName: string; billToTin?: string | null; billToPhone?: string | null;
   billToEmail?: string | null; billToAddress?: string | null;
   subtotal: number; discountAmount: number; taxAmount: number; total: number;
@@ -72,6 +72,7 @@ export default function InvoiceDetailPage() {
   const [dueAt, setDueAt]     = useState('');
   const [waPrompt, setWaPrompt] = useState(false);
   const [waNumberInput, setWaNumberInput] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const { data: inv, isLoading } = useQuery<Invoice>({
     queryKey: ['invoice', id],
@@ -92,6 +93,16 @@ export default function InvoiceDetailPage() {
     onError: (e) => setError(apiError(e, 'Could not update the invoice')),
   });
 
+  const del = useMutation({
+    mutationFn: () => api.delete(`/invoices/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      qc.invalidateQueries({ queryKey: ['invoice-availability'] });
+      navigate('/invoices', { replace: true });
+    },
+    onError: (e) => { setDeleteOpen(false); setError(apiError(e, 'Could not delete this draft')); },
+  });
+
   if (isLoading) return <PageLoader />;
   if (!inv) {
     return (
@@ -107,7 +118,7 @@ export default function InvoiceDetailPage() {
   const canPay   = !isDraft && !isDead && inv.balance > 0;
   const canDeliver = !isDraft && !isDead && !inv.isFulfilled;
 
-  function doPrint(title = 'INVOICE', number = inv!.invoiceNo) {
+  function doPrint(title = 'INVOICE', number = inv!.invoiceNo ?? 'DRAFT') {
     printInvoice({
       title, number,
       status: inv!.status,
@@ -134,7 +145,7 @@ export default function InvoiceDetailPage() {
   }
 
   const waMessage =
-    `Hello ${inv.billToName}, here is invoice ${inv.invoiceNo} for ${money(inv.total)}. ` +
+    `Hello ${inv.billToName}, here is ${inv.invoiceNo ? `invoice ${inv.invoiceNo}` : 'a draft invoice'} for ${money(inv.total)}. ` +
     (inv.balance > 0 ? `Balance due: ${money(inv.balance)}.` : 'Paid in full, thank you.');
 
   /**
@@ -162,7 +173,7 @@ export default function InvoiceDetailPage() {
           <Link to="/invoices" className="text-stone-400 hover:text-stone-700 shrink-0"><ArrowLeft size={18} /></Link>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="page-title font-mono">{inv.invoiceNo}</h1>
+              <h1 className="page-title font-mono">{inv.invoiceNo ?? 'Draft'}</h1>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${STATUS_STYLE[inv.status]}`}>
                 {inv.status.replace(/_/g, ' ')}
               </span>
@@ -248,6 +259,14 @@ export default function InvoiceDetailPage() {
                 </button>
               )}
             </>
+          )}
+          {/* A draft holds no number, so removing it leaves no gap in the sequence */}
+          {isDraft && (
+            <button
+              className="text-xs px-3 py-2 rounded-lg border border-stone-200 text-stone-500 hover:border-red-300 hover:text-red-600 ml-auto"
+              onClick={() => setDeleteOpen(true)}>
+              <Trash2 size={12} className="inline mr-1" /> Delete draft
+            </button>
           )}
         </div>
       )}
@@ -427,6 +446,28 @@ export default function InvoiceDetailPage() {
                 disabled={act.isPending || !(Number(payAmt) > 0)}
                 onClick={() => act.mutate({ action: 'payments', body: { amount: Number(payAmt), method: payMethod, reference: payRef || undefined } })}>
                 <Check size={12} className="mr-1.5" /> Record
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation — drafts only */}
+      {deleteOpen && (
+        <div className="fixed inset-0 bg-black/40 grid place-items-center z-50 p-4">
+          <div className="card p-5 w-full max-w-sm space-y-3">
+            <h3 className="text-sm font-bold text-stone-900">Delete this draft?</h3>
+            <p className="text-xs text-stone-500">
+              It was never issued and holds no invoice number, so nothing is left behind
+              and your numbering is unaffected. This cannot be undone.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button className="btn-secondary flex-1 text-xs" onClick={() => setDeleteOpen(false)}>Keep it</button>
+              <button
+                className="flex-1 text-xs py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-40"
+                disabled={del.isPending}
+                onClick={() => del.mutate()}>
+                {del.isPending ? 'Deleting…' : 'Delete draft'}
               </button>
             </div>
           </div>

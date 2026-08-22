@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate, requireShop } from '../../middleware/auth';
 import {
   listInvoices, getInvoice, createInvoice, updateInvoice,
-  issueInvoice, recordPayment, fulfilInvoice, cancelInvoice, getAvailability,
+  issueInvoice, recordPayment, fulfilInvoice, cancelInvoice, getAvailability, deleteInvoice,
 } from './invoices.controller';
 
 const router = Router();
@@ -18,7 +18,8 @@ router.post('/:id/issue',      issueInvoice);
 router.post('/:id/payments',   recordPayment);
 router.post('/:id/fulfil',     fulfilInvoice);
 router.post('/:id/cancel',     cancelInvoice);
-// No delete: an issued number must never leave a gap in the sequence. Cancel
-// keeps the document and its number, which is what tax authorities expect.
+// Deletes only an unissued draft, which never held a number. Anything issued
+// is kept for the audit trail — see the controller.
+router.delete('/:id',          deleteInvoice);
 
 export default router;

@@ -151,7 +151,7 @@ const INVOICE_INCLUDE = {
 // ── GET /invoices ────────────────────────────────────────────────────────────
 export async function listInvoices(req: AuthRequest, res: Response) {
   const sid = shop(req);
-  const { status, search, from, to, overdue, page = '1', limit = '25' } = req.query as Record<string, string>;
+  const { status, search, from, to, overdue, includeCancelled, page = '1', limit = '25' } = req.query as Record<string, string>;
   const take = Math.min(Number(limit) || 25, 100);
   const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
@@ -160,6 +160,9 @@ export async function listInvoices(req: AuthRequest, res: Response) {
 
   const where = {
     shopId: sid,
+    // Cancelled invoices are kept for the audit trail but are noise day to day,
+    // so they stay out of the list unless asked for by name or by flag.
+    ...(!status && includeCancelled !== 'true' && { status: { not: 'CANCELLED' as never } }),
     ...(status && { status: status as never }),
     // Overdue is derived, so it is expressed as a query rather than a stored flag.
     ...(overdue === 'true' && {
@@ -349,12 +352,11 @@ export async function createInvoice(req: AuthRequest, res: Response) {
   const orderDiscount = Math.min(Math.max(Number(discountAmount) || 0, 0), subtotal);
   const total = subtotal - orderDiscount + taxTotal;
 
-  const invoiceNo = await nextDocNumber(sid, 'INVOICE', 'INV');
-
+  // No number yet. A draft is a working document; it earns a number when it is
+  // issued, so abandoning one leaves no gap in the sequence.
   const invoice = await prisma.invoice.create({
     data: {
       shopId: sid,
-      invoiceNo,
       status: 'DRAFT',
       customerId: linkedCustomerId,
       billToName: name.slice(0, 160),
@@ -498,15 +500,20 @@ export async function issueInvoice(req: AuthRequest, res: Response) {
   const { dueAt } = req.body ?? {};
   const inv = await prisma.invoice.findFirst({
     where: { id: req.params.id, shopId: shop(req) },
-    select: { id: true, status: true, dueAt: true },
+    select: { id: true, status: true, dueAt: true, invoiceNo: true },
   });
   if (!inv) return R.notFound(res, 'Invoice not found');
   if (inv.status !== 'DRAFT') return R.badRequest(res, 'This invoice has already been issued');
+
+  // The number is claimed here, at the moment the document becomes real.
+  // Drafts created before this behaviour changed already carry one; keep it.
+  const invoiceNo = inv.invoiceNo ?? await nextDocNumber(shop(req), 'INVOICE', 'INV');
 
   const updated = await prisma.invoice.update({
     where: { id: inv.id },
     data: {
       status: 'SENT',
+      invoiceNo,
       issuedAt: new Date(),
       ...(dueAt !== undefined && { dueAt: dueAt ? new Date(dueAt) : null }),
     },
@@ -712,6 +719,35 @@ export async function cancelInvoice(req: AuthRequest, res: Response) {
     include: INVOICE_INCLUDE,
   });
   return R.ok(res, decorate(updated));
+}
+
+// ── DELETE /invoices/:id ─────────────────────────────────────────────────────
+/**
+ * Only an unissued draft can be deleted, and only because it never held a
+ * number — nothing is removed from the sequence.
+ *
+ * An issued invoice is never deletable, however it ended up. The customer holds
+ * a copy, and a missing number is precisely what a tax audit treats as a hidden
+ * sale. Cancelling is the correct disposal: the document stays, marked void,
+ * with its number intact.
+ */
+export async function deleteInvoice(req: AuthRequest, res: Response) {
+  const inv = await prisma.invoice.findFirst({
+    where: { id: req.params.id, shopId: shop(req) },
+    select: { id: true, status: true, invoiceNo: true, issuedAt: true },
+  });
+  if (!inv) return R.notFound(res, 'Invoice not found');
+
+  if (inv.status !== 'DRAFT' || inv.issuedAt || inv.invoiceNo) {
+    return R.badRequest(res,
+      inv.status === 'CANCELLED'
+        ? `${inv.invoiceNo} was issued, so it is kept as a cancelled record. Deleting it would leave a gap in your invoice numbers.`
+        : 'Only a draft that has never been issued can be deleted. Cancel this one instead.');
+  }
+
+  // Items cascade on delete; a draft can have no payments or linked sale.
+  await prisma.invoice.delete({ where: { id: inv.id } });
+  return R.ok(res, { message: 'Draft deleted' });
 }
 
 // ── POST /pos/transactions/:id/tax-invoice ───────────────────────────────────

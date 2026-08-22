@@ -36,7 +36,7 @@ function apiError(e: unknown, fallback: string) {
 const newKey = () => Math.random().toString(36).slice(2);
 
 interface LoadedInvoice {
-  id: string; status: string; invoiceNo: string;
+  id: string; status: string; invoiceNo: string | null;
   customerId?: string | null;
   billToName: string; billToTin?: string | null; billToPhone?: string | null;
   billToEmail?: string | null; billToAddress?: string | null;

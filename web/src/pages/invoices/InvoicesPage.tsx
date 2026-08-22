@@ -9,7 +9,7 @@ import { useAuthStore } from '../../store/authStore';
 import { PageLoader } from '../../components/ui/Loader';
 
 interface Invoice {
-  id: string; invoiceNo: string; status: string;
+  id: string; invoiceNo: string | null; status: string;
   billToName: string; billToPhone?: string | null;
   total: number; amountPaid: number; balance: number;
   isOverdue: boolean; isFulfilled: boolean;
@@ -35,6 +35,7 @@ const TABS = [
   { key: 'SENT',           label: 'Awaiting payment' },
   { key: 'PARTIALLY_PAID', label: 'Part paid' },
   { key: 'PAID',           label: 'Paid' },
+  { key: 'CANCELLED',      label: 'Cancelled' },
 ];
 
 function money(n: number, c = 'TZS') {
@@ -164,7 +165,7 @@ export default function InvoicesPage() {
                       onClick={() => navigate(`/invoices/${inv.id}`)}
                       className="cursor-pointer hover:bg-stone-50">
                       <td>
-                        <span className="font-mono text-xs font-semibold text-stone-900">{inv.invoiceNo}</span>
+                        <span className="font-mono text-xs font-semibold text-stone-900">{inv.invoiceNo ?? <span className="italic text-stone-400 font-sans">Draft</span>}</span>
                         {inv.isFulfilled && (
                           <span title="Goods delivered" className="ml-1.5 inline-flex align-middle text-emerald-600">
                             <Package size={11} />

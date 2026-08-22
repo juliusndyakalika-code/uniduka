@@ -1234,9 +1234,11 @@ model Invoice {
   id        String        @id @default(cuid())
   shopId    String
   shop      Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  // Assigned when the invoice is issued, not when the draft is created, so an
+  // abandoned draft never burns a number and the sequence stays gap-free.
   // Unique per shop, not globally: numbering restarts at 1 for every shop, so
   // two shops legitimately both hold an INV-000001.
-  invoiceNo String
+  invoiceNo String?
   status    InvoiceStatus @default(DRAFT)
 
   // Bill-to. customerId links a CRM record when there is one; the snapshot

@@ -196,7 +196,23 @@ export function printReceipt(r: ReceiptData) {
 // Print without navigating away, via a hidden iframe. Safe to call from async
 // callbacks (e.g. after a checkout/settlement request) — iframes are not subject
 // to popup blockers the way window.open is. Used for automatic receipt printing.
-export function printHtmlInline(bodyHtml: string, cssText: string, wrapperClass = 'receipt') {
+/** Strip characters that are illegal or awkward in a filename. */
+export function safeFileName(s: string, fallback = 'document') {
+  const cleaned = String(s ?? '')
+    .replace(/[\\/:*?"<>|]+/g, ' ')   // illegal on Windows and confusing elsewhere
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+  return cleaned || fallback;
+}
+
+/**
+ * @param documentTitle becomes the suggested filename when the user picks
+ *   "Save as PDF". Browsers take it from the document title, and which document
+ *   varies — Chrome has used the parent's for iframe prints — so it is set on
+ *   both and the parent's is restored afterwards.
+ */
+export function printHtmlInline(bodyHtml: string, cssText: string, wrapperClass = 'receipt', documentTitle?: string) {
   const iframe = document.createElement('iframe');
   iframe.setAttribute('aria-hidden', 'true');
   Object.assign(iframe.style, { position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: '0' });
@@ -205,19 +221,27 @@ export function printHtmlInline(bodyHtml: string, cssText: string, wrapperClass 
   const doc = iframe.contentWindow?.document;
   if (!doc) { iframe.remove(); return; }
 
+  const titleTag = documentTitle
+    ? `<title>${safeFileName(documentTitle).replace(/[&<>]/g, '')}</title>`
+    : '';
+
   doc.open();
-  doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>${cssText}</style></head><body><div class="${wrapperClass}">${bodyHtml}</div></body></html>`);
+  doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">${titleTag}<style>${cssText}</style></head><body><div class="${wrapperClass}">${bodyHtml}</div></body></html>`);
   doc.close();
+
+  const originalTitle = document.title;
+  if (documentTitle) document.title = safeFileName(documentTitle);
+  const restoreTitle = () => { if (documentTitle) document.title = originalTitle; };
 
   const win = iframe.contentWindow!;
   let done = false;
   const fire = () => {
     if (done) return; done = true;
     try { win.focus(); win.print(); } catch { /* printing unsupported / cancelled */ }
-    setTimeout(() => iframe.remove(), 1500);
+    setTimeout(() => { restoreTitle(); iframe.remove(); }, 1500);
   };
   // Fire after a short delay so layout/fonts settle; onload is a fallback.
-  win.onafterprint = () => setTimeout(() => iframe.remove(), 200);
+  win.onafterprint = () => setTimeout(() => { restoreTitle(); iframe.remove(); }, 200);
   setTimeout(fire, 400);
 }
 
