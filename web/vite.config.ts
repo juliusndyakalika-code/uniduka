@@ -13,7 +13,7 @@ export default defineConfig({
         short_name: 'MauzoHalisi',
         description: 'Taarifa kwa Wakati. Faida Zaidi.',
         theme_color: '#B0682C',
-        background_color: '#1C1A18',
+        background_color: '#FFFFFF',
         display: 'standalone',
         // 'any' lets the installed app follow the phone's rotation (portrait & landscape)
         orientation: 'any',
