@@ -40,8 +40,36 @@ import invoicesRoutes   from './modules/invoices/invoices.routes';
 
 const app  = express();
 const http = createServer(app);
+
+/**
+ * Browser origins allowed to call this API.
+ *
+ * CORS_ORIGIN takes a comma-separated list, not a single value: while a domain
+ * is being moved, the old address and the new one are both live, and a single
+ * origin would lock out whichever is not named. Leave it unset to allow any
+ * origin — convenient locally, worth tightening once the domain is settled.
+ *
+ *   CORS_ORIGIN=https://mauzohalisi.dilikitaa.com,https://web-production-x.up.railway.app
+ */
+const allowedOrigins = (process.env.CORS_ORIGIN ?? '')
+  .split(',')
+  .map(s => s.trim().replace(/\/$/, ''))   // tolerate a trailing slash
+  .filter(Boolean);
+
+type OriginCallback = (err: Error | null, allow?: boolean) => void;
+
+const corsOrigin = allowedOrigins.length === 0
+  ? '*'
+  : (origin: string | undefined, cb: OriginCallback) => {
+      // No Origin header on same-origin navigations, curl, and server-to-server
+      // calls — those are not the cross-site requests CORS exists to police.
+      if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ''))) return cb(null, true);
+      logger.warn(`CORS: blocked origin ${origin}`);
+      cb(new Error('Origin not allowed'));
+    };
+
 export const io = new SocketServer(http, {
-  cors: { origin: process.env.CORS_ORIGIN || '*' },
+  cors: { origin: corsOrigin as never },
 });
 
 // ── Static files & APK download ──────────────────────────────────────────────
@@ -51,7 +79,7 @@ app.get('/uniduka.apk', (_req, res) => res.redirect('https://web-production-a0a0
 // ── Security ──────────────────────────────────────────────────────────────────
 app.set('trust proxy', 1);
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*', credentials: true }));
+app.use(cors({ origin: corsOrigin as never, credentials: true }));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 500, standardHeaders: true, legacyHeaders: false }));
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
