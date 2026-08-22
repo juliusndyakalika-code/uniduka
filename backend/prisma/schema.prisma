@@ -770,7 +770,7 @@ model Transaction {
 
   // A formal tax invoice issued against this sale. Assigned on demand rather
   // than at sale time, so numbers are only consumed when actually needed.
-  taxInvoiceNo String?   @unique
+  taxInvoiceNo String?
   taxInvoiceAt DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -778,6 +778,7 @@ model Transaction {
   items    TransactionItem[]
   payments TransactionPayment[]
 
+  @@unique([shopId, taxInvoiceNo])
   @@map("transactions")
 }
 
@@ -1233,7 +1234,9 @@ model Invoice {
   id        String        @id @default(cuid())
   shopId    String
   shop      Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  invoiceNo String        @unique
+  // Unique per shop, not globally: numbering restarts at 1 for every shop, so
+  // two shops legitimately both hold an INV-000001.
+  invoiceNo String
   status    InvoiceStatus @default(DRAFT)
 
   // Bill-to. customerId links a CRM record when there is one; the snapshot
@@ -1275,6 +1278,7 @@ model Invoice {
   items    InvoiceItem[]
   payments InvoicePayment[]
 
+  @@unique([shopId, invoiceNo])
   @@index([shopId, status])
   @@index([shopId, dueAt])
   @@map("invoices")

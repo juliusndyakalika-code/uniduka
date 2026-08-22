@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/authStore';
 
 interface Product { id: string; name: string; sku?: string; sellingPrice: number; unit?: string; stock: number }
 interface Customer { id: string; fullName: string; phone?: string; email?: string; address?: string }
+interface Availability { stock: number; committed: number; available: number | null }
 
 interface Line {
   key: string;
@@ -62,6 +63,24 @@ export default function NewInvoicePage() {
     enabled: !!shopId,
   });
 
+  // What can still be promised: stock minus quantities already on other open
+  // invoices. `available: null` means the product is not stock-tracked.
+  const { data: avail = {} } = useQuery<Record<string, Availability>>({
+    queryKey: ['invoice-availability', shopId],
+    queryFn: () => api.get('/invoices/availability').then(r => r.data.data),
+    enabled: !!shopId,
+  });
+
+  /** Remaining headroom for a product, accounting for other lines on this invoice. */
+  function headroom(productId: string, exceptKey?: string) {
+    const a = avail[productId];
+    if (!a || a.available === null) return Infinity;
+    const usedElsewhere = lines
+      .filter(l => l.productId === productId && l.key !== exceptKey)
+      .reduce((s, l) => s + l.quantity, 0);
+    return a.available - usedElsewhere;
+  }
+
   const totals = useMemo(() => {
     let subtotal = 0, tax = 0;
     for (const l of lines) {
@@ -114,18 +133,23 @@ export default function NewInvoicePage() {
     setCustOpen(false); setCustSearch('');
   }
 
-  const filteredProducts = prodSearch.trim()
+  const matchedProducts = prodSearch.trim()
     ? products.filter(p => p.name.toLowerCase().includes(prodSearch.toLowerCase()) ||
                            (p.sku ?? '').toLowerCase().includes(prodSearch.toLowerCase()))
-    : products.slice(0, 40);
+    : products;
+  // Nothing promisable is still listed, but greyed out and unselectable, so it
+  // is obvious the product exists rather than looking like it vanished.
+  const filteredProducts = matchedProducts.slice(0, 60);
   const filteredCustomers = custSearch.trim()
     ? customers.filter(c => c.fullName.toLowerCase().includes(custSearch.toLowerCase()) ||
                             (c.phone ?? '').includes(custSearch))
     : customers.slice(0, 30);
 
+  const overCommitted = lines.some(l => l.productId && l.quantity > headroom(l.productId, l.key));
   const canSave = billToName.trim().length > 1 &&
                   lines.length > 0 &&
-                  lines.every(l => l.name.trim() && l.quantity > 0 && l.unitPrice >= 0);
+                  lines.every(l => l.name.trim() && l.quantity > 0 && l.unitPrice >= 0) &&
+                  !overCommitted;
 
   return (
     <div className="space-y-4 pb-8">
@@ -218,10 +242,16 @@ export default function NewInvoicePage() {
                 value={l.name} onChange={e => setLine(l.key, { name: e.target.value, productId: undefined })} />
               <button onClick={() => setPicker(picker === l.key ? null : l.key)}
                 className="btn-secondary text-xs shrink-0">Product</button>
-              {lines.length > 1 && (
-                <button onClick={() => setLines(ls => ls.filter(x => x.key !== l.key))}
-                  className="text-stone-300 hover:text-red-500 shrink-0"><Trash2 size={15} /></button>
-              )}
+              {/* Always removable. On the last remaining line this clears it
+                  rather than disappearing, since an invoice needs one line. */}
+              <button
+                onClick={() => setLines(ls => ls.length > 1
+                  ? ls.filter(x => x.key !== l.key)
+                  : [{ key: newKey(), name: '', quantity: 1, unitLabel: 'ea', unitPrice: 0, discountPct: 0, taxRate: 0 }])}
+                title={lines.length > 1 ? 'Remove this line' : 'Clear this line'}
+                className="p-1.5 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 shrink-0 transition-colors">
+                <Trash2 size={15} />
+              </button>
             </div>
 
             {picker === l.key && (
@@ -232,15 +262,36 @@ export default function NewInvoicePage() {
                     value={prodSearch} onChange={e => setProdSearch(e.target.value)} />
                 </div>
                 <div className="max-h-48 overflow-y-auto">
-                  {filteredProducts.map(p => (
-                    <button key={p.id} onClick={() => pickProduct(l.key, p)}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-stone-50 flex justify-between gap-2 border-b border-stone-50 last:border-0">
-                      <span className="truncate">{p.name}</span>
-                      <span className="text-xs text-stone-400 shrink-0">
-                        {money(p.sellingPrice)} · {p.stock} left
-                      </span>
-                    </button>
-                  ))}
+                  {filteredProducts.map(p => {
+                    const room = headroom(p.id, l.key);
+                    const untracked = avail[p.id]?.available === null;
+                    const blocked = !untracked && room <= 0;
+                    const committed = avail[p.id]?.committed ?? 0;
+                    return (
+                      <button key={p.id}
+                        disabled={blocked}
+                        onClick={() => pickProduct(l.key, p)}
+                        className={`w-full text-left px-3 py-2 text-sm flex justify-between gap-2 border-b border-stone-50 last:border-0 ${
+                          blocked ? 'opacity-40 cursor-not-allowed bg-stone-50' : 'hover:bg-stone-50'}`}>
+                        <span className="truncate">{p.name}</span>
+                        <span className="text-xs shrink-0 text-right">
+                          <span className="text-stone-400">{money(p.sellingPrice)}</span>
+                          {untracked ? (
+                            <span className="block text-[10px] text-stone-400">not stock tracked</span>
+                          ) : blocked ? (
+                            <span className="block text-[10px] text-red-500 font-semibold">
+                              {committed > 0 ? 'all promised' : 'out of stock'}
+                            </span>
+                          ) : (
+                            <span className="block text-[10px] text-stone-400">
+                              {room} can be promised
+                              {committed > 0 && <span className="text-amber-600"> · {committed} on other invoices</span>}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -248,7 +299,11 @@ export default function NewInvoicePage() {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               <div>
                 <label className="label text-[10px]">Qty</label>
-                <input className="input" type="number" min={0} step="any" value={l.quantity}
+                <input
+                  className={`input ${l.productId && l.quantity > headroom(l.productId, l.key) ? 'border-red-400' : ''}`}
+                  type="number" min={0} step="any"
+                  max={l.productId && Number.isFinite(headroom(l.productId, l.key)) ? headroom(l.productId, l.key) : undefined}
+                  value={l.quantity}
                   onChange={e => setLine(l.key, { quantity: Number(e.target.value) || 0 })} />
               </div>
               <div>
@@ -273,9 +328,18 @@ export default function NewInvoicePage() {
               </div>
             </div>
 
-            <p className="text-right text-xs font-semibold text-stone-700">
-              {money(l.unitPrice * l.quantity * (1 - l.discountPct / 100))}
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              {l.productId && l.quantity > headroom(l.productId, l.key) ? (
+                <p className="text-[11px] text-red-600 font-medium">
+                  Only {headroom(l.productId, l.key)} can be promised
+                  {(avail[l.productId]?.committed ?? 0) > 0 &&
+                    ` — ${avail[l.productId]!.stock} in stock, ${avail[l.productId]!.committed} on other invoices`}
+                </p>
+              ) : <span />}
+              <p className="text-right text-xs font-semibold text-stone-700 shrink-0">
+                {money(l.unitPrice * l.quantity * (1 - l.discountPct / 100))}
+              </p>
+            </div>
           </div>
         ))}
 
@@ -329,7 +393,9 @@ export default function NewInvoicePage() {
             {isPending ? 'Saving…' : 'Save draft'}
           </button>
           <p className="text-[11px] text-stone-400 text-center">
-            You can review it before issuing to the customer.
+            {overCommitted
+              ? 'Reduce the highlighted quantities to save.'
+              : 'Saved as a draft. Your stock count does not change — it only moves when you mark the invoice delivered.'}
           </p>
         </div>
       </div>

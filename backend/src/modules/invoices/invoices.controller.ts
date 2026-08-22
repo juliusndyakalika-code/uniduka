@@ -55,6 +55,62 @@ async function nextDocNumber(shopId: string, kind: 'INVOICE' | 'TAX_INVOICE', fa
   return `${seq.prefix}-${String(seq.next - 1).padStart(6, '0')}`;
 }
 
+/**
+ * What can still be promised for a set of products.
+ *
+ * Raw stock is not the answer on its own: an invoice is a promise, and open
+ * invoices that have not yet been delivered have already spoken for some of it.
+ * Without subtracting those, five invoices could each claim the full shelf.
+ *
+ * `excludeInvoiceId` lets an invoice being edited ignore its own lines, so a
+ * draft for 7 of 10 does not read as only 3 remaining while you adjust it.
+ */
+async function availability(shopId: string, productIds: string[], excludeInvoiceId?: string) {
+  const out = new Map<string, { stock: number; committed: number; available: number; name: string }>();
+  if (productIds.length === 0) return out;
+
+  const [products, openLines] = await Promise.all([
+    prisma.product.findMany({
+      where: { id: { in: productIds }, shopId },
+      select: { id: true, name: true, trackStock: true, type: true, inventory: { select: { quantity: true } } },
+    }),
+    prisma.invoiceItem.findMany({
+      where: {
+        productId: { in: productIds },
+        invoice: {
+          shopId,
+          fulfilledAt: null,                              // not yet delivered
+          status: { notIn: ['CANCELLED'] },               // cancelled promises nothing
+          ...(excludeInvoiceId && { id: { not: excludeInvoiceId } }),
+        },
+      },
+      select: { productId: true, quantity: true },
+    }),
+  ]);
+
+  const committedBy = new Map<string, number>();
+  for (const l of openLines) {
+    if (!l.productId) continue;
+    committedBy.set(l.productId, (committedBy.get(l.productId) ?? 0) + l.quantity);
+  }
+
+  for (const p of products) {
+    const stock = p.inventory.reduce((s, i) => s + i.quantity, 0);
+    const committed = committedBy.get(p.id) ?? 0;
+    // Services have nothing to run out of. So do products explicitly marked as
+    // untracked (made to order, drop-shipped). Constraining either would stop a
+    // salon or clinic invoicing at all, since their lines never carry stock.
+    const unlimited = !p.trackStock || p.type === 'SERVICE';
+    out.set(p.id, {
+      name: p.name,
+      stock,
+      committed,
+      available: unlimited ? Number.POSITIVE_INFINITY : stock - committed,
+    });
+  }
+  return out;
+}
+
 /** Money for one line. Tax is exclusive, matching the POS convention. */
 function priceLine(input: {
   quantity: number; unitPrice: number; discountPct?: number; taxRate?: number;
@@ -156,6 +212,31 @@ export async function listInvoices(req: AuthRequest, res: Response) {
   });
 }
 
+// ── GET /invoices/availability ───────────────────────────────────────────────
+// What each product can still be promised for, so the picker can grey out what
+// is spoken for instead of letting someone pick it and fail on save.
+export async function getAvailability(req: AuthRequest, res: Response) {
+  const sid = shop(req);
+  const { exclude } = req.query as Record<string, string>;
+
+  const products = await prisma.product.findMany({
+    where: { shopId: sid, isActive: true },
+    select: { id: true },
+  });
+  const map = await availability(sid, products.map(p => p.id), exclude || undefined);
+
+  const out: Record<string, { stock: number; committed: number; available: number | null }> = {};
+  for (const [id, v] of map) {
+    out[id] = {
+      stock: v.stock,
+      committed: v.committed,
+      // JSON has no Infinity; null means "not stock-tracked, no limit".
+      available: Number.isFinite(v.available) ? v.available : null,
+    };
+  }
+  return R.ok(res, out);
+}
+
 // ── GET /invoices/:id ────────────────────────────────────────────────────────
 export async function getInvoice(req: AuthRequest, res: Response) {
   const inv = await prisma.invoice.findFirst({
@@ -211,6 +292,29 @@ export async function createInvoice(req: AuthRequest, res: Response) {
       })
     : [];
   const byId = new Map(products.map(p => [p.id, p]));
+  const stockFor = await availability(sid, productIds);
+
+  // Collapse duplicate lines for the same product before checking, or two lines
+  // of 6 against 10 in stock would each pass while together they oversell.
+  const wantedPerProduct = new Map<string, number>();
+  for (const raw of items) {
+    if (!raw?.productId) continue;
+    wantedPerProduct.set(raw.productId, (wantedPerProduct.get(raw.productId) ?? 0) + (Number(raw.quantity) || 0));
+  }
+  for (const [pid, wanted] of wantedPerProduct) {
+    const a = stockFor.get(pid);
+    if (!a) continue;
+    if (a.available <= 0) {
+      return R.badRequest(res, a.committed > 0
+        ? `${a.name} has none left to promise — all ${a.stock} are already on other invoices`
+        : `${a.name} is out of stock`);
+    }
+    if (wanted > a.available) {
+      return R.badRequest(res, a.committed > 0
+        ? `Only ${a.available} of ${a.name} can still be promised (${a.stock} in stock, ${a.committed} on other invoices)`
+        : `Only ${a.available} of ${a.name} in stock`);
+    }
+  }
 
   const lines = [];
   for (const raw of items) {
@@ -322,6 +426,29 @@ async function buildDraftUpdate(req: AuthRequest): Promise<DraftRebuild> {
       })
     : [];
   const byId = new Map(products.map(p => [p.id, p]));
+
+  // Editing a draft ignores that draft's own lines, so adjusting a quantity
+  // does not measure the invoice against itself.
+  const stockFor = await availability(sid, productIds, req.params.id);
+  const wantedPerProduct = new Map<string, number>();
+  for (const raw of items) {
+    if (!raw?.productId) continue;
+    wantedPerProduct.set(raw.productId, (wantedPerProduct.get(raw.productId) ?? 0) + (Number(raw.quantity) || 0));
+  }
+  for (const [pid, wanted] of wantedPerProduct) {
+    const a = stockFor.get(pid);
+    if (!a) continue;
+    if (a.available <= 0) {
+      return { error: a.committed > 0
+        ? `${a.name} has none left to promise — all ${a.stock} are already on other invoices`
+        : `${a.name} is out of stock` };
+    }
+    if (wanted > a.available) {
+      return { error: a.committed > 0
+        ? `Only ${a.available} of ${a.name} can still be promised (${a.stock} in stock, ${a.committed} on other invoices)`
+        : `Only ${a.available} of ${a.name} in stock` };
+    }
+  }
 
   const lines = [];
   for (const raw of items) {

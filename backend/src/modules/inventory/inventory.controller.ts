@@ -154,6 +154,9 @@ function extractProductFields(body: Record<string, unknown>) {
     // Services
     durationMinutes: body.durationMinutes != null && body.durationMinutes !== '' ? Number(body.durationMinutes) : undefined,
     requiresStaff:   body.requiresStaff  != null ? bool(body.requiresStaff)  : undefined,
+    // Whether this item has stock at all. Made-to-order and drop-shipped goods
+    // set this false so they are never constrained by an inventory count.
+    trackStock:      body.trackStock     != null ? bool(body.trackStock)     : undefined,
   };
 }
 
@@ -200,6 +203,7 @@ export async function updateProduct(req: AuthRequest, res: Response) {
   if ('isControlled'    in b) data.isControlled     = bool(b.isControlled) ?? false;
   if ('durationMinutes' in b) data.durationMinutes  = num(b.durationMinutes) ?? null;
   if ('requiresStaff'   in b) data.requiresStaff    = bool(b.requiresStaff) ?? false;
+  if ('trackStock'      in b) data.trackStock       = bool(b.trackStock) ?? true;
   // Storefront: publish toggle and optional online-only price
   if ('isPublished'     in b) data.isPublished      = bool(b.isPublished) ?? false;
   if ('publicPrice'     in b) data.publicPrice      = num(b.publicPrice) ?? null;
