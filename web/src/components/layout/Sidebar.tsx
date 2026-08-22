@@ -44,19 +44,39 @@ function NavItem({ to, icon, label, end, badge }: NavItemProps) {
   );
 }
 
-function NavGroup({ icon, label, prefix, children }: {
-  icon: React.ReactNode; label: string; prefix: string; children: React.ReactNode;
+function NavGroup({ icon, label, prefix, badge, children }: {
+  icon: React.ReactNode;
+  label: string;
+  /** One or more path prefixes that count as "inside" this group. */
+  prefix: string | string[];
+  /** Bubbled up from a child so a count is not lost while the group is shut. */
+  badge?: number;
+  children: React.ReactNode;
 }) {
-  const isGroupActive = window.location.pathname.startsWith(prefix);
-  const [open, setOpen] = useState(isGroupActive);
+  const location = useLocation();
+  const prefixes = Array.isArray(prefix) ? prefix : [prefix];
+  const isGroupActive = prefixes.some(p => location.pathname.startsWith(p));
+
+  // Driven by the current route rather than read once at mount, so navigating
+  // into a group opens it and a collapsed group does not hide where you are.
+  const [manuallyOpen, setManuallyOpen] = useState<boolean | null>(null);
+  const open = manuallyOpen ?? isGroupActive;
+
   return (
     <div>
       <button
-        onClick={() => setOpen(v => !v)}
+        onClick={() => setManuallyOpen(!open)}
         className={`nav-item w-full justify-between ${isGroupActive ? 'text-stone-900 font-semibold' : ''}`}
       >
-        <span className="flex items-center gap-2">{icon}<span>{label}</span></span>
-        <ChevronDown size={13} className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+        <span className="flex items-center gap-2 min-w-0">{icon}<span className="truncate">{label}</span></span>
+        <span className="flex items-center gap-1.5 shrink-0">
+          {!open && !!badge && badge > 0 && (
+            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold grid place-items-center">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
+          <ChevronDown size={13} className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+        </span>
       </button>
       {open && (
         <div className="ml-4 mt-0.5 border-l border-stone-200 pl-2 space-y-0.5">
@@ -90,6 +110,11 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
   const role = user?.role ?? '';
   const isOwner = role === 'ACCOUNT_OWNER';
   const currentShop = shops.find(s => s.id === shopId);
+
+  // Business-type shorthands — these gate a lot of nav and read badly inline.
+  const isHotel = currentShop?.businessType === 'HOTEL_GUESTHOUSE';
+  const isFoodService = ['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB']
+    .includes(currentShop?.businessType ?? '');
 
   // Pending online orders, shown as a badge. Shares the ['orders'] key so the
   // socket alert invalidating that key refreshes this count too.
@@ -263,9 +288,11 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
         <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
           <NavItem to="/dashboard" icon={<LayoutDashboard size={16} />} label={t('nav.dashboard')} end />
 
+          {/* Cashiers get a short, flat list on purpose — every extra tap costs
+              time at the counter, and there are few enough items to fit. */}
           {role === 'CASHIER' && (
             <>
-              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
+              {!isHotel && (
                 <>
                   <NavItem to="/pos" icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
                   <NavItem to="/pos/transactions" icon={<ReceiptText size={16} />} label="Transactions" />
@@ -273,8 +300,8 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
                   <NavItem to="/invoices" icon={<FileText size={16} />} label="Invoices" />
                 </>
               )}
-              <NavItem to="/customers" icon={<Users size={16} />} label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'Guests' : t('nav.customers')} />
-              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
+              <NavItem to="/customers" icon={<Users size={16} />} label={isHotel ? 'Guests' : t('nav.customers')} />
+              {!isHotel && (
                 <NavItem to="/consignment" icon={<Handshake size={16} />} label={t('nav.consignment')} />
               )}
               <NavItem to="/expenses" icon={<Wallet size={16} />} label={t('nav.expenses')} />
@@ -301,70 +328,79 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
 
           {isOwner && (
             <>
-              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
-                <>
-                  <NavItem to="/pos"              icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />
-                  <NavItem to="/pos/transactions" icon={<ReceiptText size={16} />}  label="Transactions" />
-                  <NavItem to="/orders"           icon={<Inbox size={16} />}        label="Online Orders" badge={pendingOrders} />
-                  <NavItem to="/pos/debts"        icon={<Clock size={16} />}        label={t('nav.debts')} />
-                  <NavItem to="/pos/voids"        icon={<Trash2 size={16} />}       label={t('nav.voidedSales')} />
-                </>
-              )}
-              {/* Every business type bills someone — hotels invoice corporate stays. */}
-              <NavItem to="/invoices" icon={<FileText size={16} />} label="Invoices" />
-              {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
-                <NavItem to="/kds" icon={<ChefHat size={16} />} label={t('nav.kitchenDisplay')} />
-              )}
+              {/* Whatever this shop does all day stays at the top level, one tap
+                  away. Everything else is grouped. */}
+              {!isHotel && <NavItem to="/pos" icon={<ShoppingCart size={16} />} label={t('nav.pos')} end />}
+              {isHotel && <NavItem to="/hotel" icon={<BedDouble size={16} />} label={t('nav.hotelRooms')} />}
+              {isFoodService && <NavItem to="/kds" icon={<ChefHat size={16} />} label={t('nav.kitchenDisplay')} />}
               {currentShop?.businessType === 'REPAIR_WORKSHOP' && (
                 <NavItem to="/repairs/work-orders" icon={<Wrench size={16} />} label={t('nav.workOrders')} />
               )}
-              {currentShop?.businessType === 'HOTEL_GUESTHOUSE' && (
-                <NavItem to="/hotel" icon={<BedDouble size={16} />} label={t('nav.hotelRooms')} />
+
+              <NavGroup icon={<ReceiptText size={16} />} label="Sales"
+                prefix={['/pos/', '/invoices', '/consignment']}>
+                {!isHotel && (
+                  <>
+                    <NavItem to="/pos/transactions" icon={<ReceiptText size={14} />} label="Transactions" />
+                    <NavItem to="/pos/debts"        icon={<Clock size={14} />}       label={t('nav.debts')} />
+                    <NavItem to="/pos/voids"        icon={<Trash2 size={14} />}      label={t('nav.voidedSales')} />
+                  </>
+                )}
+                {/* Every business type bills someone — hotels invoice corporate stays */}
+                <NavItem to="/invoices" icon={<FileText size={14} />} label="Invoices" />
+                {!isHotel && (
+                  <NavItem to="/consignment" icon={<Handshake size={14} />} label={t('nav.consignment')} />
+                )}
+              </NavGroup>
+
+              {!isHotel && (
+                <NavGroup icon={<Globe size={16} />} label="Online Store"
+                  prefix={['/storefront', '/orders']} badge={pendingOrders}>
+                  <NavItem to="/orders"     icon={<Inbox size={14} />} label="Orders" badge={pendingOrders} />
+                  <NavItem to="/storefront" icon={<Globe size={14} />} label="Store Settings" />
+                </NavGroup>
               )}
-              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
+
+              {!isHotel && (
                 <NavGroup icon={<Package size={16} />} label={t('nav.inventory')} prefix="/inventory">
                   <NavItem to="/inventory"                 icon={<BarChart2 size={14} />}     label={t('nav.stockOverview')} end />
                   <NavItem to="/inventory/products"        icon={<Package size={14} />}       label={t('nav.products')} />
                   <NavItem to="/inventory/stock"           icon={<ArrowUpDown size={14} />}   label={t('nav.stockMovements')} />
                   <NavItem to="/inventory/purchase-orders" icon={<ClipboardList size={14} />} label={t('nav.purchaseOrders')} />
-                  <NavItem to="/inventory/suppliers"      icon={<Truck size={14} />}         label="Suppliers" />
-                  {['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'].includes(currentShop?.businessType ?? '') && (
+                  <NavItem to="/inventory/suppliers"       icon={<Truck size={14} />}         label="Suppliers" />
+                  {isFoodService && (
                     <NavItem to="/inventory/recipes" icon={<Utensils size={14} />} label={t('nav.recipes')} />
                   )}
                 </NavGroup>
               )}
-              <NavItem to="/customers"    icon={<Users size={16} />}     label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'Guests' : t('nav.customers')} />
-              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
-                <NavItem to="/consignment"  icon={<Handshake size={16} />} label={t('nav.consignment')} />
-              )}
-              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
-                <NavItem to="/appointments" icon={<Calendar size={16} />}  label={t('nav.appointments')} />
-              )}
-              <NavGroup icon={<TrendingUp size={16} />} label={t('nav.reports')} prefix="/reports">
-                <NavItem to="/reports/sales"  icon={<TrendingUp size={14} />} label={t('nav.sales')} />
-                <NavItem to="/reports/staff"  icon={<Users size={14} />}      label={currentShop?.businessType === 'HOTEL_GUESTHOUSE' ? 'By Receptionist' : t('nav.bySeller')} />
-                {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
-                  <NavItem to="/reports/products" icon={<BarChart2 size={14} />} label="By Product" />
-                )}
-                {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
-                  <NavItem to="/reports/inventory" icon={<Package size={14} />} label={t('nav.stock')} />
+
+              <NavGroup icon={<Users size={16} />} label={isHotel ? 'Guests' : t('nav.customers')}
+                prefix={['/customers', '/loyalty', '/appointments']}>
+                <NavItem to="/customers" icon={<Users size={14} />} label={isHotel ? 'All Guests' : 'All Customers'} />
+                <NavItem to="/loyalty"   icon={<Star size={14} />}  label={t('nav.loyalty')} />
+                {!isHotel && (
+                  <NavItem to="/appointments" icon={<Calendar size={14} />} label={t('nav.appointments')} />
                 )}
               </NavGroup>
-              <NavItem to="/expenses" icon={<Wallet size={16} />} label={t('nav.expenses')} />
-              {currentShop?.businessType !== 'HOTEL_GUESTHOUSE' && (
-                <NavItem to="/storefront" icon={<Globe size={16} />} label="Online Store" />
-              )}
 
-              <div className="pt-3 pb-1">
-                <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400">{t('nav.management')}</p>
-              </div>
-              <NavItem to="/timeclock"       icon={<Clock size={16} />}     label={t('nav.staffTimeclock')} />
-              <NavItem to="/admin/users"     icon={<Users size={16} />}     label={t('nav.usersStaff')} />
-              <NavItem to="/admin/shops"     icon={<Building2 size={16} />} label={t('nav.shops')} />
-              <NavItem to="/loyalty"         icon={<Star size={16} />}      label={t('nav.loyalty')} />
-              <NavItem to="/admin/tax-rules" icon={<Percent size={16} />}   label={t('nav.taxRules')} />
-              <NavItem to="/admin/shop"      icon={<Store size={16} />}     label={t('nav.shopSettings')} />
-              <NavItem to="/admin/business"  icon={<Settings size={16} />}  label={t('nav.businessSettings')} />
+              <NavGroup icon={<TrendingUp size={16} />} label={t('nav.reports')} prefix="/reports">
+                <NavItem to="/reports/sales" icon={<TrendingUp size={14} />} label={t('nav.sales')} />
+                <NavItem to="/reports/staff" icon={<Users size={14} />}      label={isHotel ? 'By Receptionist' : t('nav.bySeller')} />
+                {!isHotel && <NavItem to="/reports/products"  icon={<BarChart2 size={14} />} label="By Product" />}
+                {!isHotel && <NavItem to="/reports/inventory" icon={<Package size={14} />}   label={t('nav.stock')} />}
+              </NavGroup>
+
+              <NavItem to="/expenses" icon={<Wallet size={16} />} label={t('nav.expenses')} />
+
+              <NavGroup icon={<Settings size={16} />} label={t('nav.management')}
+                prefix={['/admin', '/timeclock', '/branches']}>
+                <NavItem to="/timeclock"       icon={<Clock size={14} />}     label={t('nav.staffTimeclock')} />
+                <NavItem to="/admin/users"     icon={<Users size={14} />}     label={t('nav.usersStaff')} />
+                <NavItem to="/admin/shops"     icon={<Building2 size={14} />} label={t('nav.shops')} />
+                <NavItem to="/admin/tax-rules" icon={<Percent size={14} />}   label={t('nav.taxRules')} />
+                <NavItem to="/admin/shop"      icon={<Store size={14} />}     label={t('nav.shopSettings')} />
+                <NavItem to="/admin/business"  icon={<Settings size={14} />}  label={t('nav.businessSettings')} />
+              </NavGroup>
             </>
           )}
         </nav>
