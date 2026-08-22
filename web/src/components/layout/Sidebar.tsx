@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
 import i18n from '../../i18n';
+import { LogoMark } from '../ui/Logo';
 
 const BUSINESS_ICONS: Record<string, React.ReactNode> = {
   RETAIL_STORE:        <ShoppingBag size={14} />,
@@ -185,15 +186,9 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
         {/* Logo */}
         <div className="flex items-center justify-between h-14 px-4 flex-shrink-0" style={{ borderBottom: '1px solid rgba(163,177,198,0.3)' }}>
           <div className="flex items-center gap-2.5">
-            <svg width="26" height="26" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-              <rect width="40" height="40" rx="9" fill="#a66624"/>
-              <rect x="6" y="27" width="7" height="9" rx="1.5" fill="white" opacity="0.6"/>
-              <rect x="16.5" y="21" width="7" height="15" rx="1.5" fill="white" opacity="0.8"/>
-              <rect x="27" y="14" width="7" height="22" rx="1.5" fill="white"/>
-              <path d="M30.5 11 L30.5 6 M27.5 8.5 L30.5 5.5 L33.5 8.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <LogoMark size={26} />
             <span className="text-base font-bold tracking-tight text-stone-900">
-              Mauzo<span className="font-light text-primary-600">Smart</span>
+              Mauzo<span className="text-primary-600">Halisi</span>
             </span>
           </div>
           <button onClick={onClose} className="lg:hidden p-1 text-stone-400 hover:text-stone-700">

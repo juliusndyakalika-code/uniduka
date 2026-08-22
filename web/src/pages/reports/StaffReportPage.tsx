@@ -121,7 +121,7 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
           discountPct: i.discountPct, lineTotal: i.lineTotal, unit: i.unitLabel,
         })),
         shop: {
-          tradingName:  shop?.tradingName ?? 'MauzoSmart',
+          tradingName:  shop?.tradingName ?? 'MauzoHalisi',
           addressLine1: shop?.addressLine1,
           city:         shop?.city,
           phone:        shop?.phone,

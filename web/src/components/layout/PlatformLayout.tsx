@@ -29,7 +29,7 @@ export default function PlatformLayout() {
             <ShieldCheck size={15} className="text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold text-stone-900 leading-none">MauzoSmart</p>
+            <p className="text-sm font-bold text-stone-900 leading-none">MauzoHalisi</p>
             <p className="text-[10px] text-violet-600 font-semibold uppercase tracking-wider">Platform Admin</p>
           </div>
         </div>

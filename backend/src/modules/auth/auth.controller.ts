@@ -199,7 +199,7 @@ export async function changePassword(req: AuthRequest, res: Response) {
 
 // POST /api/v1/auth/2fa/setup
 export async function setup2fa(req: AuthRequest, res: Response) {
-  const secret = speakeasy.generateSecret({ name: `UniDuka:${req.user!.sub}`, length: 20 });
+  const secret = speakeasy.generateSecret({ name: `MauzoHalisi:${req.user!.sub}`, length: 20 });
   await prisma.user.update({ where: { id: req.user!.sub }, data: { twoFaSecret: secret.base32 } });
   const qr = await QRCode.toDataURL(secret.otpauth_url!);
   return R.ok(res, { secret: secret.base32, qr });

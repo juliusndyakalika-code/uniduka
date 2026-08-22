@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { CheckCircle2, ChevronRight, ChevronLeft, Store, MapPin, Layers, Loader2 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { LogoMark } from '../../components/ui/Logo';
 
 const STEPS = [
   { num: 1, label: 'Shop Identity', icon: <Store size={16} /> },
@@ -118,14 +119,8 @@ export default function SetupWizard() {
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2 mb-3">
-            <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
-              <rect width="40" height="40" rx="9" fill="#a66624"/>
-              <rect x="6" y="27" width="7" height="9" rx="1.5" fill="white" opacity="0.6"/>
-              <rect x="16.5" y="21" width="7" height="15" rx="1.5" fill="white" opacity="0.8"/>
-              <rect x="27" y="14" width="7" height="22" rx="1.5" fill="white"/>
-              <path d="M30.5 11 L30.5 6 M27.5 8.5 L30.5 5.5 L33.5 8.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span className="text-xl font-bold">Mauzo<span className="font-light text-primary-600">Smart</span></span>
+            <LogoMark size={24} />
+            <span className="text-xl font-bold">Mauzo<span className="text-primary-600">Halisi</span></span>
           </div>
           <h1 className="text-2xl font-bold text-stone-900">Register Your Shop</h1>
           <p className="text-sm text-stone-400 mt-1">Step {step} of 3 — {STEPS[step - 1].label}</p>

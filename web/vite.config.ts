@@ -9,10 +9,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'MauzoSmart',
-        short_name: 'MauzoSmart',
-        description: 'Smart Sales Platform for East African businesses',
-        theme_color: '#a66624',
+        name: 'MauzoHalisi',
+        short_name: 'MauzoHalisi',
+        description: 'Taarifa kwa Wakati. Faida Zaidi.',
+        theme_color: '#B0682C',
         background_color: '#1C1A18',
         display: 'standalone',
         // 'any' lets the installed app follow the phone's rotation (portrait & landscape)

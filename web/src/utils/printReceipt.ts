@@ -139,7 +139,7 @@ export function buildReceiptContent(r: ReceiptData): { bodyHtml: string; cssText
     ${(r.paymentMethod === 'DEBIT' || (r.balanceDue ?? 0) > 0) ? '<p class="dw">*** BALANCE PENDING ***</p><hr class="sep"/>' : ''}
     <p class="fm">ASANTE KWA KUNUNUA!</p>
     <hr class="sep"/>
-    <p class="ft">Powered by MauzoSmart</p>
+    <p class="ft">Powered by MauzoHalisi</p>
   `;
 
   const cssText = `

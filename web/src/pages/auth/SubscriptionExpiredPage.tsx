@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
+import { LogoMark } from '../../components/ui/Logo';
 
 export default function SubscriptionExpiredPage() {
   const { logout, user } = useAuthStore();
@@ -10,15 +11,9 @@ export default function SubscriptionExpiredPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
-          <svg width="36" height="36" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-            <rect width="40" height="40" rx="9" fill="#a66624"/>
-            <rect x="6" y="27" width="7" height="9" rx="1.5" fill="white" opacity="0.6"/>
-            <rect x="16.5" y="21" width="7" height="15" rx="1.5" fill="white" opacity="0.8"/>
-            <rect x="27" y="14" width="7" height="22" rx="1.5" fill="white"/>
-            <path d="M30.5 11 L30.5 6 M27.5 8.5 L30.5 5.5 L33.5 8.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <LogoMark size={36} />
           <span className="text-xl font-bold tracking-tight text-stone-900">
-            Mauzo<span className="font-light text-primary-600">Smart</span>
+            Mauzo<span className="text-primary-600">Halisi</span>
           </span>
         </div>
 
@@ -33,7 +28,7 @@ export default function SubscriptionExpiredPage() {
 
           <h1 className="text-xl font-bold text-stone-900 mb-2">{t('auth.subscriptionExpired')}</h1>
           <p className="text-sm text-stone-500 mb-1">
-            {user?.fullName ? `Hi ${user.fullName.split(' ')[0]}, your` : 'Your'} MauzoSmart subscription has ended.
+            {user?.fullName ? `Hi ${user.fullName.split(' ')[0]}, your` : 'Your'} MauzoHalisi subscription has ended.
           </p>
           <p className="text-sm text-stone-500 mb-8">
             {t('auth.expiredMessage')}

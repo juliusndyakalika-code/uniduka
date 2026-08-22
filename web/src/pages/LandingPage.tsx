@@ -8,6 +8,7 @@ import {
   ShoppingBag, Utensils, Stethoscope, Scissors, Wrench, Hotel,
   Wine, Layers, AlertTriangle,
 } from 'lucide-react';
+import { LogoMark } from '../components/ui/Logo';
 
 function useScrollY() {
   const [y, setY] = useState(0);
@@ -73,13 +74,8 @@ function DashboardMockup() {
 
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200/60" style={{ background: '#E8EBF0' }}>
           <div className="flex items-center gap-2">
-            <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
-              <rect width="40" height="40" rx="9" fill="#a66624"/>
-              <rect x="6" y="27" width="7" height="9" rx="1.5" fill="white" opacity="0.6"/>
-              <rect x="16.5" y="21" width="7" height="15" rx="1.5" fill="white" opacity="0.8"/>
-              <rect x="27" y="14" width="7" height="22" rx="1.5" fill="white"/>
-            </svg>
-            <span className="text-xs font-bold text-stone-800">MauzoSmart</span>
+            <LogoMark size={26} />
+            <span className="text-xs font-bold text-stone-800">MauzoHalisi</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="text-[9px] text-stone-500 hidden sm:block">USER · Dashboard</div>
@@ -291,15 +287,10 @@ function ProductsMockup() {
 function Logo({ light = false }: { light?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
-        <rect width="40" height="40" rx="9" fill="#a66624"/>
-        <rect x="6" y="27" width="7" height="9" rx="1.5" fill="white" opacity="0.6"/>
-        <rect x="16.5" y="21" width="7" height="15" rx="1.5" fill="white" opacity="0.8"/>
-        <rect x="27" y="14" width="7" height="22" rx="1.5" fill="white"/>
-        <path d="M30.5 11 L30.5 6 M27.5 8.5 L30.5 5.5 L33.5 8.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
+      {/* The cart is drawn in ink, which vanishes on the dark sections */}
+      <LogoMark size={28} inkColor={light ? '#FFFFFF' : undefined} />
       <span className={`text-lg font-bold tracking-tight ${light ? 'text-white' : 'text-stone-900'}`}>
-        Mauzo<span className={`font-light ${light ? 'text-amber-300' : 'text-amber-700'}`}>Smart</span>
+        Mauzo<span className={`${light ? 'text-amber-300' : 'text-amber-700'}`}>Halisi</span>
       </span>
     </div>
   );
@@ -363,7 +354,7 @@ export default function LandingPage() {
                 <span className="block text-stone-400 font-light">every single day.</span>
               </h1>
               <p className="text-lg text-stone-500 leading-relaxed mb-8 max-w-lg">
-                MauzoSmart covers retail, restaurants, pharmacies, salons and more.
+                MauzoHalisi covers retail, restaurants, pharmacies, salons and more.
                 TRA receipts, real-time inventory, and a full Android POS are included from day one.
               </p>
               <div className="flex flex-wrap gap-3 mb-5">
@@ -501,7 +492,7 @@ export default function LandingPage() {
             <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>Business Types</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">Built for your industry</h2>
             <p className="text-stone-500 max-w-xl mx-auto">
-              Pick your business type when you sign up. MauzoSmart sets up the right tools, tax settings, and workflows for you automatically.
+              Pick your business type when you sign up. MauzoHalisi sets up the right tools, tax settings, and workflows for you automatically.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -531,7 +522,7 @@ export default function LandingPage() {
           </div>
           <div className="grid lg:grid-cols-3 gap-6">
             {[
-              { step: '01', title: 'Register your business', desc: 'Sign up and choose your business type. MauzoSmart sets up the right settings and modules for you.' },
+              { step: '01', title: 'Register your business', desc: 'Sign up and choose your business type. MauzoHalisi sets up the right settings and modules for you.' },
               { step: '02', title: 'Set up your shop',       desc: 'Add your products, set prices, and enter your TIN. Import stock by CSV or receive a shipment. Your team can be up and running within an hour.' },
               { step: '03', title: 'Start selling',          desc: 'Open the POS and start. Stock updates automatically, reports fill in on their own, and every sale prints a receipt.' },
             ].map(({ step, title, desc }) => (
@@ -609,7 +600,7 @@ export default function LandingPage() {
                 </div>
                 <div className="p-3 text-center text-[8px] text-stone-500 space-y-0.5 border-t border-stone-200">
                   <p className="font-bold text-stone-700">ASANTE KWA KUNUNUA!</p>
-                  <p>Powered by MauzoSmart</p>
+                  <p>Powered by MauzoHalisi</p>
                 </div>
               </div>
             </div>
@@ -675,7 +666,7 @@ export default function LandingPage() {
           <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
             <div>
               <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>Install on Android</p>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Take MauzoSmart with you.<br/>Install it like an app.</h2>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Take MauzoHalisi with you.<br/>Install it like an app.</h2>
               <p className="text-stone-500 leading-relaxed mb-8">
                 No Play Store, no APK files. Open the link in Chrome, tap <strong>"Add to Home Screen"</strong>,
                 and it installs in seconds. Full screen, fast, and always up to date.
@@ -697,10 +688,10 @@ export default function LandingPage() {
                 <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-4">How to install</p>
                 <div className="space-y-3">
                   {[
-                    'Open Chrome and go to the MauzoSmart link',
+                    'Open Chrome and go to the MauzoHalisi link',
                     'Tap the three-dot menu in the top-right corner',
                     'Tap "Add to Home screen" then "Add"',
-                    'The MauzoSmart icon will appear on your home screen',
+                    'The MauzoHalisi icon will appear on your home screen',
                   ].map((text, i) => (
                     <div key={i} className="flex items-start gap-3">
                       <span className="w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0"
@@ -820,7 +811,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-stone-200/60">
-            <p className="text-xs text-stone-400">© 2026 MauzoSmart. All rights reserved.</p>
+            <p className="text-xs text-stone-400">© 2026 MauzoHalisi. All rights reserved.</p>
           </div>
         </div>
       </footer>

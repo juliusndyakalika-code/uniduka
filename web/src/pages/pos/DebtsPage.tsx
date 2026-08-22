@@ -63,7 +63,7 @@ ${s.remaining > 0 ? `<tr><td>Still Outstanding</td><td class="r bold" style="col
 <hr class="sep2"/>
 <p class="footer-msg">${s.remaining <= 0 ? 'FULLY SETTLED ✓' : 'PARTIAL PAYMENT'}</p>
 <hr class="sep"/>
-<p class="footer">Powered by MauzoSmart</p>`;
+<p class="footer">Powered by MauzoHalisi</p>`;
   return { body, css };
 }
 function printSettlement(s: SettlementInfo) {

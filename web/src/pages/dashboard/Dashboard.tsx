@@ -121,7 +121,7 @@ export default function Dashboard() {
         unit:       i.unitLabel,
       })),
       shop: {
-        tradingName:  tx._shop?.tradingName ?? account?.legalName ?? 'MauzoSmart',
+        tradingName:  tx._shop?.tradingName ?? account?.legalName ?? 'MauzoHalisi',
         addressLine1: tx._shop?.addressLine1,
         city:         tx._shop?.city,
         phone:        tx._shop?.phone,

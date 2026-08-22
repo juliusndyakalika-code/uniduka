@@ -366,7 +366,7 @@ export default function PosPage() {
     onSuccess: (res) => {
       saleFeedback();
       const tx = res.data.data;
-      const shopName = shopDetail?.tradingName ?? shops.find(s => s.id === shopId)?.tradingName ?? 'MauzoSmart';
+      const shopName = shopDetail?.tradingName ?? shops.find(s => s.id === shopId)?.tradingName ?? 'MauzoHalisi';
       const cartSnapshot = cart.map(i => ({
         name:       i.product.name,
         qty:        i.qty,

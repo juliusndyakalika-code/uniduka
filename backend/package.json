@@ -1,7 +1,7 @@
 {
   "name": "uniduka-backend",
   "version": "1.0.0",
-  "description": "UniDuka — Multi-Tenant Business Management Platform Backend",
+  "description": "MauzoHalisi — Multi-Tenant Business Management Platform Backend",
   "main": "dist/app.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",

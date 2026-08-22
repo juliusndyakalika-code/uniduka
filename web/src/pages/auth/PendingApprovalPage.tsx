@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { LogoMark } from '../../components/ui/Logo';
 
 export default function PendingApprovalPage() {
   const { user, account, setAuth, token, logout } = useAuthStore();
@@ -34,14 +35,8 @@ export default function PendingApprovalPage() {
       <div className="w-full max-w-md text-center">
         {/* Logo */}
         <div className="inline-flex items-center gap-2.5 mb-8">
-          <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
-            <rect width="40" height="40" rx="9" fill="#a66624"/>
-            <rect x="6" y="27" width="7" height="9" rx="1.5" fill="white" opacity="0.6"/>
-            <rect x="16.5" y="21" width="7" height="15" rx="1.5" fill="white" opacity="0.8"/>
-            <rect x="27" y="14" width="7" height="22" rx="1.5" fill="white"/>
-            <path d="M30.5 11 L30.5 6 M27.5 8.5 L30.5 5.5 L33.5 8.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span className="text-2xl font-bold tracking-tight">Mauzo<span className="font-light text-primary-600">Smart</span></span>
+          <LogoMark size={32} />
+          <span className="text-2xl font-bold tracking-tight">Mauzo<span className="text-primary-600">Halisi</span></span>
         </div>
 
         <div className="bg-white rounded-2xl border border-stone-200 p-10 shadow-sm">

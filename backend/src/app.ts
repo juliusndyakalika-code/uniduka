@@ -92,8 +92,8 @@ app.use(`${v1}/orders`,       subscriptionGate, ordersRoutes);
 app.use(`${v1}/invoices`,     subscriptionGate, invoicesRoutes);
 
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get('/', (_, res) => res.json({ status: 'ok', service: 'UniDuka API', version: '4.0.0' }));
-app.get('/health', (_, res) => res.json({ status: 'ok', service: 'UniDuka API', version: '4.0.0' }));
+app.get('/', (_, res) => res.json({ status: 'ok', service: 'MauzoHalisi API', version: '4.0.0' }));
+app.get('/health', (_, res) => res.json({ status: 'ok', service: 'MauzoHalisi API', version: '4.0.0' }));
 
 // ── Global error handler ──────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -131,7 +131,7 @@ process.on('unhandledRejection', (reason) => {
 (async () => {
   await connectDB();
   await connectRedis().catch(() => logger.warn('Redis unavailable — continuing without cache'));
-  http.listen(PORT, () => logger.info(`UniDuka API listening on :${PORT}`));
+  http.listen(PORT, () => logger.info(`MauzoHalisi API listening on :${PORT}`));
 })();
 
 export default app;
