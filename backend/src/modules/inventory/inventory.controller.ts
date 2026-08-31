@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
+import { screenFields } from '../../core/profanity';
 
 // ── CSV import helpers ────────────────────────────────────────────────────────
 
@@ -168,6 +169,10 @@ async function generateSku(shopId: string, name: string): Promise<string> {
 
 export async function createProduct(req: AuthRequest, res: Response) {
   const { initialStock, ...fields } = extractProductFields(req.body);
+
+  // A published product is public, so its name and description are screened.
+  const unclean = screenFields({ 'product name': fields.name, 'description': fields.description });
+  if (unclean) return R.badRequest(res, unclean);
   if (!fields.sellPrice || fields.sellPrice <= 0) return R.badRequest(res, 'Selling price must be greater than 0');
   const sku = fields.sku || await generateSku(shop(req), fields.name);
   const product = await prisma.product.create({

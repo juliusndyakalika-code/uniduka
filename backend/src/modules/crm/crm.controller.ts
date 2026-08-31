@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
+import { screenFields } from '../../core/profanity';
 
 const shop = (req: AuthRequest) => req.user!.shopId!;
 
@@ -31,6 +32,9 @@ export async function getCustomer(req: AuthRequest, res: Response) {
 }
 
 export async function createCustomer(req: AuthRequest, res: Response) {
+  const unclean = screenFields({ 'customer name': req.body?.fullName, notes: req.body?.notes });
+  if (unclean) return R.badRequest(res, unclean);
+
   const customer = await prisma.customer.create({ data: { ...req.body, shopId: shop(req) } });
   return R.created(res, customer);
 }

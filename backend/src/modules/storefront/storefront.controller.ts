@@ -14,6 +14,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../core/prisma';
 import { io } from '../../app';
 import * as R from '../../utils/response';
+import { screenFields } from '../../core/profanity';
 
 const LOW_STOCK_THRESHOLD = 5;
 const ORDER_TTL_HOURS     = 48;
@@ -150,6 +151,11 @@ export async function placeOrder(req: Request, res: Response) {
   const { buyerName, buyerPhone, buyerEmail, fulfilment, deliveryAddress, note, items } = req.body ?? {};
 
   if (!buyerName || String(buyerName).trim().length < 2) return R.badRequest(res, 'Your name is required');
+
+  // The only unauthenticated write in the app — this lands in the shop's inbox
+  // and their CRM, so it is screened like anything else that becomes visible.
+  const unclean = screenFields({ name: buyerName, note, 'delivery address': deliveryAddress });
+  if (unclean) return R.badRequest(res, unclean);
   if (!buyerPhone || !isValidPhone(buyerPhone))          return R.badRequest(res, 'A valid phone number is required');
   if (!Array.isArray(items) || items.length === 0)       return R.badRequest(res, 'Your cart is empty');
   if (items.length > 50)                                 return R.badRequest(res, 'Too many items in one order');

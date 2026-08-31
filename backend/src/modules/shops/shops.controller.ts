@@ -4,6 +4,7 @@ import { AuthRequest, JwtPayload } from '../../types';
 import { prisma } from '../../core/prisma';
 import { loadBusinessProfile } from '../business-types/business.profiles';
 import * as R from '../../utils/response';
+import { screenFields } from '../../core/profanity';
 import { checkLimit } from '../../core/plans';
 
 const SECRET = process.env.JWT_SECRET || 'uniduka-secret-change-in-prod';
@@ -32,6 +33,10 @@ export async function createShop(req: AuthRequest, res: Response) {
 
   const profile = loadBusinessProfile(businessType);
   if (!profile) return R.badRequest(res, 'Invalid businessType');
+
+  // The trading name prints on every receipt.
+  const unclean = screenFields({ 'shop name': tradingName, 'legal name': legalName });
+  if (unclean) return R.badRequest(res, unclean);
 
   const allowed = await checkLimit(req.user!.accountId, 'shops');
   if (!allowed.ok) return R.badRequest(res, allowed.message);
@@ -117,6 +122,13 @@ export async function updateShop(req: AuthRequest, res: Response) {
     storefrontEnabled, slug, storefrontBio, storefrontBanner,
     acceptsDelivery, acceptsPickup, deliveryFee, deliveryNote, minOrderValue, orderPhone,
   } = req.body;
+
+  // Bio and trading name show on the public storefront; the slug is in the URL.
+  const unclean = screenFields({
+    'shop name': tradingName, 'legal name': legalName,
+    'storefront description': storefrontBio, 'storefront link': slug,
+  });
+  if (unclean) return R.badRequest(res, unclean);
 
   // The slug is a public URL and globally unique, so validate before writing.
   let slugValue: string | undefined;

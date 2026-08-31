@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 import { prisma } from '../../core/prisma';
 import { AuthRequest, JwtPayload } from '../../types';
 import * as R from '../../utils/response';
+import { screenFields } from '../../core/profanity';
 import { normalizePhone, phoneVariants } from '../../utils/phone';
 
 const SECRET      = process.env.JWT_SECRET         || 'uniduka-secret-change-in-prod';
@@ -25,6 +26,10 @@ export async function register(req: Request, res: Response, next: NextFunction) 
   try {
     const { email, password, fullName, legalName, phone: rawPhone } = req.body;
     if (!email || !password || !fullName || !legalName) return R.badRequest(res, 'Missing required fields');
+
+    // Both end up on receipts and invoices, so screen before the account exists.
+    const unclean = screenFields({ 'business name': legalName, 'name': fullName });
+    if (unclean) return R.badRequest(res, unclean);
 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return R.conflict(res, 'Email already registered');
