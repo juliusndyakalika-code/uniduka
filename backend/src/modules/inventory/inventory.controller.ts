@@ -473,6 +473,12 @@ export async function importShipment(req: AuthRequest, res: Response) {
   const imported: string[] = [];
   const rowErrors = [...errors];
 
+  // A shipment is stock arriving, so a style already in the catalogue must be
+  // restocked rather than refused. Previously every row called create() and a
+  // duplicate SKU threw, which was reported as "skipped" — quietly losing the
+  // whole quantity for every product the shop already sold.
+  const restocked: string[] = [];
+
   for (const p of calculated) {
     try {
       const nameParts = [
@@ -487,25 +493,82 @@ export async function importShipment(req: AuthRequest, res: Response) {
         `Landed cost: ${costNote}`,
       ].filter(Boolean).join(' | ');
 
-      const product = await prisma.product.create({
-        data: {
-          shopId,
-          name:        nameParts,
-          sku:         p.style,
-          type:        'PRODUCT' as never,
-          unit:        'pcs',
-          sellPrice:   p.sellingPrice || p.landedCost,
-          costPrice:   p.landedCost,
-          category:    p.color || undefined,
-          description,
-          reorderPoint: 0,
-        },
+      // Identity is style + colour + size, which is exactly the composed name —
+      // the same style in two colours is two products. Name is checked first
+      // for that reason; SKU is a fallback for rows added before this existed.
+      let product = await prisma.product.findFirst({
+        where: { shopId, name: nameParts },
       });
+      if (!product) {
+        product = await prisma.product.findFirst({
+          where: { shopId, sku: p.style, name: nameParts },
+        });
+      }
 
-      await prisma.inventoryItem.create({
-        data: { shopId, productId: product.id, quantity: p.qty, costPrice: p.landedCost },
-      });
+      if (product) {
+        // Known product: add the arriving quantity and refresh its cost basis.
+        await prisma.product.update({
+          where: { id: product.id },
+          data: {
+            costPrice: p.landedCost,
+            // Only move the selling price when the sheet actually states one.
+            ...(p.sellingPrice > 0 && { sellPrice: p.sellingPrice }),
+            description,
+          },
+        });
 
+        // Mirror addProductStock: top up the existing row rather than adding
+        // another, so a product does not accumulate a row per shipment.
+        const row = await prisma.inventoryItem.findFirst({
+          where: { shopId, productId: product.id },
+          orderBy: { createdAt: 'asc' },
+        });
+        if (row) {
+          await prisma.inventoryItem.update({
+            where: { id: row.id },
+            data: { quantity: { increment: p.qty }, costPrice: p.landedCost },
+          });
+        } else {
+          await prisma.inventoryItem.create({
+            data: { shopId, productId: product.id, quantity: p.qty, costPrice: p.landedCost },
+          });
+        }
+        restocked.push(product.id);
+      } else {
+        // New product. The SKU is the style, which collides when one style
+        // arrives in several colours, so a taken SKU gets a variant suffix
+        // instead of failing the row.
+        let sku = p.style;
+        const skuTaken = await prisma.product.findFirst({
+          where: { shopId, sku }, select: { id: true },
+        });
+        if (skuTaken) {
+          const variant = [p.color, p.sizeRange].filter(Boolean).join('-').replace(/\s+/g, '');
+          sku = variant ? `${p.style}-${variant}` : `${p.style}-${Date.now().toString(36).slice(-4)}`;
+        }
+
+        product = await prisma.product.create({
+          data: {
+            shopId,
+            name:        nameParts,
+            sku,
+            type:        'PRODUCT' as never,
+            unit:        'pcs',
+            sellPrice:   p.sellingPrice || p.landedCost,
+            costPrice:   p.landedCost,
+            category:    p.color || undefined,
+            description,
+            reorderPoint: 0,
+          },
+        });
+
+        await prisma.inventoryItem.create({
+          data: { shopId, productId: product.id, quantity: p.qty, costPrice: p.landedCost },
+        });
+        imported.push(product.id);
+      }
+
+      // Logged either way, so the movement history reconciles with the shipment.
       await prisma.stockMovement.create({
         data: {
           shopId, productId: product.id,
@@ -514,23 +577,25 @@ export async function importShipment(req: AuthRequest, res: Response) {
           userId,
         },
       });
-
-      imported.push(product.id);
     } catch (e: unknown) {
       const msg = (e as { message?: string })?.message ?? 'Unknown error';
-      const isDupe = msg.includes('Unique constraint') && msg.includes('sku');
-      rowErrors.push({ row: -1, message: isDupe ? `Style "${p.style}" already exists — skipped (delete or update it first)` : msg });
+      rowErrors.push({ row: -1, message: `${p.style}: ${msg}` });
     }
   }
+
+  // Every row now either creates or restocks, so "skipped" only ever counts
+  // genuine failures.
+  const handled = imported.length + restocked.length;
+  const skipped = calculated.length - handled;
 
   await prisma.inventoryImport.create({
     data: {
       shopId, userId, type: 'SHIPMENT',
       purchaseOrderId: purchaseOrderId || null,
       fileName: req.file.originalname,
-      imported: imported.length, skipped: calculated.length - imported.length,
+      imported: handled, skipped,
       totalQty: summary.totalPieces, totalValue: summary.totalLandingValue,
-      note: `Exchange rate 1 = ${exchangeRate}; shared costs ${summary.totalSharedCosts.toLocaleString()}`,
+      note: `${imported.length} new, ${restocked.length} restocked · rate 1 = ${exchangeRate} · shared costs ${summary.totalSharedCosts.toLocaleString()}`,
     },
   });
 
@@ -542,7 +607,13 @@ export async function importShipment(req: AuthRequest, res: Response) {
     });
   }
 
-  return R.created(res, { imported: imported.length, skipped: calculated.length - imported.length, items: calculated, summary, errors: rowErrors });
+  return R.created(res, {
+    imported: handled,           // total rows that landed, for existing callers
+    created:  imported.length,   // brand new products
+    restocked: restocked.length, // already in the catalogue, stock added
+    skipped,
+    items: calculated, summary, errors: rowErrors,
+  });
 }
 
 // ── Stock ─────────────────────────────────────────────────────────────────────
