@@ -4,9 +4,9 @@ import LanguageToggle from '../components/ui/LanguageToggle';
 import {
   ShoppingCart, Package, Users, BarChart2, Shield, Zap, Globe,
   Receipt, Star, ChevronRight, Check, ArrowRight, Menu, X,
-  Smartphone, Printer, TrendingUp, Lock, RefreshCw,
+  TrendingUp, Lock, RefreshCw,
   ShoppingBag, Utensils, Stethoscope, Scissors, Wrench, Hotel,
-  Wine, Layers, AlertTriangle,
+  Wine, Layers, AlertTriangle, FileText, Clock, Truck, Wallet, Building2,
 } from 'lucide-react';
 import { LogoMark } from '../components/ui/Logo';
 
@@ -37,15 +37,22 @@ const BUSINESS_TYPES = [
   { icon: Hotel,        label: 'Hotel & Guesthouse',     desc: 'Room management and food & beverage' },
 ];
 
+// Grid is 4 columns on large screens, so this stays a multiple of four.
 const FEATURES = [
-  { icon: ShoppingCart, title: 'Point of Sale',      desc: 'Simple POS that works for any business. Take cash, M-Pesa, or card and print receipts on the spot.', color: '#a66624' },
-  { icon: Package,      title: 'Smart Inventory',    desc: 'Real-time stock tracking with automatic cost calculation. Get alerts before you run out.', color: '#0d9488' },
-  { icon: Users,        title: 'Customer CRM',       desc: 'Keep customer profiles, track purchase history, and run a loyalty points programme.', color: '#b45309' },
-  { icon: BarChart2,    title: 'Sales Reports',      desc: 'See revenue by day, week, or month. Know which products sell and how much profit you make.', color: '#7c3aed' },
-  { icon: Receipt,      title: 'Auto Receipts',      desc: 'Every sale generates a receipt with TIN, VRN, and tax codes automatically.', color: '#0369a1' },
-  { icon: Globe,        title: 'Multi-Branch',       desc: 'Run all your shops from one account. Switch branches in seconds.', color: '#b91c1c' },
-  { icon: Smartphone,   title: 'Install on Android', desc: 'Install straight from Chrome with no Play Store needed. Works like a regular app, always up to date.', color: '#b45309' },
-  { icon: Shield,       title: 'Role-Based Access',  desc: 'Set up roles like Cashier or Inventory Staff. Everyone sees only what their job requires.', color: '#374151' },
+  { icon: ShoppingCart, title: 'Point of Sale',      desc: 'Sell in seconds on any phone or computer. Cash, M-Pesa, Tigo Pesa, Airtel, card, or on credit.', color: '#a66624' },
+  { icon: Package,      title: 'Stock That Adds Up', desc: 'Every sale, restock and adjustment recorded. What the screen says is what is on the shelf.', color: '#0d9488' },
+  { icon: FileText,     title: 'Invoices',           desc: 'Bill a customer now and get paid later. Record part payments, deliver when ready, and send it on WhatsApp.', color: '#4f46e5' },
+  { icon: Globe,        title: 'Your Own Online Shop', desc: 'Share one link and take orders. Customers browse your stock, order, and pay when it reaches them.', color: '#0f766e' },
+
+  { icon: Receipt,      title: 'Tax Receipts',       desc: 'Every sale prints with your TIN, VRN and tax codes worked out for you.', color: '#0369a1' },
+  { icon: Clock,        title: 'Credit and Debts',   desc: 'Sell on credit without losing track. See exactly who owes what, and settle it in a tap.', color: '#b45309' },
+  { icon: BarChart2,    title: 'Reports That Answer', desc: 'What sold today, which product earns most, which seller moved it, and what profit is left.', color: '#7c3aed' },
+  { icon: Truck,        title: 'Shipment Import',    desc: 'Import a supplier sheet, add shipping and clearance, and landed cost per item is calculated for you.', color: '#a16207' },
+
+  { icon: Users,        title: 'Customers and Loyalty', desc: 'Purchase history, contacts, and a points programme that brings people back.', color: '#be185d' },
+  { icon: Wallet,       title: 'Expenses',           desc: 'Log rent, transport and wages so the profit you see is profit after costs.', color: '#065f46' },
+  { icon: Building2,    title: 'Many Shops, One Account', desc: 'Branches, transfers and per-shop reporting. Switch between them in seconds.', color: '#b91c1c' },
+  { icon: Shield,       title: 'Staff You Can Trust', desc: 'Give each person their own login. Cashiers see the till, not your margins or your reports.', color: '#374151' },
 ];
 
 // Limits here must match PLAN_LIMITS in backend/src/core/plans.ts, which is what
