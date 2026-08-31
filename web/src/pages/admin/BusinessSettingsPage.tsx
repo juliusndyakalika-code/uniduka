@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { PageLoader } from '../../components/ui/Loader';
+import { SUPPORT, waLinkTo } from '../../config';
 
 interface AccountInfo {
   id: string; legalName: string; tradingName?: string; email?: string; phone?: string;
@@ -117,8 +118,8 @@ export default function BusinessSettingsPage() {
           <div className="text-right">
             <p className="text-xs text-stone-500 mb-2">To upgrade or renew your plan, contact support:</p>
             <div className="flex gap-2 flex-wrap justify-end">
-              <a href="mailto:support@mauzohalisi.com" className="btn-secondary text-xs py-1.5 px-3">Email Support</a>
-              <a href="https://wa.me/255700000000" target="_blank" rel="noreferrer" className="btn-primary text-xs py-1.5 px-3">WhatsApp</a>
+              <a href={`mailto:${SUPPORT.supportEmail}`} className="btn-secondary text-xs py-1.5 px-3">Email Support</a>
+              <a href={waLinkTo("Hello, I would like to upgrade or renew my MauzoHalisi plan.")} target="_blank" rel="noreferrer" className="btn-primary text-xs py-1.5 px-3">WhatsApp</a>
             </div>
           </div>
         </div>

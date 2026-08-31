@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
+import { checkLimit } from '../../core/plans';
 
 export async function listBranches(req: AuthRequest, res: Response) {
   const shops = await prisma.shop.findMany({
@@ -21,6 +22,10 @@ export async function createBranch(req: AuthRequest, res: Response) {
   const parentShopId = req.body.parentShopId || req.user!.shopId;
   const parent = await prisma.shop.findFirst({ where: { id: parentShopId, ownerAccountId: req.user!.accountId, wizardCompleted: true } });
   if (!parent) return R.notFound(res, 'Parent shop not found or setup not complete');
+
+  const allowed = await checkLimit(req.user!.accountId, 'branches');
+  if (!allowed.ok) return R.badRequest(res, allowed.message);
+
   const branch = await prisma.shop.create({
     data: {
       ownerAccountId: req.user!.accountId,

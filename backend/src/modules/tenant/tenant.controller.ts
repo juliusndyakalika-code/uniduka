@@ -3,13 +3,8 @@ import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
 import * as tz from '../../utils/tz';
+import { PLAN_LIMITS, PLAN_PRICES, PLAN_LABELS, type PlanKey } from '../../core/plans';
 
-const PLAN_LIMITS = {
-  STARTER:    { shops: 1,  branches: 1,  staff: 3,  registers: 1 },
-  GROWTH:     { shops: 3,  branches: 3,  staff: 15, registers: 3 },
-  BUSINESS:   { shops: 10, branches: 999, staff: 100, registers: 999 },
-  ENTERPRISE: { shops: 999, branches: 999, staff: 999, registers: 999 },
-};
 
 export async function getAccount(req: AuthRequest, res: Response) {
   const account = await prisma.ownerAccount.findUnique({
@@ -33,23 +28,22 @@ export async function updateAccount(req: AuthRequest, res: Response) {
 }
 
 export async function getSubscriptionPlans(_req: AuthRequest, res: Response) {
-  return R.ok(res, [
-    { plan: 'STARTER',    ...PLAN_LIMITS.STARTER,    price: 0,    label: 'Starter',    support: 'Email' },
-    { plan: 'GROWTH',     ...PLAN_LIMITS.GROWTH,     price: 29,   label: 'Growth',     support: 'Priority Chat' },
-    { plan: 'BUSINESS',   ...PLAN_LIMITS.BUSINESS,   price: 99,   label: 'Business',   support: 'Dedicated Manager' },
-    { plan: 'ENTERPRISE', ...PLAN_LIMITS.ENTERPRISE, price: null, label: 'Enterprise', support: '24/7 Phone SLA' },
-  ]);
+  // Built from the shared definition so the plans shown, the prices charged and
+  // the limits enforced can never drift apart. Prices are TZS per month.
+  const plans = (Object.keys(PLAN_LIMITS) as PlanKey[]).map(plan => ({
+    plan,
+    ...PLAN_LIMITS[plan],
+    price:    PLAN_PRICES[plan],
+    currency: 'TZS',
+    ...PLAN_LABELS[plan],
+  }));
+  return R.ok(res, plans);
 }
 
-export async function upgradeSubscription(req: AuthRequest, res: Response) {
-  const { plan } = req.body;
-  if (!['STARTER', 'GROWTH', 'BUSINESS', 'ENTERPRISE'].includes(plan)) return R.badRequest(res, 'Invalid plan');
-  const account = await prisma.ownerAccount.update({
-    where: { id: req.user!.accountId },
-    data: { subscriptionPlan: plan },
-  });
-  return R.ok(res, { plan: account.subscriptionPlan });
-}
+// A self-serve upgrade endpoint used to live here with no route pointing at it.
+// Wiring it would have let any owner move themselves onto a paid plan for free,
+// since nothing takes payment yet — plans are set by a platform admin activating
+// an account once payment is confirmed.
 
 export async function getNotifications(req: AuthRequest, res: Response) {
   const shopId = req.user!.shopId;

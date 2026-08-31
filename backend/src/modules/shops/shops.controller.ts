@@ -4,6 +4,7 @@ import { AuthRequest, JwtPayload } from '../../types';
 import { prisma } from '../../core/prisma';
 import { loadBusinessProfile } from '../business-types/business.profiles';
 import * as R from '../../utils/response';
+import { checkLimit } from '../../core/plans';
 
 const SECRET = process.env.JWT_SECRET || 'uniduka-secret-change-in-prod';
 
@@ -31,6 +32,9 @@ export async function createShop(req: AuthRequest, res: Response) {
 
   const profile = loadBusinessProfile(businessType);
   if (!profile) return R.badRequest(res, 'Invalid businessType');
+
+  const allowed = await checkLimit(req.user!.accountId, 'shops');
+  if (!allowed.ok) return R.badRequest(res, allowed.message);
 
   const shop = await prisma.shop.create({
     data: {

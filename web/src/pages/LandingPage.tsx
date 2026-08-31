@@ -48,15 +48,19 @@ const FEATURES = [
   { icon: Shield,       title: 'Role-Based Access',  desc: 'Set up roles like Cashier or Inventory Staff. Everyone sees only what their job requires.', color: '#374151' },
 ];
 
+// Limits here must match PLAN_LIMITS in backend/src/core/plans.ts, which is what
+// actually gets enforced when someone adds a shop, branch, register or staff
+// account. Advertising more than the system allows turns a sale into a support
+// ticket on the customer's first busy week.
 const PLANS = [
   { name: 'Starter',    price: 'Free',       period: '30-day trial', desc: 'Good for new businesses just getting started.', highlight: false,
-    features: ['1 shop', '1 user', 'POS and inventory', 'Auto receipts', 'Basic reports', 'Email support'] },
-  { name: 'Growth',     price: 'TZS 49,000', period: '/month',       desc: 'For businesses ready to grow.',                highlight: false,
-    features: ['Up to 3 shops', 'Up to 10 users', 'Everything in Starter', 'Loyalty programme', 'Appointments', 'CRM and customers'] },
-  { name: 'Business',   price: 'TZS 99,000', period: '/month',       desc: 'Full features for established businesses.',    highlight: true,
-    features: ['Up to 10 shops', 'Unlimited users', 'Everything in Growth', 'Staff reports', 'Purchase orders', 'KDS for restaurants', 'Priority support'] },
+    features: ['1 shop', 'Up to 3 staff accounts', '1 register', 'POS and inventory', 'Auto receipts', 'Basic reports', 'Email support'] },
+  { name: 'Growth',     price: 'TZS 20,000', period: '/month',       desc: 'For businesses ready to grow.',                highlight: false,
+    features: ['Up to 3 shops', 'Up to 15 staff accounts', 'Up to 3 branches', 'Up to 3 registers', 'Everything in Starter', 'Loyalty programme', 'Appointments and CRM'] },
+  { name: 'Business',   price: 'TZS 40,000', period: '/month',       desc: 'Full features for established businesses.',    highlight: true,
+    features: ['Up to 10 shops', 'Up to 100 staff accounts', 'Unlimited branches', 'Unlimited registers', 'Everything in Growth', 'Staff and product reports', 'Purchase orders', 'Kitchen display'] },
   { name: 'Enterprise', price: 'Custom',     period: 'contact us',   desc: 'For large chains and franchises.',             highlight: false,
-    features: ['Unlimited shops', 'Unlimited users', 'Everything in Business', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee'] },
+    features: ['Unlimited shops', 'Unlimited staff accounts', 'Everything in Business', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee'] },
 ];
 
 const STATS = [

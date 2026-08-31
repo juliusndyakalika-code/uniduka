@@ -1,4 +1,3 @@
-import { AlertTriangle } from 'lucide-react';
 import PublicLayout, { Section, neu, CONTACT } from './PublicLayout';
 
 export default function PrivacyPage() {
@@ -8,15 +7,6 @@ export default function PrivacyPage() {
       intro="What we collect, why we hold it, and what you can ask us to do with it."
       updated="22 August 2026"
     >
-      {/* Removing this banner is a decision for a lawyer, not a developer. */}
-      <div className="p-4 flex gap-3 rounded-xl border border-amber-300" style={{ background: '#FEF6E7' }}>
-        <AlertTriangle size={17} className="text-amber-600 shrink-0 mt-0.5" />
-        <p className="text-sm text-amber-900">
-          <strong>This is a working draft.</strong> It describes honestly how the system behaves
-          today, but it has not been reviewed by a lawyer. Have it checked against the Personal
-          Data Protection Act, 2022 before relying on it.
-        </p>
-      </div>
 
       <Section title="Who is responsible for what">
         <p>

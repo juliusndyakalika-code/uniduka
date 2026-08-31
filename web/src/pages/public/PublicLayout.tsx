@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { LogoMark } from '../../components/ui/Logo';
 import { BRAND } from '../../components/ui/Logo';
+import { SUPPORT } from '../../config';
 
 export const neu = {
   card:  { background: '#E8EBF0', boxShadow: '8px 8px 20px #c5cad3, -8px -8px 20px #ffffff', borderRadius: '1rem' },
@@ -23,10 +24,10 @@ export const neu = {
  * one. Fill these in as they become real.
  */
 export const CONTACT = {
-  email:   'info@mauzohalisi.com',
-  support: 'support@mauzohalisi.com',
-  phone:   '',                          // published number, once there is one
-  city:    'Dar es Salaam, Tanzania',
+  email:   SUPPORT.email,
+  support: SUPPORT.supportEmail,
+  phone:   SUPPORT.phone,
+  city:    SUPPORT.city,
 } as const;
 
 interface Props {

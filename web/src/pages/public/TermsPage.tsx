@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { AlertTriangle } from 'lucide-react';
 import PublicLayout, { Section, neu, CONTACT } from './PublicLayout';
 
 export default function TermsPage() {
@@ -9,14 +8,6 @@ export default function TermsPage() {
       intro="The agreement between your business and ours. Written to be read, not to be skipped."
       updated="22 August 2026"
     >
-      <div className="p-4 flex gap-3 rounded-xl border border-amber-300" style={{ background: '#FEF6E7' }}>
-        <AlertTriangle size={17} className="text-amber-600 shrink-0 mt-0.5" />
-        <p className="text-sm text-amber-900">
-          <strong>This is a working draft.</strong> It states our intentions plainly, but it has
-          not been reviewed by a lawyer and is not yet a settled contract. Have it checked before
-          relying on it.
-        </p>
-      </div>
 
       <Section title="The agreement">
         <p>

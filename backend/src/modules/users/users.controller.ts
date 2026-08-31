@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
+import { checkLimit } from '../../core/plans';
 import { normalizePhone } from '../../utils/phone';
 
 export async function listUsers(req: AuthRequest, res: Response) {
@@ -43,6 +44,10 @@ export async function createUser(req: AuthRequest, res: Response) {
     const exists = await prisma.user.findFirst({ where: { phone } });
     if (exists) return R.conflict(res, 'Phone number already in use');
   }
+  // The owner occupies a seat too, so this counts every user on the account.
+  const seat = await checkLimit(req.user!.accountId, 'staff');
+  if (!seat.ok) return R.badRequest(res, seat.message);
+
   const hash = await bcrypt.hash(password || 'changeme123', 12);
   const user = await prisma.user.create({
     data: { email: email || null, passwordHash: hash, fullName, phone: phone || null, role, ownerAccountId: req.user!.accountId },
