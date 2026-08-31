@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import LanguageToggle from '../components/ui/LanguageToggle';
 import {
   ShoppingCart, Package, Users, BarChart2, Shield, Zap, Globe,
@@ -25,59 +26,66 @@ const neu = {
   inset: { background: '#E8EBF0', boxShadow: 'inset 4px 4px 10px #c5cad3, inset -4px -4px 10px #ffffff', borderRadius: '0.75rem' },
 };
 
+// These arrays carry only what does not change between languages — the icon, the
+// accent colour, the key. Every string is looked up under `landing.*` so the
+// language toggle in the navbar actually changes the page.
 const BUSINESS_TYPES = [
-  { icon: ShoppingBag,  label: 'Retail Store',          desc: 'General merchandise and fashion' },
-  { icon: Layers,       label: 'Wholesale / B2B',        desc: 'Bulk supply and distribution' },
-  { icon: ShoppingCart, label: 'Grocery & Supermarket',  desc: 'FMCG and fresh produce' },
-  { icon: Stethoscope,  label: 'Pharmacy & Clinic',      desc: 'Medicine, Rx tracking, prescriptions' },
-  { icon: Utensils,     label: 'Restaurant & Café',      desc: 'Table orders, KDS, menu management' },
-  { icon: Wine,         label: 'Bar & Nightclub',        desc: 'Tab tracking and liquor inventory' },
-  { icon: Scissors,     label: 'Salon & Spa',            desc: 'Appointments and service booking' },
-  { icon: Wrench,       label: 'Repair Workshop',        desc: 'Job cards and parts inventory' },
-  { icon: Hotel,        label: 'Hotel & Guesthouse',     desc: 'Room management and food & beverage' },
+  { icon: ShoppingBag,  k: 'retail'  },
+  { icon: Layers,       k: 'whole'   },
+  { icon: ShoppingCart, k: 'grocery' },
+  { icon: Stethoscope,  k: 'pharm'   },
+  { icon: Utensils,     k: 'rest'    },
+  { icon: Wine,         k: 'bar'     },
+  { icon: Scissors,     k: 'salon'   },
+  { icon: Wrench,       k: 'repair'  },
+  { icon: Hotel,        k: 'hotel'   },
 ];
 
 // Grid is 4 columns on large screens, so this stays a multiple of four.
 const FEATURES = [
-  { icon: ShoppingCart, title: 'Point of Sale',      desc: 'Sell in seconds on any phone or computer. Cash, M-Pesa, Tigo Pesa, Airtel, card, or on credit.', color: '#a66624' },
-  { icon: Package,      title: 'Stock That Adds Up', desc: 'Every sale, restock and adjustment recorded. What the screen says is what is on the shelf.', color: '#0d9488' },
-  { icon: FileText,     title: 'Invoices',           desc: 'Bill a customer now and get paid later. Record part payments, deliver when ready, and send it on WhatsApp.', color: '#4f46e5' },
-  { icon: Globe,        title: 'Your Own Online Shop', desc: 'Share one link and take orders. Customers browse your stock, order, and pay when it reaches them.', color: '#0f766e' },
+  { icon: ShoppingCart, k: 'pos',    color: '#a66624' },
+  { icon: Package,      k: 'stock',  color: '#0d9488' },
+  { icon: FileText,     k: 'inv',    color: '#4f46e5' },
+  { icon: Globe,        k: 'shop',   color: '#0f766e' },
 
-  { icon: Receipt,      title: 'Tax Receipts',       desc: 'Every sale prints with your TIN, VRN and tax codes worked out for you.', color: '#0369a1' },
-  { icon: Clock,        title: 'Credit and Debts',   desc: 'Sell on credit without losing track. See exactly who owes what, and settle it in a tap.', color: '#b45309' },
-  { icon: BarChart2,    title: 'Reports That Answer', desc: 'What sold today, which product earns most, which seller moved it, and what profit is left.', color: '#7c3aed' },
-  { icon: Truck,        title: 'Shipment Import',    desc: 'Import a supplier sheet, add shipping and clearance, and landed cost per item is calculated for you.', color: '#a16207' },
+  { icon: Receipt,      k: 'rcpt',   color: '#0369a1' },
+  { icon: Clock,        k: 'debt',   color: '#b45309' },
+  { icon: BarChart2,    k: 'rep',    color: '#7c3aed' },
+  { icon: Truck,        k: 'ship',   color: '#a16207' },
 
-  { icon: Users,        title: 'Customers and Loyalty', desc: 'Purchase history, contacts, and a points programme that brings people back.', color: '#be185d' },
-  { icon: Wallet,       title: 'Expenses',           desc: 'Log rent, transport and wages so the profit you see is profit after costs.', color: '#065f46' },
-  { icon: Building2,    title: 'Many Shops, One Account', desc: 'Branches, transfers and per-shop reporting. Switch between them in seconds.', color: '#b91c1c' },
-  { icon: Shield,       title: 'Staff You Can Trust', desc: 'Give each person their own login. Cashiers see the till, not your margins or your reports.', color: '#374151' },
+  { icon: Users,        k: 'cust',   color: '#be185d' },
+  { icon: Wallet,       k: 'exp',    color: '#065f46' },
+  { icon: Building2,    k: 'branch', color: '#b91c1c' },
+  { icon: Shield,       k: 'staff',  color: '#374151' },
 ];
 
 // Limits here must match PLAN_LIMITS in backend/src/core/plans.ts, which is what
 // actually gets enforced when someone adds a shop, branch, register or staff
 // account. Advertising more than the system allows turns a sale into a support
 // ticket on the customer's first busy week.
+//
+// Prices stay out of the translation files: TZS 20,000 is TZS 20,000 in either
+// language, and a number that can drift between two files will eventually drift.
 const PLANS = [
-  { name: 'Starter',    price: 'Free',       period: '30-day trial', desc: 'Good for new businesses just getting started.', highlight: false,
-    features: ['1 shop', 'Up to 3 staff accounts', '1 register', 'POS and inventory', 'Auto receipts', 'Basic reports', 'Email support'] },
-  { name: 'Growth',     price: 'TZS 20,000', period: '/month',       desc: 'For businesses ready to grow.',                highlight: false,
-    features: ['Up to 3 shops', 'Up to 15 staff accounts', 'Up to 3 branches', 'Up to 3 registers', 'Everything in Starter', 'Loyalty programme', 'Appointments and CRM'] },
-  { name: 'Business',   price: 'TZS 40,000', period: '/month',       desc: 'Full features for established businesses.',    highlight: true,
-    features: ['Up to 10 shops', 'Up to 100 staff accounts', 'Unlimited branches', 'Unlimited registers', 'Everything in Growth', 'Staff and product reports', 'Purchase orders', 'Kitchen display'] },
-  { name: 'Enterprise', price: 'Custom',     period: 'contact us',   desc: 'For large chains and franchises.',             highlight: false,
-    features: ['Unlimited shops', 'Unlimited staff accounts', 'Everything in Business', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee'] },
+  { k: 'starter',    price: null,         period: 'trialPeriod', highlight: false },
+  { k: 'growth',     price: 'TZS 20,000', period: 'perMonth',    highlight: false },
+  { k: 'business',   price: 'TZS 40,000', period: 'perMonth',    highlight: true  },
+  { k: 'enterprise', price: null,         period: 'contact',     highlight: false },
 ];
 
 const STATS = [
-  { value: '11',   label: 'Business types supported' },
-  { value: '100%', label: 'TAX-compliant receipts' },
-  { value: '20s',  label: 'Average checkout time' },
+  { value: '11',   k: 'types'    },
+  { value: '100%', k: 'receipts' },
+  { value: '20s',  k: 'checkout' },
 ];
 
 // ── Mockup: Dashboard ─────────────────────────────────────────────────────────
+// The mockups are screenshots of the product, so they follow the page language
+// too — a Swahili page showing an English till reads as a mock-up of a different
+// product. Sample product names are localised for the same reason.
 function DashboardMockup() {
+  const { t } = useTranslation();
+  const m = (k: string) => t(`landing.mock.${k}`);
   return (
     <div className="relative w-full max-w-2xl mx-auto select-none">
       <div className="absolute inset-0 scale-95 translate-y-4 rounded-2xl blur-2xl" style={{ background: '#a6662420' }} />
@@ -89,23 +97,17 @@ function DashboardMockup() {
             <span className="text-xs font-bold text-stone-800">MauzoHalisi</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="text-[9px] text-stone-500 hidden sm:block">USER · Dashboard</div>
+            <div className="text-[9px] text-stone-500 hidden sm:block">USER · {m('dashboard')}</div>
             <div className="w-6 h-6 rounded-full bg-stone-700 text-white text-[9px] font-bold flex items-center justify-center">U</div>
           </div>
         </div>
 
         <div className="flex" style={{ background: '#E8EBF0' }}>
           <div className="w-28 shrink-0 p-3 space-y-1 border-r border-stone-200/60 hidden sm:block">
-            {[
-              { label: 'Dashboard', active: true },
-              { label: 'POS',       active: false },
-              { label: 'Inventory', active: false },
-              { label: 'Customers', active: false },
-              { label: 'Reports',   active: false },
-            ].map(({ label, active }) => (
-              <div key={label} className="px-2 py-1.5 rounded-lg text-[9px] font-medium"
-                style={active ? { ...neu.inset, color: '#1c1917', fontWeight: 700 } : { color: '#78716c' }}>
-                {label}
+            {['dashboard', 'pos', 'inventory', 'customers', 'reports'].map((k, i) => (
+              <div key={k} className="px-2 py-1.5 rounded-lg text-[9px] font-medium"
+                style={i === 0 ? { ...neu.inset, color: '#1c1917', fontWeight: 700 } : { color: '#78716c' }}>
+                {m(k)}
               </div>
             ))}
           </div>
@@ -113,13 +115,13 @@ function DashboardMockup() {
           <div className="flex-1 p-3 space-y-3">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { label: 'Sales Today',  value: '485,200', unit: 'TZS',    color: '#a66624' },
-                { label: 'Transactions', value: '47',      unit: 'today',  color: '#0d9488' },
-                { label: 'Products',     value: '312',     unit: 'active', color: '#7c3aed' },
-                { label: 'Low Stock',    value: '8',       unit: 'items',  color: '#b91c1c' },
-              ].map(({ label, value, unit, color }) => (
-                <div key={label} className="p-2.5 rounded-xl" style={neu.card}>
-                  <p className="text-[8px] uppercase tracking-wider font-semibold" style={{ color: '#a8a29e' }}>{label}</p>
+                { k: 'salesToday',   value: '485,200', unit: 'TZS',            color: '#a66624' },
+                { k: 'transactions', value: '47',      unit: m('today'),       color: '#0d9488' },
+                { k: 'products',     value: '312',     unit: m('active'),      color: '#7c3aed' },
+                { k: 'lowStock',     value: '8',       unit: m('items'),       color: '#b91c1c' },
+              ].map(({ k, value, unit, color }) => (
+                <div key={k} className="p-2.5 rounded-xl" style={neu.card}>
+                  <p className="text-[8px] uppercase tracking-wider font-semibold" style={{ color: '#a8a29e' }}>{m(k)}</p>
                   <p className="text-base font-bold mt-0.5" style={{ color }}>{value}</p>
                   <p className="text-[8px] text-stone-400">{unit}</p>
                 </div>
@@ -127,13 +129,13 @@ function DashboardMockup() {
             </div>
 
             <div className="rounded-xl p-2.5" style={neu.card}>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-stone-500 mb-2">Recent Sales</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-stone-500 mb-2">{m('recentSales')}</p>
               <div className="space-y-1.5">
                 {[
-                  { name: 'Samsung Earphones', qty: '1 ea',  amount: '45,000', method: 'M-Pesa' },
-                  { name: 'Maize Flour 2kg',   qty: '4 kg',  amount: '12,800', method: 'Cash'   },
-                  { name: 'Cooking Oil 1L',    qty: '2 btl', amount: '8,600',  method: 'Cash'   },
-                  { name: 'Blue Jeans (32)',   qty: '1 ea',  amount: '35,000', method: 'M-Pesa' },
+                  { name: m('n1'), qty: `1 ${m('uEa')}`,  amount: '45,000', method: 'M-Pesa'  },
+                  { name: m('n2'), qty: `4 ${m('uKg')}`,  amount: '12,800', method: m('cash') },
+                  { name: m('n3'), qty: `2 ${m('uBtl')}`, amount: '8,600',  method: m('cash') },
+                  { name: m('n4'), qty: `1 ${m('uEa')}`,  amount: '35,000', method: 'M-Pesa'  },
                 ].map((tx, i) => (
                   <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={i === 0 ? neu.inset : {}}>
                     <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#10b981' }} />
@@ -154,30 +156,32 @@ function DashboardMockup() {
 
 // ── Mockup: POS ───────────────────────────────────────────────────────────────
 function PosMockup() {
+  const { t } = useTranslation();
+  const m = (k: string) => t(`landing.mock.${k}`);
   return (
     <div className="relative w-full max-w-lg mx-auto select-none">
       <div className="absolute inset-0 scale-95 translate-y-4 rounded-2xl blur-2xl" style={{ background: '#a6662420' }} />
       <div className="relative rounded-2xl overflow-hidden" style={{ ...neu.card, padding: 0 }}>
 
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200/60" style={{ background: '#E8EBF0' }}>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-stone-600">Point of Sale</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-stone-600">{m('pointOfSale')}</span>
           <div className="flex items-center gap-2">
             <span className="text-[9px] text-emerald-600 font-semibold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block" /> Online
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block" /> {m('online')}
             </span>
-            <span className="text-[9px] text-stone-400">Your Shop</span>
+            <span className="text-[9px] text-stone-400">{m('yourShop')}</span>
           </div>
         </div>
 
         <div className="flex h-60" style={{ background: '#E8EBF0' }}>
           <div className="flex-1 p-3 grid grid-cols-3 gap-2 content-start">
             {[
-              { name: 'Samsung Earphones', price: '45,000', qty: '184 ea',  highlight: true  },
-              { name: 'Blue Jeans 32',     price: '35,000', qty: '125 ea',  highlight: false },
-              { name: 'Cooking Oil 1L',    price: '4,300',  qty: '123 btl', highlight: false },
-              { name: 'Maize Flour 2kg',   price: '3,200',  qty: '107 kg',  highlight: false },
-              { name: 'Body Lotion 400ml', price: '12,500', qty: '39 ea',   highlight: false },
-              { name: 'Sugar 1kg',         price: '2,800',  qty: '88 kg',   highlight: false },
+              { name: m('n1'), price: '45,000', qty: `184 ${m('uEa')}`,  highlight: true  },
+              { name: m('n4'), price: '35,000', qty: `125 ${m('uEa')}`,  highlight: false },
+              { name: m('n3'), price: '4,300',  qty: `123 ${m('uBtl')}`, highlight: false },
+              { name: m('n2'), price: '3,200',  qty: `107 ${m('uKg')}`,  highlight: false },
+              { name: m('n5'), price: '12,500', qty: `39 ${m('uEa')}`,   highlight: false },
+              { name: m('n6'), price: '2,800',  qty: `88 ${m('uKg')}`,   highlight: false },
             ].map((p, i) => (
               <div key={i} className="rounded-xl p-2 cursor-pointer"
                 style={{ ...neu.card, ...(p.highlight ? neu.inset : {}), outline: p.highlight ? '2px solid #a66624' : 'none' }}>
@@ -190,12 +194,12 @@ function PosMockup() {
 
           <div className="w-36 flex flex-col border-l border-stone-200/60">
             <div className="px-3 py-2 border-b border-stone-200/60">
-              <p className="text-[9px] font-bold text-stone-700 uppercase tracking-widest">Cart (2)</p>
+              <p className="text-[9px] font-bold text-stone-700 uppercase tracking-widest">{m('cart')} (2)</p>
             </div>
             <div className="flex-1 px-2 py-2 space-y-1.5 overflow-hidden">
               {[
-                { name: 'Samsung Earphones', qty: 1, total: '45,000' },
-                { name: 'Maize Flour 2kg',   qty: 3, total: '9,600'  },
+                { name: m('n1'), qty: 1, total: '45,000' },
+                { name: m('n2'), qty: 3, total: '9,600'  },
               ].map((item, i) => (
                 <div key={i} className="p-1.5 rounded-lg" style={neu.card}>
                   <p className="text-[8px] font-medium text-stone-800 leading-tight">{item.name}</p>
@@ -208,11 +212,11 @@ function PosMockup() {
             </div>
             <div className="px-3 py-2 rounded-b-2xl text-white" style={{ background: 'linear-gradient(145deg,#434343,#1a1a1a)' }}>
               <div className="flex justify-between text-[8px] mb-1.5">
-                <span className="opacity-70">TOTAL</span>
+                <span className="opacity-70 uppercase">{m('total')}</span>
                 <span className="font-bold">54,600/=</span>
               </div>
               <div className="w-full rounded-lg text-center py-1 text-[8px] font-bold" style={{ background: '#a66624' }}>
-                Charge
+                {m('charge')}
               </div>
             </div>
           </div>
@@ -224,27 +228,29 @@ function PosMockup() {
 
 // ── Mockup: Products table ────────────────────────────────────────────────────
 function ProductsMockup() {
+  const { t } = useTranslation();
+  const m = (k: string, o?: Record<string, unknown>) => t(`landing.mock.${k}`, o ?? {});
   return (
     <div className="relative w-full max-w-xl mx-auto select-none">
       <div className="relative rounded-2xl overflow-hidden p-4 space-y-3" style={neu.card}>
         <div className="flex items-center justify-between">
-          <p className="text-xs font-bold text-stone-800">Products (312 items)</p>
+          <p className="text-xs font-bold text-stone-800">{m('productsCount', { n: 312 })}</p>
           <div className="flex gap-1.5">
-            <div className="px-2 py-1 rounded-lg text-[9px] font-semibold" style={neu.inset}>All</div>
-            <div className="px-2 py-1 rounded-lg text-[9px] text-stone-500">Active</div>
-            <div className="px-2 py-1 rounded-lg text-[9px] text-stone-500">Inactive</div>
+            <div className="px-2 py-1 rounded-lg text-[9px] font-semibold" style={neu.inset}>{m('all')}</div>
+            <div className="px-2 py-1 rounded-lg text-[9px] text-stone-500 capitalize">{m('active')}</div>
+            <div className="px-2 py-1 rounded-lg text-[9px] text-stone-500">{m('inactive')}</div>
           </div>
         </div>
 
         <div className="grid grid-cols-4 gap-2">
           {[
-            { label: 'Products',    value: '312',       warn: false },
-            { label: 'Total Items', value: '5,842 pcs', warn: false },
-            { label: 'Retail Value',value: '18.4M',     warn: false },
-            { label: 'Low / Out',   value: '8 / 3',     warn: true  },
-          ].map(({ label, value, warn }) => (
-            <div key={label} className="p-2 rounded-xl" style={neu.card}>
-              <p className="text-[7px] uppercase tracking-wider text-stone-400">{label}</p>
+            { k: 'products',    value: '312',                       warn: false },
+            { k: 'totalItems',  value: `5,842 ${m('items')}`,       warn: false },
+            { k: 'retailValue', value: '18.4M',                     warn: false },
+            { k: 'lowOut',      value: '8 / 3',                     warn: true  },
+          ].map(({ k, value, warn }) => (
+            <div key={k} className="p-2 rounded-xl" style={neu.card}>
+              <p className="text-[7px] uppercase tracking-wider text-stone-400">{m(k)}</p>
               <p className="text-[10px] font-bold mt-0.5" style={{ color: warn ? '#b91c1c' : '#1c1917' }}>{value}</p>
             </div>
           ))}
@@ -254,18 +260,18 @@ function ProductsMockup() {
           <table className="w-full text-[8px]">
             <thead>
               <tr className="border-b border-stone-200/60">
-                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold">Product</th>
-                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold hidden sm:table-cell">SKU</th>
-                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold">Price</th>
-                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold">Stock</th>
+                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold">{m('product')}</th>
+                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold hidden sm:table-cell">{m('sku')}</th>
+                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold">{m('price')}</th>
+                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold">{m('stock')}</th>
               </tr>
             </thead>
             <tbody>
               {[
-                { name: 'Samsung Earphones', sku: 'PRD-001', price: '45,000', stock: '184', unit: 'ea',  warn: false },
-                { name: 'Blue Jeans 32',     sku: 'PRD-002', price: '35,000', stock: '125', unit: 'ea',  warn: false },
-                { name: 'Cooking Oil 1L',    sku: 'PRD-003', price: '4,300',  stock: '5',   unit: 'btl', warn: true  },
-                { name: 'Maize Flour 2kg',   sku: 'PRD-004', price: '3,200',  stock: '107', unit: 'kg',  warn: false },
+                { name: m('n1'), sku: 'PRD-001', price: '45,000', stock: '184', unit: m('uEa'),  warn: false },
+                { name: m('n4'), sku: 'PRD-002', price: '35,000', stock: '125', unit: m('uEa'),  warn: false },
+                { name: m('n3'), sku: 'PRD-003', price: '4,300',  stock: '5',   unit: m('uBtl'), warn: true  },
+                { name: m('n2'), sku: 'PRD-004', price: '3,200',  stock: '107', unit: m('uKg'),  warn: false },
               ].map((p, i) => (
                 <tr key={i} className="border-b border-stone-100">
                   <td className="px-2 py-1.5 font-medium text-stone-800">{p.name}</td>
@@ -282,10 +288,10 @@ function ProductsMockup() {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-stone-200">
-                <td className="px-2 py-1.5 text-[7px] uppercase tracking-wide text-stone-400">Total</td>
+                <td className="px-2 py-1.5 text-[7px] uppercase tracking-wide text-stone-400">{m('total')}</td>
                 <td className="hidden sm:table-cell" />
                 <td />
-                <td className="px-2 py-1.5 font-bold text-stone-800 text-[9px]">5,842 units</td>
+                <td className="px-2 py-1.5 font-bold text-stone-800 text-[9px]">{m('units', { n: '5,842' })}</td>
               </tr>
             </tfoot>
           </table>
@@ -308,8 +314,22 @@ function Logo({ light = false }: { light?: boolean }) {
 }
 
 export default function LandingPage() {
+  const { t } = useTranslation();
   const scrollY = useScrollY();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Bullet lists are stored as p1…p5 rather than a JSON array, so that a
+  // half-translated file falls back to the English key instead of collapsing
+  // the whole list to nothing.
+  const bullets = (section: string, n: number) =>
+    Array.from({ length: n }, (_, i) => t(`landing.${section}.p${i + 1}`));
+
+  const NAV = [
+    ['features', '#features'],
+    ['who',      '#who'],
+    ['pricing',  '#pricing'],
+    ['install',  '#install'],
+  ] as const;
 
   return (
     <div className="min-h-screen text-stone-900 overflow-x-hidden" style={{ background: '#E8EBF0' }}>
@@ -320,18 +340,18 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Logo />
           <nav className="hidden md:flex items-center gap-8">
-            {[['Features','#features'],["Who It's For",'#who'],['Pricing','#pricing'],['Install','#install']].map(([item, href]) => (
-              <a key={item} href={href} className="text-sm text-stone-600 hover:text-stone-900 transition-colors">{item}</a>
+            {NAV.map(([k, href]) => (
+              <a key={k} href={href} className="text-sm text-stone-600 hover:text-stone-900 transition-colors">{t(`landing.nav.${k}`)}</a>
             ))}
           </nav>
           <div className="hidden md:flex items-center gap-3">
             <LanguageToggle />
-            <Link to="/login" className="btn-secondary py-2 px-5 text-[11px]">Sign In</Link>
-            <Link to="/register" className="btn-primary py-2 px-5 text-[11px]">Start Free Trial</Link>
+            <Link to="/login" className="btn-secondary py-2 px-5 text-[11px]">{t('landing.nav.signIn')}</Link>
+            <Link to="/register" className="btn-primary py-2 px-5 text-[11px]">{t('landing.hero.ctaPrimary')}</Link>
           </div>
           <div className="md:hidden flex items-center gap-2">
             <LanguageToggle />
-            <Link to="/login" className="btn-primary py-2 px-4 text-[11px]">Sign In</Link>
+            <Link to="/login" className="btn-primary py-2 px-4 text-[11px]">{t('landing.nav.signIn')}</Link>
             <button className="p-2 text-stone-600" onClick={() => setMobileOpen(o => !o)}>
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
@@ -339,12 +359,12 @@ export default function LandingPage() {
         </div>
         {mobileOpen && (
           <div className="md:hidden px-4 py-5 space-y-4 border-t border-stone-200" style={{ background: '#E8EBF0' }}>
-            {[['Features','#features'],["Who It's For",'#who'],['Pricing','#pricing'],['Install','#install']].map(([item, href]) => (
-              <a key={item} href={href} onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-stone-700 py-1">{item}</a>
+            {NAV.map(([k, href]) => (
+              <a key={k} href={href} onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-stone-700 py-1">{t(`landing.nav.${k}`)}</a>
             ))}
             <div className="pt-2 flex flex-col gap-3">
-              <Link to="/login" className="btn-secondary py-2.5 text-center" onClick={() => setMobileOpen(false)}>Sign In</Link>
-              <Link to="/register" className="btn-primary py-2.5 text-center" onClick={() => setMobileOpen(false)}>Start Free Trial</Link>
+              <Link to="/login" className="btn-secondary py-2.5 text-center" onClick={() => setMobileOpen(false)}>{t('landing.nav.signIn')}</Link>
+              <Link to="/register" className="btn-primary py-2.5 text-center" onClick={() => setMobileOpen(false)}>{t('landing.hero.ctaPrimary')}</Link>
             </div>
           </div>
         )}
@@ -357,33 +377,32 @@ export default function LandingPage() {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
                 style={{ ...neu.card, color: '#a66624' }}>
-                <Zap size={12} className="fill-amber-700" /> Built for all business types
+                <Zap size={12} className="fill-amber-700" /> {t('landing.hero.badge')}
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight mb-6">
-                Run your business
-                <span className="block" style={{ color: '#a66624' }}>smarter, faster</span>
-                <span className="block text-stone-400 font-light">every single day.</span>
+                {t('landing.hero.title1')}
+                <span className="block" style={{ color: '#a66624' }}>{t('landing.hero.title2')}</span>
+                <span className="block text-stone-400 font-light">{t('landing.hero.title3')}</span>
               </h1>
               <p className="text-lg text-stone-500 leading-relaxed mb-8 max-w-lg">
-                MauzoHalisi covers retail, restaurants, pharmacies, salons and more.
-                TRA receipts, real-time inventory, and a full Android POS are included from day one.
+                {t('landing.hero.subtitle')}
               </p>
               <div className="flex flex-wrap gap-3 mb-5">
                 <Link to="/register" className="btn-primary py-3 px-7">
-                  Start Free Trial <ArrowRight size={15} />
+                  {t('landing.hero.ctaPrimary')} <ArrowRight size={15} />
                 </Link>
                 <Link to="/login" className="btn-secondary py-3 px-7">
-                  Sign In <ChevronRight size={15} />
+                  {t('landing.hero.ctaSecondary')} <ChevronRight size={15} />
                 </Link>
               </div>
               <div className="flex flex-wrap items-center gap-6 text-xs text-stone-500">
                 {[
-                  { icon: Check,     text: '30-day free trial'       },
-                  { icon: Lock,      text: 'No credit card required' },
-                  { icon: RefreshCw, text: 'Cancel anytime'          },
-                ].map(({ icon: Icon, text }) => (
-                  <span key={text} className="flex items-center gap-1.5">
-                    <Icon size={12} className="text-emerald-600" />{text}
+                  { icon: Check,     k: 'trial'  },
+                  { icon: Lock,      k: 'noCard' },
+                  { icon: RefreshCw, k: 'cancel' },
+                ].map(({ icon: Icon, k }) => (
+                  <span key={k} className="flex items-center gap-1.5">
+                    <Icon size={12} className="text-emerald-600" />{t(`landing.hero.${k}`)}
                   </span>
                 ))}
               </div>
@@ -399,10 +418,10 @@ export default function LandingPage() {
       <section className="py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-3 gap-4">
-            {STATS.map(({ value, label }) => (
-              <div key={label} className="p-6 text-center rounded-2xl" style={neu.card}>
+            {STATS.map(({ value, k }) => (
+              <div key={k} className="p-6 text-center rounded-2xl" style={neu.card}>
                 <p className="text-3xl font-bold mb-1" style={{ color: '#a66624' }}>{value}</p>
-                <p className="text-xs text-stone-500">{label}</p>
+                <p className="text-xs text-stone-500">{t(`landing.stats.${k}`)}</p>
               </div>
             ))}
           </div>
@@ -413,21 +432,21 @@ export default function LandingPage() {
       <section id="features" className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>Platform Features</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Everything your business needs</h2>
+            <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>{t('landing.features.eyebrow')}</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t('landing.features.title')}</h2>
             <p className="text-stone-500 max-w-xl mx-auto">
-              One platform, set up for your business type. No plugins and no complicated configuration.
+              {t('landing.features.subtitle')}
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {FEATURES.map(({ icon: Icon, title, desc, color }) => (
-              <div key={title} className="p-6 rounded-2xl" style={neu.card}>
+            {FEATURES.map(({ icon: Icon, k, color }) => (
+              <div key={k} className="p-6 rounded-2xl" style={neu.card}>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
                   style={{ background: `${color}18`, color }}>
                   <Icon size={18} />
                 </div>
-                <h3 className="text-sm font-bold text-stone-900 mb-2">{title}</h3>
-                <p className="text-xs text-stone-500 leading-relaxed">{desc}</p>
+                <h3 className="text-sm font-bold text-stone-900 mb-2">{t(`landing.features.${k}T`)}</h3>
+                <p className="text-xs text-stone-500 leading-relaxed">{t(`landing.features.${k}D`)}</p>
               </div>
             ))}
           </div>
@@ -439,20 +458,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
             <div className="mb-12 lg:mb-0">
-              <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>Inventory Management</p>
-              <h2 className="text-3xl font-bold mb-4">Always know what you have in stock</h2>
+              <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>{t('landing.inventory.eyebrow')}</p>
+              <h2 className="text-3xl font-bold mb-4">{t('landing.inventory.title')}</h2>
               <p className="text-stone-500 leading-relaxed mb-6">
-                Track every unit across all your products. The table footer shows live totals for whatever you are searching.
-                Stock alerts turn amber when a product hits its reorder point and red when it runs out.
+                {t('landing.inventory.body')}
               </p>
               <ul className="space-y-3">
-                {[
-                  'Weighted average cost pricing updated on every restock',
-                  'Barcode scanning with a physical scanner or camera',
-                  'CSV bulk import and shipment receiving by name, SKU, or barcode',
-                  'Box-quantity entry for carton deliveries',
-                  'Low stock and out-of-stock counters always visible at the top',
-                ].map(item => (
+                {bullets('inventory', 5).map(item => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-stone-600">
                     <Check size={14} className="text-emerald-600 mt-0.5 shrink-0" />{item}
                   </li>
@@ -472,20 +484,13 @@ export default function LandingPage() {
               <PosMockup />
             </div>
             <div className="order-1 lg:order-2">
-              <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>Point of Sale</p>
-              <h2 className="text-3xl font-bold mb-4">Checkout in under 20 seconds</h2>
+              <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>{t('landing.pos.eyebrow')}</p>
+              <h2 className="text-3xl font-bold mb-4">{t('landing.pos.title')}</h2>
               <p className="text-stone-500 leading-relaxed mb-6">
-                The POS shows your full product list with live stock levels. Tap to add items, set the quantity,
-                apply a discount, and charge. The whole thing happens on one screen.
+                {t('landing.pos.body')}
               </p>
               <ul className="space-y-3">
-                {[
-                  'Cash, M-Pesa, card, and credit (debt) payments',
-                  'Sell above listed price for negotiated deals',
-                  'Receipt printed automatically on every sale',
-                  'Void or refund any transaction with one tap',
-                  'Debt tracking to record and collect customer balances',
-                ].map(item => (
+                {bullets('pos', 5).map(item => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-stone-600">
                     <Check size={14} className="text-emerald-600 mt-0.5 shrink-0" />{item}
                   </li>
@@ -500,22 +505,22 @@ export default function LandingPage() {
       <section id="who" className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>Business Types</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Built for your industry</h2>
+            <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>{t('landing.who.eyebrow')}</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t('landing.who.title')}</h2>
             <p className="text-stone-500 max-w-xl mx-auto">
-              Pick your business type when you sign up. MauzoHalisi sets up the right tools, tax settings, and workflows for you automatically.
+              {t('landing.who.subtitle')}
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {BUSINESS_TYPES.map(({ icon: Icon, label, desc }) => (
-              <div key={label} className="p-5 flex items-start gap-4 rounded-2xl" style={neu.card}>
+            {BUSINESS_TYPES.map(({ icon: Icon, k }) => (
+              <div key={k} className="p-5 flex items-start gap-4 rounded-2xl" style={neu.card}>
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                   style={{ background: '#a6662415', color: '#a66624' }}>
                   <Icon size={16} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-stone-900 leading-tight">{label}</p>
-                  <p className="text-xs text-stone-400 mt-0.5 leading-snug">{desc}</p>
+                  <p className="text-sm font-semibold text-stone-900 leading-tight">{t(`landing.who.${k}T`)}</p>
+                  <p className="text-xs text-stone-400 mt-0.5 leading-snug">{t(`landing.who.${k}D`)}</p>
                 </div>
               </div>
             ))}
@@ -527,23 +532,19 @@ export default function LandingPage() {
       <section className="py-24">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>Get Started</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Up and running in minutes</h2>
-            <p className="text-stone-500 max-w-lg mx-auto">No training needed. Just sign up and start selling.</p>
+            <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>{t('landing.steps.eyebrow')}</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t('landing.steps.title')}</h2>
+            <p className="text-stone-500 max-w-lg mx-auto">{t('landing.steps.subtitle')}</p>
           </div>
           <div className="grid lg:grid-cols-3 gap-6">
-            {[
-              { step: '01', title: 'Register your business', desc: 'Sign up and choose your business type. MauzoHalisi sets up the right settings and modules for you.' },
-              { step: '02', title: 'Set up your shop',       desc: 'Add your products, set prices, and enter your TIN. Import stock by CSV or receive a shipment. Your team can be up and running within an hour.' },
-              { step: '03', title: 'Start selling',          desc: 'Open the POS and start. Stock updates automatically, reports fill in on their own, and every sale prints a receipt.' },
-            ].map(({ step, title, desc }) => (
-              <div key={step} className="p-6 rounded-2xl" style={neu.card}>
+            {['1', '2', '3'].map(n => (
+              <div key={n} className="p-6 rounded-2xl" style={neu.card}>
                 <div className="w-12 h-12 rounded-xl text-white text-sm font-bold flex items-center justify-center mb-5"
                   style={{ background: 'linear-gradient(145deg,#434343,#1a1a1a)', boxShadow: '4px 4px 10px #c5cad3, -2px -2px 8px #ffffff' }}>
-                  {step}
+                  {`0${n}`}
                 </div>
-                <h3 className="text-base font-bold text-stone-900 mb-2">{title}</h3>
-                <p className="text-sm text-stone-500 leading-relaxed">{desc}</p>
+                <h3 className="text-base font-bold text-stone-900 mb-2">{t(`landing.steps.s${n}T`)}</h3>
+                <p className="text-sm text-stone-500 leading-relaxed">{t(`landing.steps.s${n}D`)}</p>
               </div>
             ))}
           </div>
@@ -555,20 +556,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
             <div>
-              <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>TRA Compliance</p>
-              <h2 className="text-3xl font-bold mb-4">Every sale prints a receipt automatically.</h2>
+              <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>{t('landing.receipt.eyebrow')}</p>
+              <h2 className="text-3xl font-bold mb-4">{t('landing.receipt.title')}</h2>
               <p className="text-stone-500 leading-relaxed mb-6">
-                Each receipt includes your shop name, address, TIN, VRN, itemised products, tax breakdown, and payment details.
-                Print it straight away or share it with the customer. No extra setup needed.
+                {t('landing.receipt.body')}
               </p>
               <ul className="space-y-3">
-                {[
-                  'Shop name, address and phone on every receipt',
-                  'TIN and VRN printed when configured',
-                  'Tax codes: A (18% VAT), C (Zero-rated), E (Exempt)',
-                  'Customer TIN field for B2B invoices',
-                  'Unique receipt number and timestamp on every sale',
-                ].map(item => (
+                {bullets('receipt', 5).map(item => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-stone-600">
                     <Check size={14} className="text-emerald-600 mt-0.5 shrink-0" />{item}
                   </li>
@@ -578,40 +572,40 @@ export default function LandingPage() {
             <div className="mt-12 lg:mt-0 flex justify-center">
               <div className="rounded-2xl overflow-hidden w-64 font-mono text-[10px]" style={neu.card}>
                 <div className="text-center py-2 text-[10px] tracking-widest text-stone-500 font-bold border-b border-stone-200">
-                  RECEIPT PREVIEW
+                  {t('landing.mock.receiptPreview')}
                 </div>
                 <div className="p-4 space-y-1 border-b border-dashed border-stone-300">
-                  <p className="text-center font-bold text-sm text-stone-900">YOUR SHOP NAME</p>
-                  <p className="text-center text-stone-500">Dar es Salaam, Tanzania</p>
-                  <p className="text-center text-stone-500">Tel: +255 7XX XXX XXX</p>
+                  <p className="text-center font-bold text-sm text-stone-900">{t('landing.mock.yourShopName')}</p>
+                  <p className="text-center text-stone-500">{t('landing.mock.city')}</p>
+                  <p className="text-center text-stone-500">{t('landing.mock.tel')}: +255 7XX XXX XXX</p>
                 </div>
                 <div className="p-4 space-y-1 border-b border-dashed border-stone-300">
                   <p className="text-center font-bold text-stone-800">TIN: 100-XXX-XXX</p>
                   <p className="text-center text-stone-500">VRN: 40-XXXXXX-A</p>
                 </div>
                 <div className="p-4 space-y-1 border-b border-dashed border-stone-300 text-stone-700">
-                  <div className="flex justify-between"><span>Date:</span><span>24/07/2026</span></div>
-                  <div className="flex justify-between"><span>Time:</span><span>10:15:44</span></div>
-                  <div className="flex justify-between font-bold"><span>Receipt:</span><span>RCP-0248</span></div>
+                  <div className="flex justify-between"><span>{t('landing.mock.date')}:</span><span>24/07/2026</span></div>
+                  <div className="flex justify-between"><span>{t('landing.mock.time')}:</span><span>10:15:44</span></div>
+                  <div className="flex justify-between font-bold"><span>{t('landing.mock.receipt')}:</span><span>RCP-0248</span></div>
                 </div>
                 <div className="p-4 space-y-1">
                   <div className="flex justify-between text-stone-400 text-[8px] mb-2">
-                    <span>ITEM</span><span>TC</span><span>AMOUNT</span>
+                    <span>{t('landing.mock.item')}</span><span>TC</span><span>{t('landing.mock.amount')}</span>
                   </div>
                   <div className="flex justify-between text-stone-700">
-                    <span className="flex-1">Samsung Earphones</span><span className="w-6 text-center">A</span><span>45,000</span>
+                    <span className="flex-1">{t('landing.mock.n1')}</span><span className="w-6 text-center">A</span><span>45,000</span>
                   </div>
                   <div className="flex justify-between text-stone-700">
-                    <span className="flex-1">Maize Flour 2kg</span><span className="w-6 text-center">E</span><span>9,600</span>
+                    <span className="flex-1">{t('landing.mock.n2')}</span><span className="w-6 text-center">E</span><span>9,600</span>
                   </div>
                   <div className="border-t border-dashed border-stone-300 mt-2 pt-2">
-                    <div className="flex justify-between font-bold text-sm text-stone-900"><span>TOTAL</span><span>TZS 54,600</span></div>
+                    <div className="flex justify-between font-bold text-sm text-stone-900"><span className="uppercase">{t('landing.mock.total')}</span><span>TZS 54,600</span></div>
                     <div className="flex justify-between text-stone-500 text-[8px] mt-1"><span>M-Pesa</span><span>54,600</span></div>
                   </div>
                 </div>
                 <div className="p-3 text-center text-[8px] text-stone-500 space-y-0.5 border-t border-stone-200">
-                  <p className="font-bold text-stone-700">ASANTE KWA KUNUNUA!</p>
-                  <p>Powered by MauzoHalisi</p>
+                  <p className="font-bold text-stone-700">{t('landing.mock.thanks')}</p>
+                  <p>{t('landing.mock.poweredBy')}</p>
                 </div>
               </div>
             </div>
@@ -623,13 +617,13 @@ export default function LandingPage() {
       <section id="pricing" className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>Pricing</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Plans for every stage of growth</h2>
-            <p className="text-stone-500 max-w-lg mx-auto">Start free. Upgrade when you are ready. No setup fees and no hidden charges.</p>
+            <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>{t('landing.pricing.eyebrow')}</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t('landing.pricing.title')}</h2>
+            <p className="text-stone-500 max-w-lg mx-auto">{t('landing.pricing.subtitle')}</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 items-start">
-            {PLANS.map(({ name, price, period, desc, highlight, features }) => (
-              <div key={name} className={`relative rounded-2xl p-6 flex flex-col ${highlight ? 'scale-105' : ''}`}
+            {PLANS.map(({ k, price, period, highlight }) => (
+              <div key={k} className={`relative rounded-2xl p-6 flex flex-col ${highlight ? 'scale-105' : ''}`}
                 style={highlight
                   ? { background: 'linear-gradient(145deg,#434343,#1a1a1a)', boxShadow: '8px 8px 20px #c5cad3, -8px -8px 20px #ffffff', borderRadius: '1rem' }
                   : neu.card}>
@@ -637,21 +631,23 @@ export default function LandingPage() {
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="inline-flex items-center gap-1 text-white text-[10px] font-bold px-3 py-1 rounded-full"
                       style={{ background: '#a66624' }}>
-                      <Star size={10} className="fill-white" /> Most Popular
+                      <Star size={10} className="fill-white" /> {t('landing.pricing.popular')}
                     </span>
                   </div>
                 )}
                 <div className="mb-5">
                   <p className="text-xs font-bold uppercase tracking-widest mb-2"
-                    style={{ color: highlight ? '#fbbf24' : '#a66624' }}>{name}</p>
+                    style={{ color: highlight ? '#fbbf24' : '#a66624' }}>{t(`landing.pricing.${k}T`)}</p>
                   <div className="flex items-baseline gap-1 mb-1">
-                    <span className={`text-2xl font-bold ${highlight ? 'text-white' : 'text-stone-900'}`}>{price}</span>
-                    <span className="text-xs text-stone-400">{period}</span>
+                    <span className={`text-2xl font-bold ${highlight ? 'text-white' : 'text-stone-900'}`}>
+                      {price ?? t(k === 'starter' ? 'landing.pricing.free' : 'landing.pricing.custom')}
+                    </span>
+                    <span className="text-xs text-stone-400">{t(`landing.pricing.${period}`)}</span>
                   </div>
-                  <p className={`text-xs leading-snug ${highlight ? 'text-stone-400' : 'text-stone-500'}`}>{desc}</p>
+                  <p className={`text-xs leading-snug ${highlight ? 'text-stone-400' : 'text-stone-500'}`}>{t(`landing.pricing.${k}D`)}</p>
                 </div>
                 <ul className="space-y-2.5 flex-1 mb-6">
-                  {features.map(f => (
+                  {(t(`landing.pricing.${k}F`, { returnObjects: true }) as string[]).map(f => (
                     <li key={f} className="flex items-start gap-2">
                       <Check size={13} className={`mt-0.5 shrink-0 ${highlight ? 'text-amber-400' : 'text-emerald-600'}`} />
                       <span className={`text-xs ${highlight ? 'text-stone-300' : 'text-stone-600'}`}>{f}</span>
@@ -663,7 +659,7 @@ export default function LandingPage() {
                   style={highlight
                     ? { background: '#a66624', color: 'white' }
                     : { background: '#E8EBF0', color: '#1c1917', boxShadow: '4px 4px 8px #c5cad3, -4px -4px 8px #ffffff' }}>
-                  {name === 'Enterprise' ? 'Contact Us' : 'Get Started'}
+                  {t(k === 'enterprise' ? 'landing.pricing.ctaEnterprise' : 'landing.pricing.cta')}
                 </Link>
               </div>
             ))}
@@ -676,34 +672,22 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
             <div>
-              <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>Install on Android</p>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Take MauzoHalisi with you.<br/>Install it like an app.</h2>
+              <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>{t('landing.install.eyebrow')}</p>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t('landing.install.title')}<br/>{t('landing.install.title2')}</h2>
               <p className="text-stone-500 leading-relaxed mb-8">
-                No Play Store, no APK files. Open the link in Chrome, tap <strong>"Add to Home Screen"</strong>,
-                and it installs in seconds. Full screen, fast, and always up to date.
+                {t('landing.install.body')}
               </p>
               <ul className="space-y-3 mb-10">
-                {[
-                  'Full POS: sell, collect payment, and print receipts',
-                  'Real-time stock and inventory updates',
-                  'Sales dashboard, reports, and customer management',
-                  'Works on any Android phone or tablet',
-                  'Updates automatically with no manual installs',
-                ].map(item => (
+                {bullets('install', 5).map(item => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-stone-600">
                     <Check size={14} className="text-emerald-600 mt-0.5 shrink-0" />{item}
                   </li>
                 ))}
               </ul>
               <div className="p-5 rounded-2xl" style={neu.card}>
-                <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-4">How to install</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-4">{t('landing.install.howTo')}</p>
                 <div className="space-y-3">
-                  {[
-                    'Open Chrome and go to the MauzoHalisi link',
-                    'Tap the three-dot menu in the top-right corner',
-                    'Tap "Add to Home screen" then "Add"',
-                    'The MauzoHalisi icon will appear on your home screen',
-                  ].map((text, i) => (
+                  {[1, 2, 3, 4].map(n => t(`landing.install.h${n}`)).map((text, i) => (
                     <div key={i} className="flex items-start gap-3">
                       <span className="w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0"
                         style={{ background: '#a66624' }}>{i + 1}</span>
@@ -721,28 +705,28 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1 p-3 space-y-2" style={{ background: '#E8EBF0' }}>
                   <div className="p-3 rounded-xl" style={neu.card}>
-                    <p className="text-[9px] uppercase tracking-widest text-stone-400">Sales Today</p>
+                    <p className="text-[9px] uppercase tracking-widest text-stone-400">{t('landing.mock.salesToday')}</p>
                     <p className="text-xl font-bold mt-0.5 text-stone-900">485,200<span className="text-xs font-normal text-stone-400 ml-1">TZS</span></p>
-                    <p className="text-[9px] text-emerald-600 mt-0.5">up 12% from yesterday</p>
+                    <p className="text-[9px] text-emerald-600 mt-0.5">{t('landing.mock.upFrom')}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="p-2.5 rounded-xl" style={neu.card}>
-                      <p className="text-[8px] text-stone-400">Transactions</p>
+                      <p className="text-[8px] text-stone-400">{t('landing.mock.transactions')}</p>
                       <p className="text-sm font-bold text-stone-900">47</p>
                     </div>
                     <div className="p-2.5 rounded-xl" style={neu.card}>
-                      <p className="text-[8px] text-stone-400">Items Sold</p>
+                      <p className="text-[8px] text-stone-400">{t('landing.mock.itemsSold')}</p>
                       <p className="text-sm font-bold text-stone-900">312</p>
                     </div>
                   </div>
                   <div className="p-2 rounded-xl text-center" style={neu.inset}>
-                    <p className="text-[9px] font-bold text-emerald-600">Installed as App</p>
+                    <p className="text-[9px] font-bold text-emerald-600">{t('landing.mock.installedAsApp')}</p>
                   </div>
                   <div className="space-y-1.5">
                     {[
-                      { name: 'Samsung Earphones', price: '45,000/=' },
-                      { name: 'Maize Flour 2kg',   price: '3,200/='  },
-                      { name: 'Cooking Oil 1L',    price: '4,300/='  },
+                      { name: t('landing.mock.n1'), price: '45,000/=' },
+                      { name: t('landing.mock.n2'), price: '3,200/='  },
+                      { name: t('landing.mock.n3'), price: '4,300/='  },
                     ].map(p => (
                       <div key={p.name} className="p-2 rounded-lg flex justify-between items-center" style={neu.card}>
                         <p className="text-[8px] text-stone-600 truncate">{p.name}</p>
@@ -763,19 +747,19 @@ export default function LandingPage() {
           <div className="p-10 rounded-2xl" style={neu.card}>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
               style={{ ...neu.inset, color: '#a66624' }}>
-              <TrendingUp size={12} /> Join businesses across Tanzania
+              <TrendingUp size={12} /> {t('landing.cta.badge')}
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to grow your business?</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t('landing.cta.title')}</h2>
             <p className="text-stone-500 mb-8 text-lg">
-              Start your free 30-day trial today. No credit card and no setup fees required.
+              {t('landing.cta.body')}
             </p>
             <div className="flex flex-wrap justify-center gap-4 mb-8">
-              <Link to="/register" className="btn-primary py-3.5 px-8">Create Free Account <ArrowRight size={16} /></Link>
-              <Link to="/login" className="btn-secondary py-3.5 px-8">Sign In</Link>
+              <Link to="/register" className="btn-primary py-3.5 px-8">{t('landing.cta.primary')} <ArrowRight size={16} /></Link>
+              <Link to="/login" className="btn-secondary py-3.5 px-8">{t('landing.cta.secondary')}</Link>
             </div>
             <div className="flex flex-wrap justify-center gap-6 text-xs text-stone-400">
-              {['30-day free trial', 'No credit card', 'Cancel anytime', 'Auto receipts'].map(t => (
-                <span key={t} className="flex items-center gap-1.5"><Check size={11} className="text-emerald-500" />{t}</span>
+              {(t('landing.cta.chips', { returnObjects: true }) as string[]).map(chip => (
+                <span key={chip} className="flex items-center gap-1.5"><Check size={11} className="text-emerald-500" />{chip}</span>
               ))}
             </div>
           </div>
@@ -789,42 +773,42 @@ export default function LandingPage() {
             <div className="sm:col-span-2 lg:col-span-1">
               <Logo />
               <p className="text-sm leading-relaxed text-stone-500 mt-4">
-                One platform for any type of business. Manage stock, sales, staff, and customers all in one place.
+                {t('landing.footer.tagline')}
               </p>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-stone-700 mb-4">Product</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-stone-700 mb-4">{t('landing.footer.product')}</p>
               <ul className="space-y-2.5">
-                {[['Features','#features'],['Pricing','#pricing'],['Install App','#install']].map(([l,h]) => (
-                  <li key={l}><a href={h} className="text-sm text-stone-500 hover:text-stone-900 transition-colors">{l}</a></li>
+                {([['features','#features'],['pricing','#pricing'],['installApp','#install']] as const).map(([k, h]) => (
+                  <li key={k}><a href={h} className="text-sm text-stone-500 hover:text-stone-900 transition-colors">{t(`landing.footer.${k}`)}</a></li>
                 ))}
               </ul>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-stone-700 mb-4">Industries</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-stone-700 mb-4">{t('landing.footer.industries')}</p>
               <ul className="space-y-2.5">
-                {['Retail & Wholesale','Pharmacy & Clinic','Restaurant & Café','Salon & Spa'].map(l => (
-                  <li key={l}><a href="#" className="text-sm text-stone-500 hover:text-stone-900 transition-colors">{l}</a></li>
+                {['i1','i2','i3','i4'].map(k => (
+                  <li key={k}><a href="#who" className="text-sm text-stone-500 hover:text-stone-900 transition-colors">{t(`landing.footer.${k}`)}</a></li>
                 ))}
               </ul>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-stone-700 mb-4">Company</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-stone-700 mb-4">{t('landing.footer.company')}</p>
               <ul className="space-y-2.5">
-                {([['About','/about'],['Contact','/contact'],['Privacy Policy','/privacy'],['Terms of Service','/terms']] as const).map(([l, to]) => (
+                {([['about','/about'],['contact','/contact'],['privacy','/privacy'],['terms','/terms']] as const).map(([k, to]) => (
                   <li key={to}>
-                    <Link to={to} className="text-sm text-stone-500 hover:text-stone-900 transition-colors">{l}</Link>
+                    <Link to={to} className="text-sm text-stone-500 hover:text-stone-900 transition-colors">{t(`landing.footer.${k}`)}</Link>
                   </li>
                 ))}
               </ul>
               <div className="mt-5">
-                <p className="text-xs text-stone-400 mb-1">Reach us</p>
+                <p className="text-xs text-stone-400 mb-1">{t('landing.footer.reach')}</p>
                 <p className="text-sm text-stone-700">info@mauzohalisi.com</p>
               </div>
             </div>
           </div>
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-stone-200/60">
-            <p className="text-xs text-stone-400">© 2026 MauzoHalisi. All rights reserved.</p>
+            <p className="text-xs text-stone-400">© {new Date().getFullYear()} MauzoHalisi. {t('landing.footer.rights')}</p>
           </div>
         </div>
       </footer>
