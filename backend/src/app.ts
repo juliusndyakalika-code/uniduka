@@ -64,8 +64,18 @@ const corsOrigin = allowedOrigins.length === 0
       // No Origin header on same-origin navigations, curl, and server-to-server
       // calls — those are not the cross-site requests CORS exists to police.
       if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ''))) return cb(null, true);
-      logger.warn(`CORS: blocked origin ${origin}`);
-      cb(new Error('Origin not allowed'));
+
+      // Withhold permission rather than raising. Passing an Error here sends it
+      // to the global handler, which logged "Unhandled error" and answered 500 —
+      // so any bot probing from a random origin looked like a server fault and
+      // buried real errors in the log.
+      //
+      // CORS is enforced by the browser: with no Access-Control-Allow-Origin
+      // header the browser refuses to expose the response, which is the whole
+      // mechanism. It was never a server-side guard — Origin is trivially forged
+      // by anything that is not a browser, so authentication does the real work.
+      logger.warn(`CORS: origin not allowed — ${origin}`);
+      cb(null, false);
     };
 
 export const io = new SocketServer(http, {
