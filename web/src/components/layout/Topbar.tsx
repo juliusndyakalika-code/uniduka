@@ -3,6 +3,7 @@ import { Menu, Bell, X, Package, Clock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { enablePush, pushSupported, permission as pushPermission } from '../../utils/push';
 
 interface Notification {
   id: string;
@@ -122,6 +123,8 @@ export default function Topbar({ onMenuClick }: Props) {
               </div>
             </div>
 
+            <PushRow />
+
             <div className="max-h-80 overflow-y-auto divide-y divide-stone-100">
               {notifications.length === 0 ? (
                 <div className="px-4 py-10 text-center">
@@ -163,5 +166,51 @@ export default function Topbar({ onMenuClick }: Props) {
         )}
       </div>
     </header>
+  );
+}
+
+/**
+ * Offer to switch on order alerts, shown only while they are actually off.
+ *
+ * Deliberately not asked on page load: an unprompted permission dialog is the
+ * fastest way to get a permanent "block", after which the browser will not ask
+ * again and the shop can never be alerted. Here the user has just opened the
+ * notification panel, so the request has a reason they can see.
+ */
+function PushRow() {
+  const [state, setState] = useState<'idle' | 'working' | 'on' | 'denied'>('idle');
+
+  const supported = pushSupported();
+  const perm = pushPermission();
+  if (!supported || perm === 'granted' || state === 'on') return null;
+
+  const blocked = perm === 'denied' || state === 'denied';
+
+  return (
+    <div className="px-4 py-3 border-b border-stone-100 bg-amber-50/60">
+      {blocked ? (
+        <p className="text-[11px] text-stone-500 leading-snug">
+          Order alerts are blocked for this site. Turn notifications back on in your
+          browser settings to be told about orders while the app is closed.
+        </p>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] text-stone-600 leading-snug">
+            Get told about new orders even when the app is closed.
+          </p>
+          <button
+            disabled={state === 'working'}
+            onClick={async () => {
+              setState('working');
+              const ok = await enablePush().catch(() => null);
+              setState(ok ? 'on' : 'denied');
+            }}
+            className="shrink-0 text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-stone-900 text-white disabled:opacity-50"
+          >
+            {state === 'working' ? 'Enabling…' : 'Turn on'}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

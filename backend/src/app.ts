@@ -37,6 +37,7 @@ import expensesRoutes   from './modules/expenses/expenses.routes';
 import storefrontRoutes from './modules/storefront/storefront.routes';
 import ordersRoutes     from './modules/orders/orders.routes';
 import invoicesRoutes   from './modules/invoices/invoices.routes';
+import notificationRoutes from './modules/notifications/notifications.routes';
 
 const app  = express();
 const http = createServer(app);
@@ -133,6 +134,7 @@ app.use(`${v1}/hotel`,        subscriptionGate, hotelRoutes);
 app.use(`${v1}/expenses`,     subscriptionGate, expensesRoutes);
 app.use(`${v1}/orders`,       subscriptionGate, ordersRoutes);
 app.use(`${v1}/invoices`,     subscriptionGate, invoicesRoutes);
+app.use(`${v1}/notifications`, subscriptionGate, notificationRoutes);
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/', (_, res) => res.json({ status: 'ok', service: 'MauzoHalisi API', version: '4.0.0' }));

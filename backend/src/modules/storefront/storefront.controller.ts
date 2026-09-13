@@ -15,6 +15,7 @@ import { prisma } from '../../core/prisma';
 import { io } from '../../app';
 import * as R from '../../utils/response';
 import { screenFields } from '../../core/profanity';
+import { pushToShop } from '../../core/push';
 
 const LOW_STOCK_THRESHOLD = 5;
 const ORDER_TTL_HOURS     = 48;
@@ -263,6 +264,17 @@ export async function placeOrder(req: Request, res: Response) {
       fulfilment: mode,
     });
   } catch { /* socket layer unavailable; the order still stands */ }
+
+  // The socket only reaches a tab that is already open. Push is what reaches a
+  // shop whose phone is in a pocket, which is the case that matters: an order
+  // nobody sees for an hour is a lost sale. Fire and forget for the same reason
+  // the emit above is wrapped — delivery is not worth failing a committed order.
+  void pushToShop(shop.id, {
+    title: `New order ${order.orderNo}`,
+    body:  `${String(buyerName).trim()} · ${shop.currency} ${order.total.toLocaleString()} · ${mode === 'DELIVERY' ? 'Delivery' : 'Pickup'}`,
+    url:   '/orders',
+    tag:   `order-${order.id}`,
+  }).catch(() => { /* logged inside pushToShop */ });
 
   // Enough to show a confirmation and compose the WhatsApp hand-off, nothing more.
   return R.created(res, {

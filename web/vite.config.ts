@@ -46,6 +46,9 @@ export default defineConfig({
       workbox: {
         clientsClaim: true,
         skipWaiting: true,
+        // Adds the push and notificationclick listeners to the generated worker.
+        // Kept out of line so the precache and caching rules stay generated.
+        importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
