@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.mauzohalisi.app",
+      "sha256_cert_fingerprints": [
+        "80:55:23:46:8B:62:FF:CE:79:6A:A1:F9:E1:FA:D2:76:59:7A:44:F8:7A:72:BB:F6:5F:5F:FB:96:34:2F:0C:F4"
+      ]
+    }
+  }
+]
