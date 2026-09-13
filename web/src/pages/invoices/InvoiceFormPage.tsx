@@ -507,7 +507,7 @@ export default function InvoiceFormPage() {
           <p className="text-[11px] text-stone-400 text-center">
             {overCommitted
               ? 'Reduce the highlighted quantities to save.'
-              : 'Saved as a draft. Your stock count does not change — it only moves when you mark the invoice delivered.'}
+              : 'Saved as a draft. Your stock count does not change. It only moves when you mark the invoice delivered.'}
           </p>
         </div>
       </div>

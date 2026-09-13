@@ -126,7 +126,7 @@ export default function Topbar({ onMenuClick }: Props) {
               {notifications.length === 0 ? (
                 <div className="px-4 py-10 text-center">
                   <Bell size={28} className="mx-auto text-stone-200 mb-2" />
-                  <p className="text-sm text-stone-400">All clear — no alerts</p>
+                  <p className="text-sm text-stone-400">All clear. No alerts</p>
                 </div>
               ) : (
                 notifications.map(n => {

@@ -25,8 +25,8 @@ export default function NoShopPrompt() {
         {account?.legalName ? `Welcome, ${account.legalName}` : 'Welcome'}
       </h1>
       <p className="text-stone-500 leading-relaxed mb-8">
-        Your account is ready. Add your first shop and you can start selling —
-        it takes about a minute, and everything is set up for your business type
+        Your account is ready. Add your first shop and you can start selling.
+        It takes about a minute, and everything is set up for your business type
         automatically.
       </p>
 

@@ -19,7 +19,7 @@ export default function TermsPage() {
       <Section title="Your account">
         <p>
           You are responsible for what happens under your account, including anything done by staff
-          you add. Give each person their own login rather than sharing one — it is the only way
+          you add. Give each person their own login rather than sharing one, because it is the only way
           the reports can tell you who sold what, and the only way to remove one person's access
           without disrupting everyone.
         </p>
@@ -32,7 +32,7 @@ export default function TermsPage() {
       <Section title="Trial, plans and payment">
         <p>
           New accounts start with a 30-day trial. No card is required and it does not roll into a
-          paid plan by itself — if you do nothing, access simply ends.
+          paid plan by itself. If you do nothing, access simply ends.
         </p>
         <p>
           Paid plans are billed in advance for the period chosen, in Tanzanian shillings. Fees are
@@ -47,7 +47,7 @@ export default function TermsPage() {
 
       <Section title="Your data is yours">
         <p>
-          Everything you put in — products, sales, customers, invoices — belongs to your business,
+          Everything you put in (products, sales, customers, invoices) belongs to your business,
           not to us. We claim no ownership and will not use it for anything beyond running the
           service for you.
         </p>
@@ -91,7 +91,7 @@ export default function TermsPage() {
 
       <Section title="What we are responsible for">
         <p>
-          We take accuracy seriously — it is the point of the product. But the figures the service
+          We take accuracy seriously. It is the point of the product. But the figures the service
           shows depend on what is entered into it, and it is not a substitute for your own
           bookkeeping or professional accounting and tax advice.
         </p>
@@ -127,7 +127,7 @@ export default function TermsPage() {
         <p>
           These terms are governed by the laws of the United Republic of Tanzania, and the courts
           of Tanzania have jurisdiction over any dispute. We would much rather settle a
-          disagreement by talking to you first — write to us and we will try.
+          disagreement by talking to you first. Write to us and we will try.
         </p>
       </Section>
 

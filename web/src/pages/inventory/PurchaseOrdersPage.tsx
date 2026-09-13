@@ -437,7 +437,7 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
 
               {poType === 'IMPORT' && (
                 <div>
-                  <h4 className="text-xs font-bold text-stone-600 uppercase tracking-widest mb-3">Estimated Costs (optional — update at import time)</h4>
+                  <h4 className="text-xs font-bold text-stone-600 uppercase tracking-widest mb-3">Estimated Costs (optional, update at import time)</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <div className="col-span-2 sm:col-span-1">
                       <label className="label">Exchange Rate (¥ → TZS) <span className="text-red-500">*</span></label>
@@ -471,7 +471,7 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
                   })}
                 </div>
                 <p className="text-[11px] text-stone-400 mt-1.5">
-                  {onCredit ? 'Recorded as owed to supplier — settle payments later.' : 'Supplier is paid in full at creation.'}
+                  {onCredit ? 'Recorded as owed to supplier. Settle payments later.' : 'Supplier is paid in full at creation.'}
                 </p>
               </div>
 
@@ -615,7 +615,7 @@ function NewPOModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
             <>
               <button onClick={onClose} className="btn-secondary">Cancel</button>
               <button onClick={goToStep2} className="btn-primary flex items-center gap-2">
-                Next — Upload CSV <ArrowRight size={14} />
+                Next: Upload CSV <ArrowRight size={14} />
               </button>
             </>
           )}
@@ -889,7 +889,7 @@ export default function PurchaseOrdersPage() {
           onImported={() => {
             qc.invalidateQueries({ queryKey: ['purchase-orders'] });
             setImportingPO(null);
-            setSuccess(`Shipment imported — PO ${importingPO.poNumber} marked as Received.`);
+            setSuccess(`Shipment imported. PO ${importingPO.poNumber} marked as Received.`);
             setTimeout(() => setSuccess(''), 5000);
           }}
         />

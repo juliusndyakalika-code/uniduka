@@ -25,7 +25,7 @@ const PAYMENT_METHODS = [
   { value: 'MOBILE_MONEY',  label: 'Mobile Money' },
   { value: 'CARD',          label: 'Card' },
   { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
-  { value: 'DEBIT',         label: 'Debit (Credit — pay later)' },
+  { value: 'DEBIT',         label: 'Debit (Credit, pay later)' },
 ];
 // Revenue and outstanding balance for a sale
 function saleRevenue(s: Sale) { return s.sellingPrice * s.qty; }
@@ -298,7 +298,7 @@ export default function ConsignmentPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('consignment.title')}</h1>
-          <p className="page-subtitle">Goods sold on behalf — record the profit when sold</p>
+          <p className="page-subtitle">Goods sold on behalf. Record the profit when sold</p>
         </div>
         <div className="flex gap-2">
           {tab === 'Partners' && isOwner && (
@@ -763,7 +763,7 @@ export default function ConsignmentPage() {
                         {customers.map(c => <option key={c.id} value={c.id}>{c.fullName}{c.phone ? ` · ${c.phone}` : ''}</option>)}
                       </select>
                       {customers.length === 0 && (
-                        <p className="text-[10px] text-amber-600 mt-1">No customers yet — tap “+ New customer” to add one.</p>
+                        <p className="text-[10px] text-amber-600 mt-1">No customers yet. Tap “+ New customer” to add one.</p>
                       )}
                     </>
                   )}

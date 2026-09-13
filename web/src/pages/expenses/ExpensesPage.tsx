@@ -140,7 +140,7 @@ export default function ExpensesPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Expenses</h1>
-          <p className="page-subtitle">Track operating costs — used to calculate net profit</p>
+          <p className="page-subtitle">Track operating costs, used to calculate net profit</p>
         </div>
         <button className="btn-primary text-xs" onClick={openAdd}>
           <Plus size={14} className="mr-1" /> Add Expense

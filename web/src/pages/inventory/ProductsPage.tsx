@@ -275,7 +275,7 @@ function AddStockModal({ product, error, saving, form, onSubmit, onClose }: AddS
           {/* Price fluctuation panel */}
           {costChanged && qty > 0 && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
-              <p className="text-xs font-semibold text-amber-800 uppercase tracking-widest">Cost changed — pricing review</p>
+              <p className="text-xs font-semibold text-amber-800 uppercase tracking-widest">Cost changed, pricing review</p>
 
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
@@ -709,7 +709,7 @@ export default function ProductsPage() {
 
                         {/* Edit — owners can always edit; others locked once product has sales */}
                         {p.inUse && !isOwner ? (
-                          <span className="p-1.5 text-stone-300 cursor-not-allowed" title="Cannot edit — product has sales history">
+                          <span className="p-1.5 text-stone-300 cursor-not-allowed" title="Cannot edit, product has sales history">
                             <Lock size={13} />
                           </span>
                         ) : (

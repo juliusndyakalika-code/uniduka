@@ -10,7 +10,7 @@ export default function ContactPage() {
   return (
     <PublicLayout
       title="Contact us"
-      intro="Questions about setting up, pricing, or getting your existing stock into the system — reach us however suits you."
+      intro="Questions about setting up, pricing, or getting your existing stock into the system. Reach us however suits you."
     >
       <div className="grid sm:grid-cols-2 gap-3">
         <a href={`mailto:${CONTACT.email}`} className="p-5 block hover:opacity-90 transition-opacity" style={neu.card}>

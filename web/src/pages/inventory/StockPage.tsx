@@ -62,7 +62,7 @@ function ProductCombobox({ products, value, onChange }: {
             <span className="text-xs text-stone-400 font-mono shrink-0">{selected.sku}</span>
           </div>
         ) : (
-          <span className="flex-1 text-sm text-stone-400 truncate">All products — filter for running balance</span>
+          <span className="flex-1 text-sm text-stone-400 truncate">All products. Filter for running balance</span>
         )}
         {value ? (
           <button

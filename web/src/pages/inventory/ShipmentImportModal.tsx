@@ -164,7 +164,7 @@ export default function ShipmentImportModal({ onClose, onImported, initialPoId }
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 flex-shrink-0">
           <div>
-            <h3 className="text-sm font-bold text-stone-900">Import Shipment — Landed Cost</h3>
+            <h3 className="text-sm font-bold text-stone-900">Import Shipment: Landed Cost</h3>
             <p className="text-xs text-stone-400 mt-0.5">
               {!preview ? 'Step 1 of 2 — Enter costs & upload products CSV' : 'Step 2 of 2 — Review calculated costs before importing'}
             </p>

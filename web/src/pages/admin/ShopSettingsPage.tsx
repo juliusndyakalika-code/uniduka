@@ -170,7 +170,7 @@ export default function ShopSettingsPage() {
         {!config.tin && (
           <div className="mb-4 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-start gap-2">
             <span className="font-bold mt-0.5">⚠</span>
-            <span>TIN is missing — enter your TIN to include it on receipts.</span>
+            <span>TIN is missing. Enter your TIN to include it on receipts.</span>
           </div>
         )}
 

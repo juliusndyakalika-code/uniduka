@@ -147,7 +147,7 @@ export default function SetupWizard() {
           <h1 className="text-2xl font-bold text-stone-900">
             {firstShop === false ? 'Add Another Shop' : 'Set Up Your Shop'}
           </h1>
-          <p className="text-sm text-stone-400 mt-1">Step {step} of 3 — {STEPS[step - 1].label}</p>
+          <p className="text-sm text-stone-400 mt-1">Step {step} of 3: {STEPS[step - 1].label}</p>
           {firstShop === false && (
             <button type="button" onClick={() => navigate(-1)}
               className="text-xs text-stone-400 hover:text-stone-600 mt-2 underline">
@@ -200,7 +200,7 @@ export default function SetupWizard() {
                   />
                   {errors.tradingName
                     ? <p className="mt-1 text-xs text-red-600">{errors.tradingName.message}</p>
-                    : <p className="mt-1 text-xs text-stone-400">The name your customers see — this prints on every receipt.</p>}
+                    : <p className="mt-1 text-xs text-stone-400">The name your customers see. This prints on every receipt.</p>}
                 </div>
                 <div>
                   <label className="label">Legal / Registered Name</label>
@@ -287,7 +287,7 @@ export default function SetupWizard() {
               <div>
                 <h2 className="text-lg font-bold text-stone-900 mb-1">Business Type</h2>
                 <p className="text-xs text-stone-400 mb-2">
-                  Choosing a type loads a pre-built configuration — inventory model, modules, units, and tax defaults.
+                  Choosing a type loads a pre-built configuration: inventory model, modules, units, and tax defaults.
                   This cannot be changed after setup.
                 </p>
               </div>

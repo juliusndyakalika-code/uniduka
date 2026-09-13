@@ -675,7 +675,7 @@ export default function HotelPage() {
                   Reserved for <strong>{showCheckIn.reservation!.guestName}</strong> from <strong>{format(resDate!, 'MMM d')}</strong>.
                   {maxNights > 0
                     ? ` Max ${maxNights} night${maxNights !== 1 ? 's' : ''} for a walk-in today.`
-                    : ' Room is reserved starting today — walk-in check-in not available.'}
+                    : ' Room is reserved starting today, so walk-in check-in is not available.'}
                 </div>
               )}
               {(maxNights === undefined || maxNights > 0) && (
@@ -847,7 +847,7 @@ export default function HotelPage() {
             )}
             {showFolio.checkOut && (
               <div className={`text-center text-sm font-medium py-2 rounded-lg ${showFolio.isPaid ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                {showFolio.isPaid ? `Checked out · Paid via ${PM_LABELS[showFolio.paymentMethod ?? ''] ?? showFolio.paymentMethod}` : 'Checked out — Payment pending (Debt)'}
+                {showFolio.isPaid ? `Checked out · Paid via ${PM_LABELS[showFolio.paymentMethod ?? ''] ?? showFolio.paymentMethod}` : 'Checked out. Payment pending (Debt)'}
               </div>
             )}
           </div>
@@ -912,7 +912,7 @@ export default function HotelPage() {
           <div className="card w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-bold text-stone-900">Reservation — Room #{showReservation.room.roomNo}</h3>
+                <h3 className="font-bold text-stone-900">Reservation: Room #{showReservation.room.roomNo}</h3>
                 <p className="text-xs text-stone-500">{showReservation.room.roomType}</p>
               </div>
               <button onClick={() => setShowReservation(null)} className="text-stone-400"><X size={18} /></button>
@@ -977,7 +977,7 @@ export default function HotelPage() {
       {/* Payment modal (checkout or settle) */}
       {paymentTarget && (
         <PaymentModal
-          title={paymentTarget.mode === 'checkout' ? 'Check Out & Pay' : `Settle Debt — ${paymentTarget.folio.guestName}`}
+          title={paymentTarget.mode === 'checkout' ? 'Check Out & Pay' : `Settle Debt: ${paymentTarget.folio.guestName}`}
           total={paymentTarget.folio.grandTotal}
           isPending={checkingOut || settling}
           onCancel={() => setPaymentTarget(null)}

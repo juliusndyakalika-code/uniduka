@@ -13,12 +13,12 @@ export default function PrivacyPage() {
           Two different relationships run through this service, and the difference matters.
         </p>
         <p>
-          For <strong>your own account</strong> — your name, email, shop details and billing — we
+          For <strong>your own account</strong> (your name, email, shop details and billing) we
           decide how that information is handled, and we are answerable for it.
         </p>
         <p>
           For <strong>the records you enter</strong> — your customers, their phone numbers, what
-          they bought, what they owe — you decide. We hold and process that on your instruction.
+          they bought, what they owe. You decide. We hold and process that on your instruction.
           It is your data. We do not sell it, mine it, or use it to build anything of our own, and
           we do not look at it except when you ask us to help with a problem.
         </p>
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
       <Section title="What stays on your device">
         <p>
           Your browser keeps a sign-in token so you are not asked for a password on every page, your
-          language choice, and — on a storefront — the shopping basket until the order is placed.
+          language choice, and, on a storefront, the shopping basket until the order is placed.
           Clearing your browser data removes all of it and signs you out.
         </p>
       </Section>
@@ -97,7 +97,7 @@ export default function PrivacyPage() {
 
       <Section title="How long we keep it">
         <p>
-          While your account is open, we keep your data so the service works — and because your
+          While your account is open, we keep your data so the service works, and because your
           sales history is a business record you may be required to retain.
         </p>
         <p>
@@ -116,7 +116,7 @@ export default function PrivacyPage() {
         </p>
         <p>
           Where your customers ask you for the same things about their data, you are the one who
-          answers — and we will help you do it.
+          answers, and we will help you do it.
         </p>
       </Section>
 

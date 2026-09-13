@@ -925,7 +925,7 @@ export default function PosPage() {
                     <AlertTriangle size={12} className="mt-0.5 shrink-0" />
                     {selectedCustomer
                       ? <span><strong>{fmt(splitBalance)}</strong> will be recorded as credit for <strong>{selectedCustomer.fullName}</strong>, collected later.</span>
-                      : <span><strong>Customer required</strong> for the {fmt(splitBalance)} balance — select or add a customer above.</span>}
+                      : <span><strong>Customer required</strong> for the {fmt(splitBalance)} balance. Select or add a customer above.</span>}
                   </div>
                 )}
               </div>

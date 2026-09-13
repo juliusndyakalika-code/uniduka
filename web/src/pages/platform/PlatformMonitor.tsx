@@ -226,7 +226,7 @@ export default function PlatformMonitor() {
 
       {/* Hourly Transaction Chart */}
       <div className="card p-5">
-        <h2 className="text-sm font-bold text-stone-900 mb-1">Transactions — Last 24 Hours</h2>
+        <h2 className="text-sm font-bold text-stone-900 mb-1">Transactions in the Last 24 Hours</h2>
         <p className="text-xs text-stone-400 mb-4">Completed sales across all shops</p>
         {isLoading ? (
           <div className="h-48 bg-stone-100 rounded-lg animate-pulse" />
@@ -254,7 +254,7 @@ export default function PlatformMonitor() {
       {/* Revenue chart */}
       {!isLoading && hourlyChart.some(h => h.revenue > 0) && (
         <div className="card p-5">
-          <h2 className="text-sm font-bold text-stone-900 mb-1">Revenue — Last 24 Hours (TZS)</h2>
+          <h2 className="text-sm font-bold text-stone-900 mb-1">Revenue in the Last 24 Hours (TZS)</h2>
           <p className="text-xs text-stone-400 mb-4">Across all shops</p>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={hourlyChart} barSize={10}>

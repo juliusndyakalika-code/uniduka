@@ -130,7 +130,7 @@ export default function MyAccountPage() {
             <label className="label flex items-center gap-1"><Phone size={12} /> Phone Number</label>
             <input {...profileForm.register('phone')} type="tel" className="input" placeholder="+255 7XX XXX XXX" />
           </div>
-          <p className="text-[11px] text-stone-400">Email or phone is required — you use these to log in.</p>
+          <p className="text-[11px] text-stone-400">Email or phone is required. You use these to log in.</p>
           <button type="submit" disabled={savingProfile} className="btn-primary">
             {savingProfile ? <Loader2 size={13} className="animate-spin" /> : 'Save Changes'}
           </button>

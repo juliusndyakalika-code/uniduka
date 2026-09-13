@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import { listCustomers, getCustomer, createCustomer, updateCustomer, deleteCustomer, getCustomerHistory } from './crm.controller';
-import { authenticate, authorize } from '../../middleware/auth';
+import { authenticate, authorize, requireShop } from '../../middleware/auth';
 const router = Router();
-router.use(authenticate);
+// Every handler here scopes by req.user.shopId. Without this guard that is
+// undefined when the account has no active shop, and Prisma DROPS an
+// undefined `where` clause — so the query returns rows across all tenants
+// instead of none. Enforce the shop rather than relying on the `!` in
+// `shop(req)`, which TypeScript erases at runtime.
+router.use(authenticate, requireShop);
 router.get('/',           listCustomers);
 router.post('/',          createCustomer);
 router.get('/:id',        getCustomer);

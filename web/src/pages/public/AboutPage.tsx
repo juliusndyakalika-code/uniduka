@@ -19,7 +19,7 @@ export default function AboutPage() {
       <Section title="Halisi means real">
         <p>
           Most business software promises to be clever. We would rather be accurate. A shopkeeper
-          does not need a prediction about next quarter — they need to know whether the twelve
+          does not need a prediction about next quarter. They need to know whether the twelve
           crates in the store room are really twelve, and whether yesterday took more than the day
           before.
         </p>
@@ -61,7 +61,7 @@ export default function AboutPage() {
         <p>
           MauzoHalisi is built in Tanzania for businesses working in Tanzania. Prices in shillings,
           receipts that satisfy the taxman, M-Pesa and Airtel Money alongside cash, Kiswahili and
-          English throughout, and a working day that starts at midnight where you are — not where a
+          English throughout, and a working day that starts at midnight where you are, not where a
           server happens to sit.
         </p>
       </Section>

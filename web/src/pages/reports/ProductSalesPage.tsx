@@ -132,7 +132,7 @@ export default function ProductSalesPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Sales by Product</h1>
-          <p className="page-subtitle">Every sale line-item — product, seller, price, time</p>
+          <p className="page-subtitle">Every sale line-item: product, seller, price, time</p>
         </div>
         <button onClick={exportCsv} disabled={!data?.rows.length} className="btn-secondary text-xs">
           <Download size={13} className="mr-1" /> Export CSV
