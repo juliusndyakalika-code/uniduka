@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../core/prisma';
 import { AuthRequest, JwtPayload } from '../../types';
 import * as R from '../../utils/response';
@@ -34,7 +35,20 @@ export async function register(req: Request, res: Response, next: NextFunction) 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return R.conflict(res, 'Email already registered');
 
+    // Phone is a login identifier — User.phone is unique and `login` accepts a
+    // phone as the username — so a duplicate has to be refused. Match against
+    // every stored format rather than just the normalised one: accounts created
+    // before normalisation existed hold values like 0712345678, and checking
+    // only +255712345678 would miss them and let the insert fail as a 500.
     const phone = rawPhone ? normalizePhone(rawPhone) : undefined;
+    if (rawPhone) {
+      const taken = await prisma.user.findFirst({
+        where: { phone: { in: phoneVariants(rawPhone) } },
+        select: { id: true },
+      });
+      if (taken) return R.conflict(res, 'That phone number is already registered');
+    }
+
     const passwordHash = await bcrypt.hash(password, 12);
 
     // STARTER plan → 30-day free trial; higher plans need admin activation
@@ -69,7 +83,18 @@ export async function register(req: Request, res: Response, next: NextFunction) 
         daysRemaining,
       },
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    // Two people registering the same phone or email at the same moment both
+    // clear the checks above, and whoever loses hits the unique index. So does
+    // an OwnerAccount holding an email no User row carries. Either way it is a
+    // 409 the form can show, not the opaque 500 the generic handler returns.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      const field = (err.meta?.target as string[] | undefined)?.[0];
+      const label = field === 'phone' ? 'phone number' : field === 'email' ? 'email' : 'account';
+      return R.conflict(res, `That ${label} is already registered`);
+    }
+    next(err);
+  }
 }
 
 // POST /api/v1/auth/login
