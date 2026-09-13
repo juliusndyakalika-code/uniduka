@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { CheckCircle2, ChevronRight, ChevronLeft, Store, MapPin, Layers, Loader2 } from 'lucide-react';
@@ -41,9 +41,31 @@ interface WizardForm {
 export default function SetupWizard() {
   const navigate = useNavigate();
   const { setShopId: storeSetShopId, account } = useAuthStore();
-  const { register, getValues, formState: { errors }, trigger } = useForm<WizardForm>({
+  const { register, getValues, formState: { errors }, trigger, reset } = useForm<WizardForm>({
     defaultValues: { country: 'TZ', currency: 'TZS', timezone: 'Africa/Dar_es_Salaam', city: 'Dar es Salaam' },
   });
+
+  // Shop creation is no longer welded to registration, so the wizard serves two
+  // cases and they want different defaults. For the account's first shop the
+  // business name typed at signup is almost always the shop name too, so both
+  // fields are filled in and the owner just taps through. For a second shop the
+  // trading name is by definition different, but the registered entity behind it
+  // is the same — so only the legal name carries over.
+  const [firstShop, setFirstShop] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    api.get('/shops')
+      .then(r => {
+        if (!live) return;
+        const isFirst = (r.data.data?.length ?? 0) === 0;
+        setFirstShop(isFirst);
+        const name = account?.legalName ?? '';
+        if (name) reset(vals => ({ ...vals, legalName: name, ...(isFirst && { tradingName: name }) }));
+      })
+      .catch(() => { if (live) setFirstShop(true); });
+    return () => { live = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [step, setStep]               = useState(1);
   const [businessType, setBusinessType] = useState('');
@@ -122,8 +144,16 @@ export default function SetupWizard() {
             <LogoMark size={24} />
             <span className="text-xl font-bold">Mauzo<span className="text-primary-600">Halisi</span></span>
           </div>
-          <h1 className="text-2xl font-bold text-stone-900">Register Your Shop</h1>
+          <h1 className="text-2xl font-bold text-stone-900">
+            {firstShop === false ? 'Add Another Shop' : 'Set Up Your Shop'}
+          </h1>
           <p className="text-sm text-stone-400 mt-1">Step {step} of 3 — {STEPS[step - 1].label}</p>
+          {firstShop === false && (
+            <button type="button" onClick={() => navigate(-1)}
+              className="text-xs text-stone-400 hover:text-stone-600 mt-2 underline">
+              Cancel
+            </button>
+          )}
         </div>
 
         {/* Step indicator */}
@@ -168,11 +198,16 @@ export default function SetupWizard() {
                     placeholder="e.g. Mama Ntilie Fresh"
                     autoFocus
                   />
-                  {errors.tradingName && <p className="mt-1 text-xs text-red-600">{errors.tradingName.message}</p>}
+                  {errors.tradingName
+                    ? <p className="mt-1 text-xs text-red-600">{errors.tradingName.message}</p>
+                    : <p className="mt-1 text-xs text-stone-400">The name your customers see — this prints on every receipt.</p>}
                 </div>
                 <div>
                   <label className="label">Legal / Registered Name</label>
                   <input {...register('legalName')} className="input" placeholder="e.g. Mama Ntilie Catering Ltd" />
+                  <p className="mt-1 text-xs text-stone-400">
+                    Appears on tax invoices. Leave blank if the business is not registered.
+                  </p>
                 </div>
                 <div>
                   <label className="label">Contact Email</label>

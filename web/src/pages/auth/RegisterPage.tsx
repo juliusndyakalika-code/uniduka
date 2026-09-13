@@ -24,7 +24,10 @@ export default function RegisterPage() {
       const res = await api.post('/auth/register', data);
       const { accessToken, refreshToken, user, account } = res.data.data;
       setAuth(accessToken, user, account, undefined, refreshToken);
-      navigate('/setup/wizard');
+      // Straight into the app. Shop setup used to be bolted onto the end of
+      // registration, which made signing up a six-step form before anyone had
+      // seen the product. Layout prompts for a shop the moment a page needs one.
+      navigate('/dashboard');
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Registration failed');
     } finally { setLoading(false); }
