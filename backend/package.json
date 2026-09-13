@@ -33,6 +33,7 @@
     "socket.io": "^4.7.5",
     "speakeasy": "^2.0.0",
     "uuid": "^9.0.1",
+    "web-push": "^3.6.7",
     "winston": "^3.13.0",
     "xss": "^1.0.15"
   },
@@ -49,6 +50,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/speakeasy": "^2.0.10",
     "@types/uuid": "^9.0.8",
+    "@types/web-push": "^3.6.4",
     "prisma": "^5.14.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",

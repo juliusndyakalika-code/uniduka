@@ -351,6 +351,7 @@ model Shop {
   orders              Order[]
   invoices            Invoice[]
   docSequences        DocumentSequence[]
+  pushSubscriptions   PushSubscription[]
 
   @@map("shops")
 }
@@ -413,16 +414,17 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  shopAccess       UserShopAccess[]
-  transactions     Transaction[]
-  auditLogs        AuditLog[]
-  appointments     Appointment[]     @relation("StaffAppointments")
-  consignmentSales ConsignmentSale[]
-  timeClocks       TimeClock[]
-  stockMovements   StockMovement[]
-  inventoryImports InventoryImport[]
-  Invoice          Invoice[]
-  InvoicePayment   InvoicePayment[]
+  shopAccess        UserShopAccess[]
+  transactions      Transaction[]
+  auditLogs         AuditLog[]
+  appointments      Appointment[]      @relation("StaffAppointments")
+  consignmentSales  ConsignmentSale[]
+  timeClocks        TimeClock[]
+  stockMovements    StockMovement[]
+  inventoryImports  InventoryImport[]
+  Invoice           Invoice[]
+  InvoicePayment    InvoicePayment[]
+  pushSubscriptions PushSubscription[]
 
   @@map("users")
 }
@@ -1421,4 +1423,37 @@ model SupportTicket {
   updatedAt      DateTime     @updatedAt
 
   @@map("support_tickets")
+}
+
+// A browser or installed-app push endpoint, one row per device per user.
+//
+// The endpoint URL is the identity: the same person on a phone and a laptop is
+// two rows, and re-subscribing on the same device returns the same endpoint, so
+// it is unique rather than accumulating duplicates that would deliver the same
+// alert several times.
+//
+// Scoped to a shop as well as a user, because staff can be moved between shops
+// and should stop hearing about orders for a shop they no longer work in.
+model PushSubscription {
+  id       String @id @default(cuid())
+  endpoint String @unique
+
+  // Encryption material from the browser's PushSubscription. Without both, the
+  // payload cannot be encrypted and the send fails.
+  p256dh String
+  auth   String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  shopId String?
+  shop   Shop?   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  @@index([shopId])
+  @@index([userId])
+  @@map("push_subscriptions")
 }

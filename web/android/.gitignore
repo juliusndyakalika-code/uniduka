@@ -1,0 +1,21 @@
+# Gradle / build outputs
+build/
+app/build/
+.gradle/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.idsig
+
+# Copied from web dist at `cap sync`, never edited by hand
+app/src/main/assets/public/
+app/src/main/assets/capacitor.config.json
+app/src/main/assets/capacitor.plugins.json
+
+# Signing material lives in ~/.mauzohalisi-signing
+*.keystore
+*.jks
+keystore-password.txt

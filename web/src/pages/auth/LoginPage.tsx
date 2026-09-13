@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -12,13 +12,21 @@ interface Form { username: string; password: string; totp?: string; }
 
 export default function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm<Form>();
-  const { setAuth } = useAuthStore();
+  const { setAuth, token, user: currentUser } = useAuthStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [need2fa, setNeed2fa] = useState(false);
+
+  // Someone already signed in has no business on this screen. It matters most
+  // in the Android app, which opens straight here: without this the owner would
+  // be shown a login form on every launch despite an active session.
+  useEffect(() => {
+    if (!token) return;
+    navigate(currentUser?.role === 'PLATFORM_ADMIN' ? '/platform' : '/dashboard', { replace: true });
+  }, [token, currentUser, navigate]);
 
   async function onSubmit(data: Form) {
     setLoading(true); setError('');
