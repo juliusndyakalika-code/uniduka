@@ -1,0 +1,13 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Only the launch window. Everything after this is Compose. -->
+    <style name="Theme.MauzoHalisi.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/brand_ground</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.MauzoHalisi</item>
+    </style>
+    <style name="Theme.MauzoHalisi" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/brand_ground</item>
+        <item name="android:navigationBarColor">@color/brand_ground</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+    </style>
+</resources>

@@ -1,0 +1,12 @@
+build/
+app/build/
+.gradle/
+local.properties
+captures/
+*.apk
+*.aab
+*.idsig
+# Signing material lives in ~/.mauzohalisi-signing
+*.keystore
+*.jks
+keystore-password.txt
