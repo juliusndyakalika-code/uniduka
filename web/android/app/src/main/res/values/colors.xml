@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same palette as the web app, so the fallback does not look like a
+         different product from the screen it replaces. -->
+    <color name="brand_ground">#E8EBF0</color>
+    <color name="brand_ochre">#B0682C</color>
+    <color name="brand_ink">#1C1917</color>
+    <color name="brand_muted">#78716C</color>
+    <color name="brand_faint">#A8A29E</color>
+    <color name="brand_white">#FFFFFF</color>
+</resources>

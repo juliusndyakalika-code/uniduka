@@ -56,3 +56,29 @@ reset by Google.
 Package name is `com.mauzohalisi.app` and cannot be changed after the first
 upload. Unlike the TWA, no `assetlinks.json` entry is required for the app to
 render full screen; the file is still served and is harmless.
+
+## Connection failures
+
+The WebView loads the live site, so a shop with no signal would otherwise get a
+blank white screen with nothing to tap. `MainActivity` puts a native screen over
+the WebView when a main-frame load fails, saying what happened and offering a
+retry.
+
+It is native, not a bundled HTML error page, on purpose: when the WebView cannot
+load anything, a page served to that same WebView is the least trustworthy thing
+to depend on.
+
+Three details that only showed up by running it:
+
+* `BridgeActivity` does not inflate `activity_main.xml`, so a view declared there
+  is never created and `findViewById` returns null, which crashed the app on
+  launch. The fallback is inflated over `android.R.id.content` at runtime instead.
+* `onPageFinished` fires even for a failed navigation, so a plain hide-on-finish
+  would dismiss the error screen for the very load that failed. A `loadFailed`
+  flag gates it.
+* Only main-frame failures count. A missing image or a blocked font must not
+  replace a working till.
+
+The wording distinguishes no signal from a server that is down, because the two
+need different actions from the shop. Retrying loads the start URL rather than
+calling `reload()`, which on a page that never loaded would retry `about:blank`.

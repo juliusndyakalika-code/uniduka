@@ -4,4 +4,12 @@
     <string name="title_activity_main">MauzoHalisi</string>
     <string name="package_name">com.mauzohalisi.app</string>
     <string name="custom_url_scheme">com.mauzohalisi.app</string>
+
+    <!-- Offline / connection-failure fallback -->
+    <string name="offline_title">No connection</string>
+    <string name="offline_body">MauzoHalisi could not reach the internet. Your sales and stock are safe on the server; nothing is lost.</string>
+    <string name="offline_body_server">MauzoHalisi is not responding right now. Your sales and stock are safe; nothing is lost.</string>
+    <string name="offline_hint">Check mobile data or Wi\u2011Fi, then try again.</string>
+    <string name="offline_retry">TRY AGAIN</string>
+    <string name="offline_retrying">CONNECTING\u2026</string>
 </resources>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Added over Capacitor's view at runtime rather than declared in
+  activity_main.xml: BridgeActivity builds its own hierarchy, so anything
+  written into that file is never inflated and findViewById returns null.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/offline_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/brand_ground"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:paddingStart="36dp"
+    android:paddingEnd="36dp"
+    android:visibility="gone"
+    android:clickable="true"
+    android:focusable="true">
+
+    <View
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:background="@drawable/bg_offline_badge"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/offline_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/offline_title"
+        android:textColor="@color/brand_ink"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/offline_body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/offline_body"
+        android:textColor="@color/brand_muted"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginTop="10dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/offline_hint"
+        android:textColor="@color/brand_faint"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:layout_marginTop="14dp" />
+
+    <TextView
+        android:id="@+id/offline_retry"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/offline_retry"
+        android:textColor="@color/brand_white"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.12"
+        android:background="@drawable/bg_retry_button"
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp"
+        android:paddingTop="15dp"
+        android:paddingBottom="15dp"
+        android:layout_marginTop="32dp"
+        android:clickable="true"
+        android:focusable="true" />
+</LinearLayout>

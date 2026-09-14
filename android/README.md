@@ -1,3 +1,17 @@
+# PARKED
+
+This native rewrite is **not the app being shipped**. After seeing what a
+full rewrite costs — a dozen screens still to build, and every feature built
+twice from then on — the decision went back to the WebView shell in
+`web/android`, which already has every feature the web has.
+
+Kept rather than deleted because it is a working foundation (login, session,
+token refresh, dashboard, POS) if a genuinely native screen is ever wanted,
+for instance a printing or scanning flow that the web cannot reach. Nothing
+depends on it and it is not built by CI.
+
+---
+
 # MauzoHalisi Android (native)
 
 Kotlin and Jetpack Compose. No WebView and no Chromium: every screen is a real
