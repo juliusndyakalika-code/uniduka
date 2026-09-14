@@ -1,6 +1,9 @@
 package com.mauzohalisi.app;
 
 import android.graphics.Bitmap;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.os.Bundle;
@@ -45,6 +48,9 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Must precede super.onCreate: the bridge is built there, and a plugin
+        // registered afterwards is not visible to the page.
+        registerPlugin(ThermalPrinterPlugin.class);
         super.onCreate(savedInstanceState);
 
         // Inflated over Capacitor's own view hierarchy. BridgeActivity does not
@@ -81,7 +87,10 @@ public class MainActivity extends BridgeActivity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (!loadFailed) hideOffline();
+                if (!loadFailed) {
+                    hideOffline();
+                    injectPrinterBridge(view);
+                }
             }
 
             @Override
@@ -105,6 +114,25 @@ public class MainActivity extends BridgeActivity {
             }
         };
         webView.setWebViewClient(existing);
+    }
+
+    /**
+     * Re-points the web app's receipt printing at the Bluetooth printer.
+     *
+     * Injected rather than added to the web app so the site stays a plain web
+     * app: opened in a browser it prints through the browser, and only inside
+     * the shell does it reach the printer.
+     */
+    private void injectPrinterBridge(WebView view) {
+        try (InputStream in = getAssets().open("printer-bridge.js")) {
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] chunk = new byte[4096];
+            int read;
+            while ((read = in.read(chunk)) != -1) buffer.write(chunk, 0, read);
+            view.evaluateJavascript(buffer.toString("UTF-8"), null);
+        } catch (IOException e) {
+            // Printing falls back to the browser dialog; not worth failing a load.
+        }
     }
 
     private void showOffline() {

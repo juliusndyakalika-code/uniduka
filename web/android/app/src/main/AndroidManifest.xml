@@ -40,4 +40,18 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Lets the fallback tell "no signal" apart from "server is down". -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Thermal receipt printing over Bluetooth SPP. From Android 12 these are
+         runtime permissions; below it the legacy pair are install-time and are
+         capped with maxSdkVersion so newer devices do not ask for location. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <!-- The app is useful without a printer, so this must not filter it off
+         Play for devices that have no Bluetooth hardware. -->
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
 </manifest>

@@ -82,3 +82,58 @@ Three details that only showed up by running it:
 The wording distinguishes no signal from a server that is down, because the two
 need different actions from the shop. Retrying loads the start URL rather than
 calling `reload()`, which on a page that never loaded would retry `about:blank`.
+
+## Thermal receipt printing
+
+Bluetooth ESC/POS printing, in `ThermalPrinterPlugin.java` and `EscPos.java`.
+The web app cannot reach these printers itself: Web Bluetooth does not cover the
+Serial Port Profile they speak, and is unavailable in a WebView anyway.
+
+**The web app needs no change.** `printer-bridge.js` is injected by the shell and
+re-points the existing receipt printing at the printer. Opened in a browser the
+site still prints through the browser; only inside the shell does it reach the
+roll.
+
+Printers must be paired in Android Bluetooth settings first. Pairing means a PIN
+prompt owned by the system, and a second pairing flow here would be a worse copy
+of it. The first print offers a choice of paired devices, and remembers it.
+
+### Why innerText, and why tabs matter
+
+The receipt is an HTML table, and `innerText` separates table cells with tabs.
+So a line arrives as `Sukari 1kg\t2 kg\tA\t6,000`, not as prose. `EscPos` treats
+the last cell as the amount and pins it to the right margin:
+
+```
+12345678901234567890123456789012  <- 58mm fits 32
+Sukari 1kg 2 kg A          6,000
+Mafuta ya Kupikia ya Alizeti 1L
+1 btl A                    8,000
+TOTAL (TZS)               18,500
+```
+
+Wrapping those rows as if they were sentences pushes the amount onto a line of
+its own, which is how a receipt ends up with a column of orphaned numbers. A
+long product name wraps and the amount stays with it.
+
+Printers silently truncate anything wider than the paper, so a total can lose
+its last digit with no error. Width is enforced here rather than trusted to the
+device.
+
+### Patching insertion, not observing it
+
+The bridge wraps `appendChild` and friends to patch a print iframe synchronously
+at insertion. A `MutationObserver` alone is a microtask, so an iframe appended
+and printed in the same task is never patched. The web app happens to print
+400ms later, so an observer would usually work — but a receipt reaching the
+printer should not depend on winning that race. The observer stays as a backstop.
+
+### Tested and untested
+
+Verified on the emulator: the plugin registers, the bridge injects, the
+permission flow works, `listDevices` returns cleanly with none paired, and a
+print iframe is intercepted and routed to the printer rather than the browser
+dialog. The ESC/POS output is covered by a harness over `EscPos` alone.
+
+**Not tested against a physical printer.** There is no Bluetooth hardware on an
+emulator. Connecting to a real 58mm or 80mm ESC/POS unit is the remaining step.
