@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mauzohalisi.app.core.net.Product
+import androidx.compose.ui.graphics.graphicsLayer
+import com.mauzohalisi.app.ui.components.NeuField
 import com.mauzohalisi.app.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
@@ -47,13 +49,13 @@ fun PosScreen(vm: PosViewModel, onBack: () -> Unit) {
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = NeuGround,
         topBar = {
             TopAppBar(
                 title = { Text("Point of Sale", style = MaterialTheme.typography.titleMedium) },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background),
+                    containerColor = NeuGround),
             )
         },
         bottomBar = {
@@ -74,12 +76,12 @@ fun PosScreen(vm: PosViewModel, onBack: () -> Unit) {
                                  style = MaterialTheme.typography.titleLarge)
                         }
                         Spacer(Modifier.height(12.dp))
-                        Button(
-                            onClick = { vm.charge() },
-                            enabled = !s.charging,
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Ochre),
-                            modifier = Modifier.fillMaxWidth().height(54.dp),
+                        Box(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                                .background(Ochre)
+                                .clickable(enabled = !s.charging) { vm.charge() }
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center,
                         ) {
                             if (s.charging) {
                                 CircularProgressIndicator(strokeWidth = 2.dp,
@@ -87,7 +89,9 @@ fun PosScreen(vm: PosViewModel, onBack: () -> Unit) {
                                     modifier = Modifier.size(18.dp))
                             } else {
                                 Text("CHARGE  ·  TSh ${money.format(s.total)}",
-                                     fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                     color = androidx.compose.ui.graphics.Color.White,
+                                     fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
+                                     letterSpacing = 1.5.sp)
                             }
                         }
                     }
@@ -97,12 +101,11 @@ fun PosScreen(vm: PosViewModel, onBack: () -> Unit) {
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
 
-            OutlinedTextField(
+            NeuField(
                 value = s.search,
                 onValueChange = vm::onSearch,
-                placeholder = { Text("Search product or SKU") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = "Search product or SKU",
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
             )
 
             s.error?.let {
@@ -154,12 +157,12 @@ fun PosScreen(vm: PosViewModel, onBack: () -> Unit) {
 @Composable
 private fun ProductTile(p: Product, onTap: () -> Unit) {
     val out = !p.sellable
-    Card(
-        onClick = onTap,
-        enabled = !out,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier.height(112.dp),
+    Box(
+        Modifier
+            .height(116.dp)
+            .neuRaised(radius = 16.dp)
+            .clickable(enabled = !out) { onTap() }
+            .graphicsLayer { alpha = if (out) 0.55f else 1f },
     ) {
         Column(Modifier.padding(12.dp).fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
             Text(p.name, style = MaterialTheme.typography.bodyMedium,
@@ -184,10 +187,7 @@ private fun CartRow(
     name: String, qty: Double, unit: String, total: Double,
     onMinus: () -> Unit, onPlus: () -> Unit, onRemove: () -> Unit,
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
+    Box(Modifier.fillMaxWidth().neuRaised(radius = 14.dp)) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)

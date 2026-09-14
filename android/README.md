@@ -30,6 +30,28 @@ Override with `MAUZO_API_BASE=https://… ./gradlew assembleDebug`. Release alwa
 uses production and permits no cleartext; the debug-only network security config
 is what allows plain HTTP to localhost.
 
+## Matching the web
+
+The app deliberately mirrors the web app's look, so the two read as one product.
+`ui/theme/Neu.kt` ports the neumorphic style from `web/src/index.css`:
+
+```
+.card  box-shadow: 8px 8px 20px #c5cad3, -8px -8px 20px #ffffff
+.input-box  inset 4px 4px 8px #c5cad3, inset -4px -4px 8px #ffffff
+```
+
+Compose has no two-tone shadow, so each half is drawn by hand. The effect only
+works on a ground of exactly `#E8EBF0`, which is why the palette fixes it rather
+than leaving it to a Material surface token, and why dynamic colour is off.
+
+`ui/components/Common.kt` carries the rest: `.btn-primary` as the dark gradient
+pill, `.input-box`, `.page-title`, `.label`, `.badge`.
+
+Screens read from the same endpoints the web does. The dashboard uses
+`/tenant/dashboard`, not `/reporting/dashboard`: both exist and return different
+shapes, and using the other one meant the app and the web could disagree about
+the same day's takings.
+
 ## Structure
 
 ```

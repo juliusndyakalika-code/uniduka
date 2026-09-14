@@ -67,29 +67,56 @@ data class RefreshRequest(val refreshToken: String)
 data class RefreshResponse(val accessToken: String? = null, val refreshToken: String? = null)
 
 /**
- * Field names here are the ones /reporting/dashboard actually returns. They were
- * originally guessed, and because kotlinx falls back to defaults for absent keys
- * the screen showed a confident set of zeros over real sales rather than failing.
+ * /tenant/dashboard, which is the endpoint the web dashboard uses and therefore
+ * the one whose figures the two platforms must agree on. /reporting/dashboard
+ * exists too and returns a flatter, different shape; using it here meant the app
+ * and the web could disagree about the same day.
  */
 @Serializable
-data class TopProduct(val productId: String? = null, val name: String? = null)
+data class Money(val today: Double = 0.0, val week: Double = 0.0, val month: Double = 0.0)
+
+@Serializable
+data class Counts(val today: Int = 0, val week: Int = 0)
+
+@Serializable
+data class CustomerCounts(val total: Int = 0, @SerialName("new") val fresh: Int = 0)
+
+@Serializable
+data class NetProfit(
+    val month: Double = 0.0,
+    val grossProfit: Double = 0.0,
+    val consignmentProfit: Double = 0.0,
+    val expenses: Double = 0.0,
+)
+
+@Serializable
+data class TopProduct(val name: String = "", val qty: Double = 0.0, val revenue: Double = 0.0)
+
+@Serializable
+data class RecentTx(
+    val id: String = "",
+    val receiptNo: String? = null,
+    val total: Double = 0.0,
+    val paymentMethod: String = "CASH",
+    val createdAt: String? = null,
+)
+
+@Serializable
+data class ChartPoint(val label: String = "", val revenue: Double = 0.0)
 
 @Serializable
 data class DashboardStats(
-    val revenue: Double = 0.0,
-    val tax: Double = 0.0,
-    val discounts: Double = 0.0,
-    val transactions: Int = 0,
-    val customers: Int = 0,
-    val products: Int = 0,
+    val revenue: Money = Money(),
+    val netProfit: NetProfit = NetProfit(),
+    val transactions: Counts = Counts(),
+    val customers: CustomerCounts = CustomerCounts(),
+    val lowStock: Int = 0,
+    val stockValue: Double = 0.0,
     val topProducts: List<TopProduct> = emptyList(),
+    val recentTransactions: List<RecentTx> = emptyList(),
+    val salesChart: List<ChartPoint> = emptyList(),
 )
 
-/**
- * A product as the API sends it. `stock` and `sellingPrice` are added by the
- * server on top of the stored row, and `sellPrice` is the stored column; both
- * are present, and sellingPrice is the one the till should charge.
- */
 @Serializable
 data class Product(
     val id: String,

@@ -16,7 +16,8 @@ interface Api {
     @POST("shops/active")
     suspend fun setActiveShop(@Body body: ActiveShopRequest): Response<Envelope<ActiveShopResponse>>
 
-    @GET("reporting/dashboard")
+    // The same endpoint the web dashboard calls, so both show identical figures.
+    @GET("tenant/dashboard")
     suspend fun dashboard(): Response<Envelope<DashboardStats>>
 
     @GET("inventory/products")
