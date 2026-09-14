@@ -7,6 +7,7 @@ import java.io.InputStream;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.os.Bundle;
+import androidx.activity.OnBackPressedCallback;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -63,6 +64,8 @@ public class MainActivity extends BridgeActivity {
         offlineBody = offlineView.findViewById(R.id.offline_body);
         retryButton = offlineView.findViewById(R.id.offline_retry);
 
+        setUpBackHandling();
+
         final WebView webView = getBridge().getWebView();
 
         retryButton.setOnClickListener(v -> {
@@ -89,7 +92,8 @@ public class MainActivity extends BridgeActivity {
             public void onPageFinished(WebView view, String url) {
                 if (!loadFailed) {
                     hideOffline();
-                    injectPrinterBridge(view);
+                    inject(view, "navigation-bridge.js");
+                    inject(view, "printer-bridge.js");
                 }
             }
 
@@ -117,14 +121,14 @@ public class MainActivity extends BridgeActivity {
     }
 
     /**
-     * Re-points the web app's receipt printing at the Bluetooth printer.
+     * Runs one of the shell's bridge scripts in the page.
      *
      * Injected rather than added to the web app so the site stays a plain web
-     * app: opened in a browser it prints through the browser, and only inside
-     * the shell does it reach the printer.
+     * app: opened in a browser it behaves like a website, and only inside the
+     * shell does it print to a roll or skip the landing page.
      */
-    private void injectPrinterBridge(WebView view) {
-        try (InputStream in = getAssets().open("printer-bridge.js")) {
+    private void inject(WebView view, String asset) {
+        try (InputStream in = getAssets().open(asset)) {
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             byte[] chunk = new byte[4096];
             int read;
@@ -133,6 +137,37 @@ public class MainActivity extends BridgeActivity {
         } catch (IOException e) {
             // Printing falls back to the browser dialog; not worth failing a load.
         }
+    }
+
+    /**
+     * Back should move through the app, not out of it.
+     *
+     * Capacitor's default walks WebView history, which still holds entries the
+     * app must not return to, and once that history runs out the app closes.
+     * Closing on back from the dashboard means a cashier who taps back once
+     * mid-shift loses the till.
+     *
+     * The page handles the press and reports whether it did, because the
+     * WebView's own back-forward list does not track this SPA: it reported two
+     * entries and canGoBack() false at once, so every back closed the app. When
+     * the page has nowhere useful to go, the app goes to the background the way
+     * the home button would, so it is still running when they return.
+     */
+    private void setUpBackHandling() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (offlineView != null && offlineView.getVisibility() == View.VISIBLE) {
+                    moveTaskToBack(true);
+                    return;
+                }
+                WebView web = getBridge().getWebView();
+                web.evaluateJavascript(
+                    "(function(){ try { return !!(window.__mauzoHandleBack && window.__mauzoHandleBack()); }"
+                        + " catch (e) { return false; } })()",
+                    value -> { if (!"true".equals(value)) moveTaskToBack(true); });
+            }
+        });
     }
 
     private void showOffline() {

@@ -137,3 +137,32 @@ dialog. The ESC/POS output is covered by a harness over `EscPos` alone.
 
 **Not tested against a physical printer.** There is no Bluetooth hardware on an
 emulator. Connecting to a real 58mm or 80mm ESC/POS unit is the remaining step.
+
+## Staying out of the landing page, and the back button
+
+The site serves `/` to sell the product to someone who has not signed up. In the
+app that person has already installed it, so landing there is a dead end wearing
+a Start Free Trial button.
+
+Two paths lead there, and neither is a page load, so the native
+`shouldOverrideUrlLoading` hook never sees them:
+
+* `App.tsx` sends every unmatched path to `/`
+* the Privacy and Terms pages link back to `/` from their logo
+
+Both are React Router `pushState` navigations, so `navigation-bridge.js` guards
+them in the page: `pushState`, `replaceState` and `popstate` are all checked, and
+landing on `/` does a full load of `/login`, or `/dashboard` when signed in. A
+full load rather than a history rewrite, because rewriting the URL underneath
+React Router leaves its own location state on `/` and it keeps rendering the
+landing page at a URL that says otherwise.
+
+Back is handled by the page, not by `WebView.goBack()`. The WebView's own
+back-forward list does not track this SPA: it reported **two entries and
+`canGoBack()` false at the same time**, so every back press fell through to
+closing the app. `history.length` in the page is the router's real history and is
+correct, so `__mauzoHandleBack()` decides and tells the shell whether it acted.
+
+From `/login` or `/dashboard` there is nowhere useful to go back to, so the app
+moves to the background the way the home button would. Closing outright would
+mean a cashier who taps back once mid-shift loses the till.
