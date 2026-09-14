@@ -18,4 +18,14 @@ interface Api {
 
     @GET("reporting/dashboard")
     suspend fun dashboard(): Response<Envelope<DashboardStats>>
+
+    @GET("inventory/products")
+    suspend fun products(
+        @Query("limit") limit: Int = 200,
+        @Query("active") active: String = "true",
+        @Query("search") search: String? = null,
+    ): Response<Envelope<List<Product>>>
+
+    @POST("pos/transactions")
+    suspend fun sell(@Body body: SaleRequest): Response<Envelope<SaleResponse>>
 }

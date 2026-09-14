@@ -84,3 +84,54 @@ data class DashboardStats(
     val products: Int = 0,
     val topProducts: List<TopProduct> = emptyList(),
 )
+
+/**
+ * A product as the API sends it. `stock` and `sellingPrice` are added by the
+ * server on top of the stored row, and `sellPrice` is the stored column; both
+ * are present, and sellingPrice is the one the till should charge.
+ */
+@Serializable
+data class Product(
+    val id: String,
+    val name: String,
+    val sku: String? = null,
+    val barcode: String? = null,
+    val unit: String = "ea",
+    val sellPrice: Double = 0.0,
+    val sellingPrice: Double = 0.0,
+    val stock: Double = 0.0,
+    val isActive: Boolean = true,
+    val type: String = "PRODUCT",
+    val trackStock: Boolean = true,
+) {
+    val price: Double get() = if (sellingPrice > 0) sellingPrice else sellPrice
+
+    /** A service has nothing to run out of, so it is always sellable. */
+    val sellable: Boolean get() = type == "SERVICE" || !trackStock || stock > 0
+}
+
+@Serializable
+data class SaleItem(
+    val productId: String,
+    val quantity: Double,
+    val unitPrice: Double,
+    val unitLabel: String = "ea",
+)
+
+@Serializable
+data class SalePayment(val method: String, val amount: Double)
+
+@Serializable
+data class SaleRequest(
+    val items: List<SaleItem>,
+    val payments: List<SalePayment>,
+    val customerId: String? = null,
+    val discountAmount: Double = 0.0,
+)
+
+@Serializable
+data class SaleResponse(
+    val id: String? = null,
+    val receiptNo: String? = null,
+    val total: Double = 0.0,
+)

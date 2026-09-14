@@ -62,9 +62,18 @@ rendering with no shop name against an unscoped token.
 * Session storage with silent token refresh on 401
 * Automatic shop selection
 * Dashboard: revenue, transactions, customers, products
+* Point of sale: product grid with live stock, search, cart, cash charge
+
+Quantities are held as Double throughout. A grocery sells 1.5 kg and a pharmacy
+doses in millilitres; the stored column is a float, so rounding in the client
+would invent a restriction the system does not have. The web POS does round, and
+that is a bug there, not a rule to copy.
 
 ## Not built yet
 
-Everything else: POS, inventory, invoices, reports, customers, expenses,
-hotel, KDS. Each is a screen to write by hand, since none of the React UI
-carries over.
+Inventory, invoices, reports, customers, expenses, hotel, KDS. Each is a screen
+to write by hand, since none of the React UI carries over.
+
+Within the POS: split tenders, mobile money, selling on credit, discounts,
+barcode scanning, receipt printing and offline queueing. The current till takes
+one cash payment for the full amount.

@@ -3,6 +3,8 @@ package com.mauzohalisi.app.feature.dashboard
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -18,7 +20,7 @@ private data class Tile(val label: String, val value: String, val note: String, 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(app: AppContainer, onSignOut: () -> Unit) {
+fun DashboardScreen(app: AppContainer, onOpenPos: () -> Unit, onSignOut: () -> Unit) {
     var shopName by remember { mutableStateOf<String?>(null) }
     var userName by remember { mutableStateOf<String?>(null) }
     var tiles by remember { mutableStateOf<List<Tile>>(emptyList()) }
@@ -53,6 +55,17 @@ fun DashboardScreen(app: AppContainer, onSignOut: () -> Unit) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        floatingActionButton = {
+            // Selling is what this app is opened for, so it gets the one control
+            // that is always reachable regardless of how far the page has scrolled.
+            ExtendedFloatingActionButton(
+                onClick = onOpenPos,
+                containerColor = Ochre,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                text = { Text("SELL", fontWeight = FontWeight.Bold) },
+                icon = { Icon(Icons.Filled.ShoppingCart, contentDescription = null) },
+            )
+        },
         topBar = {
             TopAppBar(
                 title = {

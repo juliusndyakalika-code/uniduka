@@ -2,9 +2,11 @@ package com.mauzohalisi.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -14,6 +16,8 @@ import com.mauzohalisi.app.core.AppContainer
 import com.mauzohalisi.app.feature.auth.LoginScreen
 import com.mauzohalisi.app.feature.auth.LoginViewModel
 import com.mauzohalisi.app.feature.dashboard.DashboardScreen
+import com.mauzohalisi.app.feature.pos.PosScreen
+import com.mauzohalisi.app.feature.pos.PosViewModel
 import com.mauzohalisi.app.ui.theme.MauzoTheme
 import kotlinx.coroutines.launch
 
@@ -43,7 +47,22 @@ class MainActivity : ComponentActivity() {
                     }
                     true  -> {
                         val scope = rememberCoroutineScope()
-                        DashboardScreen(app) { scope.launch { app.session.clear() } }
+                        // Two screens so far, so a back-stack library would be more
+                        // machinery than routing. Navigation Compose goes in when a
+                        // third screen needs deep links or arguments.
+                        var atPos by rememberSaveable { mutableStateOf(false) }
+                        BackHandler(enabled = atPos) { atPos = false }
+
+                        if (atPos) {
+                            val vm: PosViewModel = viewModel(factory = factory { PosViewModel(app) })
+                            PosScreen(vm) { atPos = false }
+                        } else {
+                            DashboardScreen(
+                                app = app,
+                                onOpenPos = { atPos = true },
+                                onSignOut = { scope.launch { app.session.clear() } },
+                            )
+                        }
                     }
                 }
             }
