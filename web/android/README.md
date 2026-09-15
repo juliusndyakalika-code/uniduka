@@ -170,12 +170,18 @@ mean a cashier who taps back once mid-shift loses the till.
 ## Getting a build onto a phone
 
 ```bash
-cd web && npx cap sync android              # Node 22 for the CLI
-cd android && ./gradlew assembleRelease     # JDK 21 for Gradle
+./release.sh            # build only
+./release.sh 1.1.0      # bump version, build, publish to GitHub Releases
 ```
 
-Produces `app/build/outputs/apk/release/app-release.apk`, signed with the
-upload key from `~/.mauzohalisi-signing`.
+Passing a version bumps `versionCode` too, since Play rejects a repeat, and
+publishes the APK to GitHub Releases so it can be downloaded straight onto a
+phone. Builds are signed with the upload key from `~/.mauzohalisi-signing`.
+
+Latest: https://github.com/juliusndyakalika-code/uniduka/releases
+
+The repository is public, so release assets download with no sign-in. The
+keystore lives outside the repo and no `.env` is tracked; keep it that way.
 
 **Over USB.** Enable Developer options (Settings, About phone, tap Build number
 seven times), turn on USB debugging, plug in, accept the prompt on the phone:
