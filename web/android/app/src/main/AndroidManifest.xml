@@ -41,6 +41,15 @@
     <!-- Lets the fallback tell "no signal" apart from "server is down". -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Barcode scanning. The web app calls getUserMedia, and a WebView cannot
+         reach the camera without this declared, so scanning failed in the
+         installed app while working fine in a browser. Not required, because a
+         shop can type a barcode and the app must stay installable on a handset
+         with no camera. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
     <!-- Thermal receipt printing over Bluetooth SPP. From Android 12 these are
          runtime permissions; below it the legacy pair are install-time and are
          capped with maxSdkVersion so newer devices do not ask for location. -->
