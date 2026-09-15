@@ -166,3 +166,29 @@ correct, so `__mauzoHandleBack()` decides and tells the shell whether it acted.
 From `/login` or `/dashboard` there is nowhere useful to go back to, so the app
 moves to the background the way the home button would. Closing outright would
 mean a cashier who taps back once mid-shift loses the till.
+
+## Getting a build onto a phone
+
+```bash
+cd web && npx cap sync android              # Node 22 for the CLI
+cd android && ./gradlew assembleRelease     # JDK 21 for Gradle
+```
+
+Produces `app/build/outputs/apk/release/app-release.apk`, signed with the
+upload key from `~/.mauzohalisi-signing`.
+
+**Over USB.** Enable Developer options (Settings, About phone, tap Build number
+seven times), turn on USB debugging, plug in, accept the prompt on the phone:
+
+```bash
+adb devices                 # the phone should be listed as "device"
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+**Without a cable.** Send the `.apk` to the phone by WhatsApp, email or Drive and
+open it. Android asks to allow installs from that app the first time; the setting
+is per-app and only needs granting once.
+
+A release build and a debug build are signed with different keys, so Android
+refuses to install one over the other. Uninstall first when switching between
+them.
