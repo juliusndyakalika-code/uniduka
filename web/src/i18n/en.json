@@ -170,7 +170,8 @@
     "managePlan": "Manage",
     "plan": "{{plan}} plan",
     "netProfitMonth": "Net Profit (This Month)",
-    "stockInvestment": "Stock Investment"
+    "stockInvestment": "Stock Investment",
+    "owedOnLoans": "{{amount}} of this is borrowed and still owed"
   },
   "pos": {
     "title": "Point of Sale",
@@ -865,5 +866,48 @@
       "uKg": "kg",
       "uBtl": "btl"
     }
+  },
+  "loans": {
+    "title": "Loans",
+    "subtitle": "Money borrowed for the business",
+    "record": "Record a loan",
+    "newTitle": "Record a loan",
+    "editTitle": "Edit loan",
+    "stillOwed": "Still owed",
+    "borrowed": "Borrowed",
+    "costOfBorrowing": "Cost of borrowing",
+    "overdue": "Overdue",
+    "profitNote": "Borrowing is not income and repaying it is not a cost, so nothing here changes your sales or profit figures. Only the interest is a real expense; log it under Expenses if you want it counted against profit.",
+    "empty": "No loans recorded. Add one when you borrow money for the shop.",
+    "lender": "Who lent the money",
+    "lenderPhone": "Their phone",
+    "principal": "Amount borrowed",
+    "interest": "Interest",
+    "interestHint": "Total extra agreed, not a rate",
+    "repayableIs": "You will repay {{amount}} in total",
+    "received": "Received on",
+    "dueDate": "Due by",
+    "purpose": "What it is for",
+    "purposeHint": "e.g. stock for December",
+    "settled": "Settled",
+    "writtenOff": "Written off",
+    "overdueBadge": "Overdue",
+    "noPurpose": "No purpose noted",
+    "due": "due",
+    "paidOf": "{{paid}} repaid of {{total}}",
+    "includesInterest": "includes {{amount}} interest",
+    "recordRepayment": "Record repayment",
+    "payAll": "Pay it off",
+    "history": "Repayments ({{count}})",
+    "hideHistory": "Hide repayments",
+    "noRepayments": "No repayments yet",
+    "writeOff": "Write off",
+    "confirmWriteOff": "Mark this loan written off? The repayment history is kept.",
+    "confirmDelete": "Delete this loan? It has no repayments recorded.",
+    "repayTitle": "Repay {{lender}}",
+    "outstandingIs": "{{amount}} is still owed.",
+    "amount": "Amount",
+    "method": "Paid with",
+    "reference": "Reference"
   }
 }

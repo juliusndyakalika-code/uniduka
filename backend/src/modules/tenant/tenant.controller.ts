@@ -158,6 +158,7 @@ export async function getDashboard(req: AuthRequest, res: Response) {
     dailyFolios.forEach(f => { const k = tz.ymdInTz(f.createdAt, zone); if (chartMap[k] !== undefined) chartMap[k] += f.grandTotal; });
 
     return R.ok(res, {
+      loans: { outstanding: 0, activeCount: 0 },
       revenue: {
         today: todayF.reduce((s, f) => s + f.grandTotal, 0),
         week:  weekF.reduce((s, f) => s + f.grandTotal, 0),
@@ -248,7 +249,24 @@ export async function getDashboard(req: AuthRequest, res: Response) {
   const monthExpenses = expenseMonthAgg._sum.amount ?? 0;
   const monthNetProfit = monthGrossProfit + monthConsignmentProfit - monthExpenses;
 
+  // What the shop still owes on money it borrowed.
+  //
+  // Deliberately NOT folded into netProfit. A loan is a liability, not a cost:
+  // receiving it does not make the shop richer and repaying the principal does
+  // not make it poorer, so putting it in the profit line would understate
+  // earnings by the whole principal. It rides alongside instead, so an owner
+  // reading a good month can see how much of that cash is spoken for.
+  const activeLoans = await prisma.loan.findMany({
+    where: { shopId, status: 'ACTIVE' },
+    select: { principal: true, interest: true, payments: { select: { amount: true } } },
+  });
+  const loanOutstanding = activeLoans.reduce((sum, l) => {
+    const paid = l.payments.reduce((s, p) => s + p.amount, 0);
+    return sum + Math.max(0, l.principal + l.interest - paid);
+  }, 0);
+
   return R.ok(res, {
+    loans: { outstanding: loanOutstanding, activeCount: activeLoans.length },
     revenue: { today: todayAgg._sum.total ?? 0, week: weekAgg._sum.total ?? 0, month: monthAgg._sum.total ?? 0 },
     netProfit: {
       month: monthNetProfit,

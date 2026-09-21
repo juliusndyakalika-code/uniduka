@@ -170,7 +170,8 @@
     "managePlan": "Simamia",
     "plan": "Mpango {{plan}}",
     "netProfitMonth": "Faida Halisi (Mwezi Huu)",
-    "stockInvestment": "Uwekezaji wa Hisa"
+    "stockInvestment": "Uwekezaji wa Hisa",
+    "owedOnLoans": "{{amount}} kati ya hii ni mkopo ambao bado unadaiwa"
   },
   "pos": {
     "title": "Mauzo (POS)",
@@ -865,5 +866,48 @@
       "uKg": "kg",
       "uBtl": "chu"
     }
+  },
+  "loans": {
+    "title": "Mikopo",
+    "subtitle": "Pesa iliyokopwa kwa ajili ya biashara",
+    "record": "Andika mkopo",
+    "newTitle": "Andika mkopo",
+    "editTitle": "Hariri mkopo",
+    "stillOwed": "Bado unadaiwa",
+    "borrowed": "Ulichokopa",
+    "costOfBorrowing": "Gharama ya kukopa",
+    "overdue": "Imepitwa na muda",
+    "profitNote": "Kukopa si mapato, na kulipa si gharama, hivyo hapa hakuna kinachobadilisha mauzo wala faida yako. Riba pekee ndiyo gharama halisi; iandike kwenye Matumizi ukitaka ihesabiwe dhidi ya faida.",
+    "empty": "Hakuna mkopo uliorekodiwa. Ongeza unapokopa pesa kwa ajili ya duka.",
+    "lender": "Nani alikukopesha",
+    "lenderPhone": "Simu yake",
+    "principal": "Kiasi ulichokopa",
+    "interest": "Riba",
+    "interestHint": "Jumla ya nyongeza mliyokubaliana, si asilimia",
+    "repayableIs": "Utarudisha jumla ya {{amount}}",
+    "received": "Ulipokea tarehe",
+    "dueDate": "Mwisho wa kulipa",
+    "purpose": "Ni kwa ajili gani",
+    "purposeHint": "mf. mzigo wa Desemba",
+    "settled": "Imelipwa",
+    "writtenOff": "Imefutwa",
+    "overdueBadge": "Imepitwa",
+    "noPurpose": "Hakuna maelezo",
+    "due": "mwisho",
+    "paidOf": "{{paid}} kati ya {{total}} imelipwa",
+    "includesInterest": "ikiwemo riba {{amount}}",
+    "recordRepayment": "Andika malipo",
+    "payAll": "Lipa yote",
+    "history": "Malipo ({{count}})",
+    "hideHistory": "Ficha malipo",
+    "noRepayments": "Bado hakuna malipo",
+    "writeOff": "Futa deni",
+    "confirmWriteOff": "Ufute mkopo huu? Historia ya malipo itabaki.",
+    "confirmDelete": "Ufute mkopo huu? Hauna malipo yaliyorekodiwa.",
+    "repayTitle": "Mlipe {{lender}}",
+    "outstandingIs": "Bado unadaiwa {{amount}}.",
+    "amount": "Kiasi",
+    "method": "Umelipa kwa",
+    "reference": "Kumbukumbu"
   }
 }

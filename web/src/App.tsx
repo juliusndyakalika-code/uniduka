@@ -69,6 +69,7 @@ const BranchesPage         = lazy(() => import('./pages/branches/BranchesPage'))
 const PlatformOverview     = lazy(() => import('./pages/platform/PlatformOverview'));
 const PlatformAccounts     = lazy(() => import('./pages/platform/PlatformAccounts'));
 const PlatformAccountDetail = lazy(() => import('./pages/platform/PlatformAccountDetail'));
+const LoansPage = lazy(() => import('./pages/loans/LoansPage'));
 const PlatformShops        = lazy(() => import('./pages/platform/PlatformShops'));
 const PlatformUsers        = lazy(() => import('./pages/platform/PlatformUsers'));
 const PlatformMonitor      = lazy(() => import('./pages/platform/PlatformMonitor'));
@@ -167,6 +168,7 @@ export default function App() {
 
               <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER', 'CASHIER']} />}>
                 <Route path="/expenses" element={<ExpensesPage />} />
+                <Route path="/loans"    element={<LoansPage />} />
               </Route>
 
               <Route element={<ProtectedRoute roles={['ACCOUNT_OWNER']} />}>

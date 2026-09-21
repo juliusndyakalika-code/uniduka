@@ -6,7 +6,7 @@ import {
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
-  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ReceiptText, Globe, Inbox, FileText,
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ReceiptText, Globe, Inbox, FileText, HandCoins,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
@@ -386,6 +386,7 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
               </NavGroup>
 
               <NavItem to="/expenses" icon={<Wallet size={16} />} label={t('nav.expenses')} />
+              <NavItem to="/loans"    icon={<HandCoins size={16} />} label={t('loans.title')} />
 
               <NavGroup icon={<Settings size={16} />} label={t('nav.management')}
                 prefix={['/admin', '/timeclock', '/branches']}>

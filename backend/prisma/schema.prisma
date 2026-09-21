@@ -352,6 +352,7 @@ model Shop {
   invoices            Invoice[]
   docSequences        DocumentSequence[]
   pushSubscriptions   PushSubscription[]
+  loans               Loan[]
 
   @@map("shops")
 }
@@ -1456,4 +1457,83 @@ model PushSubscription {
   @@index([shopId])
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+// ── Borrowing ────────────────────────────────────────────────────────────────
+// Money the shop has borrowed to fund the business, and what has been repaid.
+//
+// The mirror of customer debts: those are money owed TO the shop, these are
+// money owed BY it. Kept as its own ledger rather than folded into expenses,
+// because a loan is not a cost. Receiving 500,000 does not make the shop richer
+// and repaying it does not make the shop poorer; only the interest is a real
+// cost. Treating repayments as expenses would understate profit by the
+// principal and quietly wreck every figure on the dashboard.
+
+enum LoanStatus {
+  ACTIVE
+  SETTLED
+  WRITTEN_OFF // the lender forgave it, or it was otherwise closed unpaid
+}
+
+model Loan {
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  lenderName  String
+  lenderPhone String?
+
+  principal Float
+  // A flat total agreed on top, not a rate. Informal lending here is settled as
+  // "take 500,000, bring back 600,000"; an interest rate with an amortisation
+  // schedule would be a worse fit for the common case and harder to enter.
+  interest  Float @default(0)
+
+  receivedAt DateTime  @default(now())
+  dueAt      DateTime?
+
+  purpose String?
+  note    String?
+
+  status    LoanStatus @default(ACTIVE)
+  settledAt DateTime?
+
+  // Snapshot rather than a foreign key, so the record survives the staff member
+  // who entered it being removed. Matches how expenses do it.
+  recordedById   String?
+  recordedByName String?
+
+  payments LoanPayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shopId, receivedAt])
+  @@index([shopId, status])
+  @@map("loans")
+}
+
+model LoanPayment {
+  id     String @id @default(cuid())
+  loanId String
+  loan   Loan   @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  // Denormalised so a shop's repayments can be totalled without joining every
+  // loan, which the reports need.
+  shopId String
+
+  amount        Float
+  paymentMethod String?
+  reference     String?
+  paidAt        DateTime @default(now())
+  note          String?
+
+  recordedById   String?
+  recordedByName String?
+
+  createdAt DateTime @default(now())
+
+  @@index([loanId])
+  @@index([shopId, paidAt])
+  @@map("loan_payments")
 }

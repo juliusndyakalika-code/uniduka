@@ -12,6 +12,7 @@ import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../co
 interface DashboardData {
   revenue: { today: number; week: number; month: number };
   netProfit?: { month: number; grossProfit: number; consignmentProfit: number; expenses: number };
+  loans?: { outstanding: number; activeCount: number };
   transactions: { today: number; week: number };
   customers: { total: number; new: number };
   lowStock: number;
@@ -35,8 +36,10 @@ function fmt(n: number) {
   return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
 }
 
-function StatCard({ icon: Icon, label, value, sub, color, to }: {
+function StatCard({ icon: Icon, label, value, sub, color, to, note }: {
   icon: React.ElementType; label: string; value: string; sub?: string; color: string; to?: string;
+  /** A caveat on the figure, not part of it. Used to flag money owed. */
+  note?: string;
 }) {
   const body = (
     <>
@@ -47,6 +50,11 @@ function StatCard({ icon: Icon, label, value, sub, color, to }: {
       <p className="stat-value leading-tight">{value}</p>
       <p className="stat-label truncate">{label}</p>
       {sub && <p className="text-[10px] sm:text-xs text-stone-400 mt-1 truncate">{sub}</p>}
+      {note && (
+        <p className="text-[10px] sm:text-xs mt-1.5 truncate" style={{ color: '#b45309' }} title={note}>
+          {note}
+        </p>
+      )}
     </>
   );
   if (to) {
@@ -176,6 +184,9 @@ export default function Dashboard() {
           <StatCard icon={Wallet} label={t('dashboard.netProfitMonth')} value={fmt(data.netProfit.month)}
             sub={data.netProfit.consignmentProfit > 0 ? `incl. ${fmt(data.netProfit.consignmentProfit)} consignment` : `after ${fmt(data.netProfit.expenses)} expenses`}
             color={data.netProfit.month >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}
+            note={(data.loans?.outstanding ?? 0) > 0
+              ? t('dashboard.owedOnLoans', { amount: fmt(data.loans!.outstanding) })
+              : undefined}
             to="/reports/sales" />
         )}
         {!isHotel && data?.stockValue != null && (
