@@ -99,16 +99,72 @@
   /* ── Cards ────────────────────────────────────────────────────────────────── */
   .card {
     @apply rounded-2xl;
+    position: relative;
+    overflow: hidden;
     background: #E8EBF0;
     border: none;
     box-shadow: 8px 8px 20px #c5cad3, -8px -8px 20px #ffffff;
   }
   .card-hover {
     @apply rounded-2xl cursor-pointer;
+    position: relative;
+    overflow: hidden;
     background: #E8EBF0;
     border: none;
     box-shadow: 8px 8px 20px #c5cad3, -8px -8px 20px #ffffff;
     transition: box-shadow 0.3s ease, transform 0.2s ease;
+  }
+
+  /* ── Water drops ──────────────────────────────────────────────────────────
+     The two raised circles from the stat cards, now on every card so the
+     surface reads as one material throughout.
+
+     They sit behind the content rather than over it. On a stat card the
+     top-right corner is empty so it never mattered, but a card can hold a
+     table, a close button or a form, and a 28%-white disc laid over text
+     reads as a smudge. z-index keeps the effect identical where the corner
+     is empty and invisible where it is not.
+
+     `overflow: hidden` is what clips them into that quarter-circle at the
+     corner. Modals set their own overflow through a utility class, which
+     lands in a later cascade layer and still wins, so they keep scrolling. */
+  .card::before,
+  .card-hover::before,
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: -18px;
+    right: -18px;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.28);
+    box-shadow: 4px 4px 10px #c5cad3, -4px -4px 10px #ffffff;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .card::after,
+  .card-hover::after,
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 42px;
+    right: 42px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.38);
+    box-shadow: 2px 2px 6px #c5cad3, -2px -2px 6px #ffffff;
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Lift the card's own content clear of the drops. Only direct children, so a
+     dropdown deeper inside keeps its own stacking and is not trapped. */
+  .card > *,
+  .card-hover > *,
+  .stat-card > * {
+    position: relative;
+    z-index: 1;
   }
   .card-hover:hover {
     box-shadow: inset 4px 4px 10px #c5cad3, inset -4px -4px 10px #ffffff;
@@ -185,32 +241,6 @@
     background: #E8EBF0;
     border: none;
     box-shadow: 8px 8px 20px #c5cad3, -8px -8px 20px #ffffff;
-  }
-  /* Large water-drop circle — top-right */
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: -18px;
-    right: -18px;
-    width: 88px;
-    height: 88px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.28);
-    box-shadow: 4px 4px 10px #c5cad3, -4px -4px 10px #ffffff;
-    pointer-events: none;
-  }
-  /* Small water-drop circle — inset */
-  .stat-card::after {
-    content: '';
-    position: absolute;
-    top: 42px;
-    right: 42px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.38);
-    box-shadow: 2px 2px 6px #c5cad3, -2px -2px 6px #ffffff;
-    pointer-events: none;
   }
 
   .stat-value {

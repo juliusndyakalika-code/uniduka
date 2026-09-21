@@ -171,7 +171,7 @@
     "plan": "Mpango {{plan}}",
     "netProfitMonth": "Faida Halisi (Mwezi Huu)",
     "stockInvestment": "Uwekezaji wa Hisa",
-    "owedOnLoans": "{{amount}} kati ya hii ni mkopo ambao bado unadaiwa"
+    "owedOnLoans": "{{amount}} bado unadaiwa kwa mikopo"
   },
   "pos": {
     "title": "Mauzo (POS)",
