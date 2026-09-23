@@ -100,6 +100,10 @@
   .card {
     @apply rounded-2xl;
     position: relative;
+    /* Creates a stacking context so the drops' negative z-index puts them
+       above the card's own background but below its content. Without it they
+       would fall behind the background and vanish. */
+    isolation: isolate;
     overflow: hidden;
     background: #E8EBF0;
     border: none;
@@ -108,6 +112,7 @@
   .card-hover {
     @apply rounded-2xl cursor-pointer;
     position: relative;
+    isolation: isolate;
     overflow: hidden;
     background: #E8EBF0;
     border: none;
@@ -141,7 +146,7 @@
     background: rgba(255, 255, 255, 0.28);
     box-shadow: 4px 4px 10px #c5cad3, -4px -4px 10px #ffffff;
     pointer-events: none;
-    z-index: 0;
+    z-index: -1;
   }
   .card::after,
   .card-hover::after,
@@ -156,19 +161,34 @@
     background: rgba(255, 255, 255, 0.38);
     box-shadow: 2px 2px 6px #c5cad3, -2px -2px 6px #ffffff;
     pointer-events: none;
-    z-index: 0;
+    z-index: -1;
   }
-  /* Lift the card's own content clear of the drops. Only direct children, so a
-     dropdown deeper inside keeps its own stacking and is not trapped. */
-  .card > *,
-  .card-hover > *,
-  .stat-card > * {
-    position: relative;
-    z-index: 1;
-  }
+  /* Deliberately no z-index on children.
+     An earlier version lifted every direct child to z-index 1 to clear the
+     drops. That made each child its own stacking context, so a dropdown nested
+     in one child could no longer paint over a later sibling — the customer
+     search results on the POS ended up underneath the cart's placeholder text.
+     The drops sit at z-index -1 instead, which needs nothing from the content. */
   .card-hover:hover {
     box-shadow: inset 4px 4px 10px #c5cad3, inset -4px -4px 10px #ffffff;
     transform: scale(0.995);
+  }
+
+  /* ── Cards used as modal panels ───────────────────────────────────────────
+     A card dropped straight into a full-screen overlay is a dialog, and a
+     dialog taller than the screen must scroll or its submit button cannot be
+     reached. 45 of them had neither a height cap nor a scroll, so on a short
+     screen — a phone in landscape, a small laptop — the form simply ran off
+     the bottom. Settling a debt was one of them.
+
+     Fixed here rather than at each site so a new modal inherits it. Any modal
+     that sets its own max-height through a utility class still wins, those
+     land in a later cascade layer. */
+  .fixed.inset-0 > .card,
+  .fixed.inset-0 > * > .card {
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
   }
 
   /* ── Badges ───────────────────────────────────────────────────────────────── */
@@ -237,6 +257,7 @@
   .stat-card {
     @apply rounded-2xl p-5;
     position: relative;
+    isolation: isolate;
     overflow: hidden;
     background: #E8EBF0;
     border: none;
