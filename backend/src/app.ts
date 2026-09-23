@@ -11,6 +11,7 @@ import { Server as SocketServer } from 'socket.io';
 import { connectDB } from './core/prisma';
 import { connectRedis } from './core/redis';
 import { logger } from './utils/logger';
+import { asyncRoutes } from './utils/asyncRoutes';
 import { authenticate } from './middleware/auth';
 import { requireActiveSubscription } from './middleware/subscription';
 
@@ -107,36 +108,36 @@ app.use(morgan('combined', { stream: { write: (m) => logger.http(m.trim()) } }))
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 const v1 = '/api/v1';
-app.use(`${v1}/auth`,       authRoutes);
-app.use(`${v1}/tenant`,     tenantRoutes);
-app.use(`${v1}/shops`,      shopRoutes);
-app.use(`${v1}/business`,   businessRoutes);
-app.use(`${v1}/units`,      unitsRoutes);
+app.use(`${v1}/auth`,       asyncRoutes(authRoutes));
+app.use(`${v1}/tenant`,     asyncRoutes(tenantRoutes));
+app.use(`${v1}/shops`,      asyncRoutes(shopRoutes));
+app.use(`${v1}/business`,   asyncRoutes(businessRoutes));
+app.use(`${v1}/units`,      asyncRoutes(unitsRoutes));
 // PUBLIC storefront — intentionally unauthenticated. Only serves shops that
 // opted in via storefrontEnabled, and only their published products. Each
 // endpoint carries its own rate limit (see storefront.routes.ts).
-app.use(`${v1}/public`,     storefrontRoutes);
+app.use(`${v1}/public`,     asyncRoutes(storefrontRoutes));
 // All routes below this line require an active subscription
 const subscriptionGate = [authenticate, requireActiveSubscription];
-app.use(`${v1}/inventory`,    subscriptionGate, inventoryRoutes);
-app.use(`${v1}/pos`,          subscriptionGate, posRoutes);
-app.use(`${v1}/crm`,          subscriptionGate, crmRoutes);
-app.use(`${v1}/loyalty`,      subscriptionGate, loyaltyRoutes);
-app.use(`${v1}/appointments`,  subscriptionGate, apptRoutes);
-app.use(`${v1}/reporting`,    subscriptionGate, reportingRoutes);
-app.use(`${v1}/users`,        subscriptionGate, usersRoutes);
-app.use(`${v1}/kds`,          subscriptionGate, kdsRoutes);
-app.use(`${v1}/webhooks`,     webhookRoutes);
-app.use(`${v1}/platform`,     platformRoutes);
-app.use(`${v1}/consignment`,  subscriptionGate, consignmentRoutes);
-app.use(`${v1}/timeclock`,    subscriptionGate, timeclockRoutes);
-app.use(`${v1}/work-orders`,  subscriptionGate, workOrderRoutes);
-app.use(`${v1}/hotel`,        subscriptionGate, hotelRoutes);
-app.use(`${v1}/expenses`,     subscriptionGate, expensesRoutes);
-app.use(`${v1}/orders`,       subscriptionGate, ordersRoutes);
-app.use(`${v1}/invoices`,     subscriptionGate, invoicesRoutes);
-app.use(`${v1}/notifications`, subscriptionGate, notificationRoutes);
-app.use(`${v1}/loans`,         subscriptionGate, loansRoutes);
+app.use(`${v1}/inventory`,    subscriptionGate, asyncRoutes(inventoryRoutes));
+app.use(`${v1}/pos`,          subscriptionGate, asyncRoutes(posRoutes));
+app.use(`${v1}/crm`,          subscriptionGate, asyncRoutes(crmRoutes));
+app.use(`${v1}/loyalty`,      subscriptionGate, asyncRoutes(loyaltyRoutes));
+app.use(`${v1}/appointments`,  subscriptionGate, asyncRoutes(apptRoutes));
+app.use(`${v1}/reporting`,    subscriptionGate, asyncRoutes(reportingRoutes));
+app.use(`${v1}/users`,        subscriptionGate, asyncRoutes(usersRoutes));
+app.use(`${v1}/kds`,          subscriptionGate, asyncRoutes(kdsRoutes));
+app.use(`${v1}/webhooks`,     asyncRoutes(webhookRoutes));
+app.use(`${v1}/platform`,     asyncRoutes(platformRoutes));
+app.use(`${v1}/consignment`,  subscriptionGate, asyncRoutes(consignmentRoutes));
+app.use(`${v1}/timeclock`,    subscriptionGate, asyncRoutes(timeclockRoutes));
+app.use(`${v1}/work-orders`,  subscriptionGate, asyncRoutes(workOrderRoutes));
+app.use(`${v1}/hotel`,        subscriptionGate, asyncRoutes(hotelRoutes));
+app.use(`${v1}/expenses`,     subscriptionGate, asyncRoutes(expensesRoutes));
+app.use(`${v1}/orders`,       subscriptionGate, asyncRoutes(ordersRoutes));
+app.use(`${v1}/invoices`,     subscriptionGate, asyncRoutes(invoicesRoutes));
+app.use(`${v1}/notifications`, subscriptionGate, asyncRoutes(notificationRoutes));
+app.use(`${v1}/loans`,         subscriptionGate, asyncRoutes(loansRoutes));
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/', (_, res) => res.json({ status: 'ok', service: 'MauzoHalisi API', version: '4.0.0' }));
@@ -171,8 +172,11 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled rejection:', reason);
-  process.exit(1);
+  // Deliberately does not exit. Handlers are wrapped by asyncRoutes, so a
+  // rejection arriving here is a bug somewhere off the request path — and
+  // taking the API down for every shop is a worse answer to it than a log
+  // line. uncaughtException still exits, because that really is unknown state.
+  logger.error(`Unhandled rejection: ${reason instanceof Error ? reason.stack : String(reason)}`);
 });
 
 (async () => {

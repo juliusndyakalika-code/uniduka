@@ -13,6 +13,19 @@ const shop = (req: AuthRequest) => req.user!.shopId!;
  */
 const EPS = 0.5;
 
+/**
+ * A date the client sent, or null when it is unusable.
+ *
+ * `new Date('not-a-date')` is an Invalid Date, which Prisma rejects with a 500
+ * rather than a message anyone can act on. Parsing here turns a mistyped due
+ * date into a clear 400.
+ */
+function parseDate(value: unknown): Date | null {
+  if (value === undefined || value === null || value === '') return null;
+  const d = new Date(value as string);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 interface LoanTotals {
   repayable: number;
   paid: number;
@@ -94,6 +107,9 @@ export async function createLoan(req: AuthRequest, res: Response) {
   const unclean = screenFields({ 'lender name': lenderName, purpose, note });
   if (unclean) return R.badRequest(res, unclean);
 
+  if (receivedAt && !parseDate(receivedAt)) return R.badRequest(res, 'The date received is not a valid date.');
+  if (dueAt && !parseDate(dueAt))           return R.badRequest(res, 'The due date is not a valid date.');
+
   const loan = await prisma.loan.create({
     data: {
       shopId: shop(req),
@@ -101,8 +117,8 @@ export async function createLoan(req: AuthRequest, res: Response) {
       lenderPhone: lenderPhone ? String(lenderPhone).trim() : undefined,
       principal: amount,
       interest: extra,
-      receivedAt: receivedAt ? new Date(receivedAt) : undefined,
-      dueAt: dueAt ? new Date(dueAt) : undefined,
+      receivedAt: parseDate(receivedAt) ?? undefined,
+      dueAt: parseDate(dueAt) ?? undefined,
       purpose, note,
       recordedById: req.user!.sub,
       recordedByName: await recorderName(req),
@@ -131,6 +147,9 @@ export async function updateLoan(req: AuthRequest, res: Response) {
   if (!Number.isFinite(newPrincipal) || newPrincipal <= 0) return R.badRequest(res, 'Enter the amount borrowed.');
   if (!Number.isFinite(newInterest) || newInterest < 0)    return R.badRequest(res, 'Interest cannot be negative.');
 
+  if (receivedAt && !parseDate(receivedAt)) return R.badRequest(res, 'The date received is not a valid date.');
+  if (dueAt && !parseDate(dueAt))           return R.badRequest(res, 'The due date is not a valid date.');
+
   const alreadyPaid = existing.payments.reduce((s, p) => s + p.amount, 0);
   if (newPrincipal + newInterest < alreadyPaid - EPS) {
     return R.badRequest(res, `Repayments already total ${alreadyPaid.toLocaleString()}. The loan cannot be less than that.`);
@@ -143,8 +162,8 @@ export async function updateLoan(req: AuthRequest, res: Response) {
       ...(lenderPhone !== undefined && { lenderPhone }),
       ...(principal   !== undefined && { principal: newPrincipal }),
       ...(interest    !== undefined && { interest: newInterest }),
-      ...(receivedAt  !== undefined && { receivedAt: new Date(receivedAt) }),
-      ...(dueAt       !== undefined && { dueAt: dueAt ? new Date(dueAt) : null }),
+      ...(receivedAt  !== undefined && { receivedAt: parseDate(receivedAt) ?? existing.receivedAt }),
+      ...(dueAt       !== undefined && { dueAt: parseDate(dueAt) }),
       ...(purpose     !== undefined && { purpose }),
       ...(note        !== undefined && { note }),
       ...(status      !== undefined && { status }),
@@ -180,6 +199,7 @@ export async function addPayment(req: AuthRequest, res: Response) {
   // the remaining balance themselves.
   const value = payInFull ? t.outstanding : Number(amount);
   if (!Number.isFinite(value) || value <= 0) return R.badRequest(res, 'Enter the amount being repaid.');
+  if (paidAt && !parseDate(paidAt)) return R.badRequest(res, 'The payment date is not a valid date.');
   if (value > t.outstanding + EPS) {
     return R.badRequest(res, `Only ${t.outstanding.toLocaleString()} is still owed on this loan.`);
   }
@@ -190,7 +210,7 @@ export async function addPayment(req: AuthRequest, res: Response) {
       shopId: loan.shopId,
       amount: value,
       paymentMethod, reference, note,
-      paidAt: paidAt ? new Date(paidAt) : undefined,
+      paidAt: parseDate(paidAt) ?? undefined,
       recordedById: req.user!.sub,
       recordedByName: await recorderName(req),
     },

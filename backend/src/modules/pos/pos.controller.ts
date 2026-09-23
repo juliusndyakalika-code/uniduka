@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../types';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../core/prisma';
 import { io } from '../../app';
 import * as R from '../../utils/response';
@@ -22,7 +23,10 @@ export async function createTransaction(req: AuthRequest, res: Response) {
 
   // Calculate totals
   let subtotal = 0;
-  const txItems = [];
+  // Typed from Prisma's own input rather than by hand: the sale is built inside
+  // a $transaction closure now, and an inferred any[] stops being inferable
+  // across that boundary.
+  const txItems: Prisma.TransactionItemUncheckedCreateWithoutTransactionInput[] = [];
   for (const item of items) {
     const product = await prisma.product.findFirst({ where: { id: item.productId, shopId: shop(req) }, include: { taxRule: true } });
     if (!product) return R.badRequest(res, `Product ${item.productId} not found`);
@@ -31,7 +35,7 @@ export async function createTransaction(req: AuthRequest, res: Response) {
     subtotal += lineTotal;
     txItems.push({ productId: item.productId, name: product.name, quantity: item.quantity, unitLabel: item.unitLabel || 'ea', unitPrice: item.unitPrice, discountPct: item.discountPct || 0, taxAmount: taxAmt, lineTotal, modifiers: item.modifiers, notes: item.notes });
   }
-  const taxAmount = txItems.reduce((s, i) => s + i.taxAmount, 0);
+  const taxAmount = txItems.reduce((s, i) => s + (i.taxAmount ?? 0), 0);
   const total = subtotal - discountAmount + taxAmount;
 
   // ── Payment validation (supports split tenders + partial/deposit on credit) ──
@@ -59,45 +63,62 @@ export async function createTransaction(req: AuthRequest, res: Response) {
     }
   }
 
-  const tx = await prisma.transaction.create({
-    data: {
-      shopId: shop(req), cashierId: req.user!.sub, customerId, registerId, tableNo, coverCount,
-      rxRef, tabId, note,
-      customerName: rawCustomerName?.trim() || undefined,
-      customerTin:  customerTin || undefined,
-      subtotal, discountAmount, taxAmount, total,
-      receiptNo: receiptNo(), status: 'COMPLETED', type: 'SALE',
-      items: { create: txItems },
-      payments: { create: paymentsToSave.map((p: { method: string; amount: number; reference?: string; providerName?: string }) => ({ method: p.method as never, amount: p.amount, reference: p.reference, providerName: p.providerName })) },
-    },
-    include: { items: true, payments: true, customer: true },
-  });
-
-  // Deduct stock — FIFO across inventory rows so multi-row products
-  // don't get decremented once per row (which caused negative stock).
-  for (const item of txItems) {
-    await prisma.stockMovement.create({ data: { shopId: shop(req), productId: item.productId, type: 'SALE', quantity: -item.quantity, reference: tx.id, userId: req.user!.sub } });
-    let remaining = item.quantity;
-    const rows = await prisma.inventoryItem.findMany({
-      where: { shopId: shop(req), productId: item.productId },
-      orderBy: { createdAt: 'asc' },
+  // One transaction for the whole sale.
+  //
+  // These are five writes that only make sense together: the sale, a stock
+  // movement per line, the inventory decrements behind it, and the customer's
+  // running total. Run loose, a failure part-way leaves the shop with stock
+  // gone and no sale recorded, or a sale whose stock never moved — and the
+  // difference only surfaces weeks later during a stock count, with nothing to
+  // explain it. Either everything lands or nothing does.
+  const tx = await prisma.$transaction(async (db) => {
+    const sale = await db.transaction.create({
+      data: {
+        shopId: shop(req), cashierId: req.user!.sub, customerId, registerId, tableNo, coverCount,
+        rxRef, tabId, note,
+        customerName: rawCustomerName?.trim() || undefined,
+        customerTin:  customerTin || undefined,
+        subtotal, discountAmount, taxAmount, total,
+        receiptNo: receiptNo(), status: 'COMPLETED', type: 'SALE',
+        items: { create: txItems },
+        payments: { create: paymentsToSave.map((p: { method: string; amount: number; reference?: string; providerName?: string }) => ({ method: p.method as never, amount: p.amount, reference: p.reference, providerName: p.providerName })) },
+      },
+      include: { items: true, payments: true, customer: true },
     });
-    for (const row of rows) {
-      if (remaining <= 0) break;
-      const take = Math.min(row.quantity, remaining);
-      await prisma.inventoryItem.update({ where: { id: row.id }, data: { quantity: { decrement: take } } });
-      remaining -= take;
-    }
-    // Allow oversell: deduct any leftover from the first row (goes negative)
-    if (remaining > 0 && rows.length > 0) {
-      await prisma.inventoryItem.update({ where: { id: rows[0].id }, data: { quantity: { decrement: remaining } } });
-    }
-  }
 
-  // Update customer spend
-  if (customerId) {
-    await prisma.customer.update({ where: { id: customerId }, data: { totalSpend: { increment: total }, visitCount: { increment: 1 }, lastVisitAt: new Date() } });
-  }
+    // Deduct stock — FIFO across inventory rows so multi-row products
+    // don't get decremented once per row (which caused negative stock).
+    for (const item of txItems) {
+      await db.stockMovement.create({ data: { shopId: shop(req), productId: item.productId, type: 'SALE', quantity: -item.quantity, reference: sale.id, userId: req.user!.sub } });
+      let remaining = item.quantity;
+      const rows = await db.inventoryItem.findMany({
+        where: { shopId: shop(req), productId: item.productId },
+        orderBy: { createdAt: 'asc' },
+      });
+      for (const row of rows) {
+        if (remaining <= 0) break;
+        const take = Math.min(row.quantity, remaining);
+        await db.inventoryItem.update({ where: { id: row.id }, data: { quantity: { decrement: take } } });
+        remaining -= take;
+      }
+      // Allow oversell: deduct any leftover from the first row (goes negative)
+      if (remaining > 0 && rows.length > 0) {
+        await db.inventoryItem.update({ where: { id: rows[0].id }, data: { quantity: { decrement: remaining } } });
+      }
+    }
+
+    // Update customer spend
+    if (customerId) {
+      await db.customer.update({ where: { id: customerId }, data: { totalSpend: { increment: total }, visitCount: { increment: 1 }, lastVisitAt: new Date() } });
+    }
+
+    return sale;
+  }, {
+    // A basket of many lines does several writes per line. The default 5s is
+    // tight on a slow connection, and a till timing out mid-sale is worse than
+    // one that takes a moment.
+    timeout: 15_000,
+  });
 
   // Emit to KDS if restaurant/cafe
   io.to(`shop:${shop(req)}`).emit('new_order', { txId: tx.id, tableNo, items: txItems });
