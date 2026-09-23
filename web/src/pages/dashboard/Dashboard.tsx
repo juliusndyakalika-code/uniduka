@@ -11,7 +11,8 @@ import { useDataTable, TableSearch, SortableTh, TablePagination } from '../../co
 
 interface DashboardData {
   revenue: { today: number; week: number; month: number };
-  netProfit?: { month: number; grossProfit: number; consignmentProfit: number; expenses: number };
+  netProfit?: { month: number; grossProfit: number; consignmentProfit: number; expenses: number;
+                today?: number; todayGrossProfit?: number; todayExpenses?: number };
   loans?: { outstanding: number; activeCount: number };
   transactions: { today: number; week: number };
   customers: { total: number; new: number };
@@ -180,6 +181,14 @@ export default function Dashboard() {
         <StatCard icon={Package} label={isHotel ? 'Rooms Available' : t('dashboard.lowStockAlerts')} value={String(data?.lowStock ?? 0)}
           color={isHotel ? 'bg-emerald-50 text-emerald-600' : (data?.lowStock ? 'bg-red-50 text-red-600' : 'bg-stone-50 text-stone-500')}
           to={isHotel ? '/hotel' : '/inventory/stock'} />
+        {data?.netProfit?.today != null && (
+          <StatCard icon={Wallet} label={t('dashboard.netProfitToday')} value={fmt(data.netProfit.today)}
+            sub={(data.netProfit.todayExpenses ?? 0) > 0
+              ? `after ${fmt(data.netProfit.todayExpenses ?? 0)} expenses`
+              : t('dashboard.fromSalesToday')}
+            color={data.netProfit.today >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}
+            to="/reports/sales" />
+        )}
         {data?.netProfit && (
           <StatCard icon={Wallet} label={t('dashboard.netProfitMonth')} value={fmt(data.netProfit.month)}
             sub={data.netProfit.consignmentProfit > 0 ? `incl. ${fmt(data.netProfit.consignmentProfit)} consignment` : `after ${fmt(data.netProfit.expenses)} expenses`}

@@ -232,22 +232,45 @@ export async function getDashboard(req: AuthRequest, res: Response) {
   dailyTx.forEach(tx => { const k = tz.ymdInTz(tx.createdAt, zone); if (chartMap[k] !== undefined) chartMap[k] += tx.total; });
   const salesChart = Object.entries(chartMap).map(([date, revenue]) => ({ label: date.slice(5), revenue }));
 
-  // ── Net profit this month (products + consignment − expenses) ──────────────
-  const [monthProfitTx, consignMonthAgg, expenseMonthAgg] = await Promise.all([
+  // ── Net profit, today and this month (products + consignment − expenses) ───
+  // Today is worked out the same way as the month, from the same three sources,
+  // so the two can never tell different stories about the same sale. Both start
+  // at midnight in the shop's own timezone.
+  const [monthProfitTx, consignMonthAgg, expenseMonthAgg,
+         todayProfitTx, consignTodayAgg, expenseTodayAgg] = await Promise.all([
     prisma.transaction.findMany({
       where: { shopId, status: 'COMPLETED', createdAt: { gte: startOfMonth } },
       select: { total: true, items: { select: { quantity: true, product: { select: { costPrice: true } } } } },
     }),
     prisma.consignmentSale.aggregate({ where: { shopId, soldAt: { gte: startOfMonth } }, _sum: { profit: true } }),
     prisma.expense.aggregate({ where: { shopId, incurredAt: { gte: startOfMonth } }, _sum: { amount: true } }),
+
+    prisma.transaction.findMany({
+      where: { shopId, status: 'COMPLETED', createdAt: { gte: startOfDay } },
+      select: { total: true, items: { select: { quantity: true, product: { select: { costPrice: true } } } } },
+    }),
+    prisma.consignmentSale.aggregate({ where: { shopId, soldAt: { gte: startOfDay } }, _sum: { profit: true } }),
+    prisma.expense.aggregate({ where: { shopId, incurredAt: { gte: startOfDay } }, _sum: { amount: true } }),
   ]);
-  const monthGrossProfit = monthProfitTx.reduce((s, t) => {
+
+  // Cost is snapshotted per line at the price the product carries now, which is
+  // what the month already does. Shared so the two figures cannot drift apart.
+  const grossProfitOf = (
+    txs: { total: number; items: { quantity: number; product: { costPrice: number | null } | null }[] }[],
+  ) => txs.reduce((s, t) => {
     const cost = t.items.reduce((cs, i) => cs + (i.product?.costPrice ?? 0) * i.quantity, 0);
     return s + t.total - cost;
   }, 0);
+
+  const monthGrossProfit       = grossProfitOf(monthProfitTx);
   const monthConsignmentProfit = consignMonthAgg._sum.profit ?? 0;
-  const monthExpenses = expenseMonthAgg._sum.amount ?? 0;
+  const monthExpenses          = expenseMonthAgg._sum.amount ?? 0;
   const monthNetProfit = monthGrossProfit + monthConsignmentProfit - monthExpenses;
+
+  const todayGrossProfit       = grossProfitOf(todayProfitTx);
+  const todayConsignmentProfit = consignTodayAgg._sum.profit ?? 0;
+  const todayExpenses          = expenseTodayAgg._sum.amount ?? 0;
+  const todayNetProfit = todayGrossProfit + todayConsignmentProfit - todayExpenses;
 
   // What the shop still owes on money it borrowed.
   //
@@ -273,6 +296,9 @@ export async function getDashboard(req: AuthRequest, res: Response) {
       grossProfit: monthGrossProfit,
       consignmentProfit: monthConsignmentProfit,
       expenses: monthExpenses,
+      today: todayNetProfit,
+      todayGrossProfit,
+      todayExpenses,
     },
     transactions: { today: todayTx, week: weekTx },
     customers: { total: totalCustomers, new: newCustomers },

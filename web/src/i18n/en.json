@@ -171,7 +171,9 @@
     "plan": "{{plan}} plan",
     "netProfitMonth": "Net Profit (This Month)",
     "stockInvestment": "Stock Investment",
-    "owedOnLoans": "{{amount}} still owed on loans"
+    "owedOnLoans": "{{amount}} still owed on loans",
+    "netProfitToday": "Net Profit Today",
+    "fromSalesToday": "from today's sales"
   },
   "pos": {
     "title": "Point of Sale",
