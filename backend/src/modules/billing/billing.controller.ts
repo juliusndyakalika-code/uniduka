@@ -4,6 +4,7 @@ import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
 import { logger } from '../../utils/logger';
+import { smsPaymentReceived, smsPaymentFailed } from '../../core/notices';
 import { PLAN_PRICES, PlanKey } from '../../core/plans';
 import {
   initiateMobileMoney, checkStatus, verifyWebhook, mapStatus, toMsisdn, splashpayReady,
@@ -213,6 +214,12 @@ async function applyResult(
         completedAt: status === 'PENDING' || status === 'PROCESSING' ? null : new Date(),
       },
     });
+    // Only for an outcome that is actually final. A PENDING or PROCESSING
+    // update is the gateway narrating progress, and texting on each one would
+    // mean several messages for a single payment.
+    if (status === 'FAILED' || status === 'CANCELLED' || status === 'EXPIRED') {
+      void smsPaymentFailed(payment.accountId, { amount: payment.amount, reason: status });
+    }
     return;
   }
 
@@ -266,6 +273,12 @@ async function applyResult(
   ]);
 
   logger.info(`Subscription extended for ${payment.accountId}: ${payment.plan} to ${until.toISOString()}`);
+
+  // After the transaction, never inside it. A slow gateway would otherwise hold
+  // a write transaction open, and a failed text must not undo a paid month.
+  void smsPaymentReceived(payment.accountId, {
+    plan: payment.plan, months: payment.months, amount: payment.amount, until,
+  });
 }
 
 function slim(p: {

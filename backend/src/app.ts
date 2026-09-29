@@ -9,6 +9,7 @@ import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 
 import { connectDB } from './core/prisma';
+import { startNoticeScheduler } from './core/notices';
 import { connectRedis } from './core/redis';
 import { logger } from './utils/logger';
 import { asyncRoutes } from './utils/asyncRoutes';
@@ -192,7 +193,10 @@ process.on('unhandledRejection', (reason) => {
 (async () => {
   await connectDB();
   await connectRedis().catch(() => logger.warn('Redis unavailable — continuing without cache'));
-  http.listen(PORT, () => logger.info(`MauzoHalisi API listening on :${PORT}`));
+  http.listen(PORT, () => {
+    logger.info(`MauzoHalisi API listening on :${PORT}`);
+    startNoticeScheduler();
+  });
 })();
 
 export default app;

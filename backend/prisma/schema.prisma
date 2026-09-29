@@ -401,32 +401,41 @@ model User {
   ownerAccountId String
   ownerAccount   OwnerAccount @relation(fields: [ownerAccountId], references: [id], onDelete: Cascade)
 
-  email        String?   @unique
-  passwordHash String
-  fullName     String
-  phone        String?   @unique
-  avatarUrl    String?
-  role         UserRole  @default(CASHIER)
-  twoFaSecret  String?
-  twoFaEnabled Boolean   @default(false)
-  isActive     Boolean   @default(true)
-  lastLoginAt  DateTime?
-  lastSeenAt   DateTime?
+  email         String?   @unique
+  passwordHash  String
+  fullName      String
+  phone         String?   @unique
+  avatarUrl     String?
+  role          UserRole  @default(CASHIER)
+  twoFaSecret   String?
+  twoFaEnabled  Boolean   @default(false)
+  // Set once the owner has entered a code we sent to this number. It marks the
+  // number as reachable, so subscription and payment notices are not sent into
+  // a typo.
+  phoneVerified Boolean   @default(false)
+  // The same, for the address. Verified separately from the phone: people
+  // mistype one without mistyping the other, and either alone is enough to
+  // reach them.
+  emailVerified Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  lastSeenAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  shopAccess        UserShopAccess[]
-  transactions      Transaction[]
-  auditLogs         AuditLog[]
-  appointments      Appointment[]      @relation("StaffAppointments")
-  consignmentSales  ConsignmentSale[]
-  timeClocks        TimeClock[]
-  stockMovements    StockMovement[]
-  inventoryImports  InventoryImport[]
-  Invoice           Invoice[]
-  InvoicePayment    InvoicePayment[]
-  pushSubscriptions PushSubscription[]
+  shopAccess         UserShopAccess[]
+  transactions       Transaction[]
+  auditLogs          AuditLog[]
+  appointments       Appointment[]       @relation("StaffAppointments")
+  consignmentSales   ConsignmentSale[]
+  timeClocks         TimeClock[]
+  stockMovements     StockMovement[]
+  inventoryImports   InventoryImport[]
+  Invoice            Invoice[]
+  InvoicePayment     InvoicePayment[]
+  pushSubscriptions  PushSubscription[]
+  emailVerifications EmailVerification[]
 
   @@map("users")
 }
@@ -1592,4 +1601,98 @@ model SubscriptionPayment {
   @@index([accountId, createdAt])
   @@index([status])
   @@map("subscription_payments")
+}
+
+// ─── SMS / OTP ───────────────────────────────────────────────────────────────
+
+// Attempt counter for one phone number and one purpose.
+//
+// Textify's verify endpoint is public and unauthenticated, so it applies no
+// throttling of its own: a six digit code sitting valid for thirty minutes is
+// walkable if something does not stop the walking. This table is that
+// something, and it also caps how many codes a single number can be made to
+// receive, so the endpoint cannot be used to bill us for an SMS flood.
+model OtpAttempt {
+  id         String @id @default(cuid())
+  // The target being throttled: a phone normalised to 255XXXXXXXXX, or a
+  // lower-cased email address. One column because the two never collide and
+  // the caps that apply to them are identical.
+  identifier String
+  // "verify" for phone confirmation, "email" for address confirmation,
+  // "reset" for password recovery.
+  purpose    String
+
+  // Codes requested in the current window.
+  sends      Int       @default(0)
+  // When the last code went out, which is what the cooldown is measured from.
+  lastSentAt DateTime?
+  // Codes sent since dayStart. The window cap alone can be cycled all day by
+  // waiting it out, so a slower counter sits behind it.
+  daySends   Int       @default(0)
+  dayStart   DateTime  @default(now())
+  //  Wrong codes submitted in the current window.
+  failures   Int       @default(0)
+
+  //  When the counters above were last reset to zero.
+  windowStart DateTime  @default(now())
+  //  Set when the cap is hit; no send or check is allowed until it passes.
+  lockedUntil DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([identifier, purpose])
+  @@index([lockedUntil])
+  @@map("otp_attempts")
+}
+
+// One row per reminder actually delivered, which is what stops it repeating.
+//
+// The scheduler runs on every instance and wakes on a timer, so the same
+// account crosses the same threshold many times over. Keying on the expiry the
+// reminder was about, rather than on a date, means a renewal moves the expiry
+// and the next cycle's reminders are free to send again, while the current
+// cycle's stay sent.
+model SubscriptionNotice {
+  id        String   @id @default(cuid())
+  accountId String
+  //  Days remaining the notice was for: 7, 3, 1, or 0 for the lapse notice.
+  stage     Int
+  //  The subscription expiry this notice was about.
+  periodEnd DateTime
+
+  sentAt DateTime @default(now())
+
+  @@unique([accountId, stage, periodEnd])
+  @@map("subscription_notices")
+}
+
+// Pending email confirmation codes.
+//
+// Textify generates and stores the SMS codes for us, but its OTP endpoint
+// requires a phone number and has no email-only mode, so the email side is
+// ours to run. Only a hash is kept: a leaked backup of this table should not
+// hand anyone a working code, exactly as with a password.
+model EmailVerification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // The address the code was sent to, which is not always the address on the
+  // user now. Checking against this one stops a code issued for an old address
+  // from confirming a new one.
+  email    String
+  codeHash String
+
+  expiresAt  DateTime
+  consumedAt DateTime?
+  // Wrong guesses against this particular code. Capped alongside the
+  // per-address counter in OtpAttempt so a single code cannot be walked.
+  attempts   Int       @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, consumedAt])
+  @@index([expiresAt])
+  @@map("email_verifications")
 }
