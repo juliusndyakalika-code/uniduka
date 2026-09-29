@@ -64,12 +64,12 @@ const FEATURES = [
 // account. Advertising more than the system allows turns a sale into a support
 // ticket on the customer's first busy week.
 //
-// Prices stay out of the translation files: TZS 20,000 is TZS 20,000 in either
+// Prices stay out of the translation files: TZS 10,000 is TZS 10,000 in either
 // language, and a number that can drift between two files will eventually drift.
 const PLANS = [
   { k: 'starter',    price: null,         period: 'trialPeriod', highlight: false },
-  { k: 'growth',     price: 'TZS 20,000', period: 'perMonth',    highlight: false },
-  { k: 'business',   price: 'TZS 40,000', period: 'perMonth',    highlight: true  },
+  { k: 'growth',     price: 'TZS 10,000', period: 'perMonth',    highlight: false },
+  { k: 'business',   price: 'TZS 20,000', period: 'perMonth',    highlight: true  },
   { k: 'enterprise', price: null,         period: 'contact',     highlight: false },
 ];
 

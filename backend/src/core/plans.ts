@@ -19,8 +19,8 @@ export const PLAN_LIMITS = {
 
 export const PLAN_PRICES: Record<PlanKey, number | null> = {
   STARTER:    0,
-  GROWTH:     20_000,
-  BUSINESS:   40_000,
+  GROWTH:     10_000,
+  BUSINESS:   20_000,
   ENTERPRISE: null,
 };
 
