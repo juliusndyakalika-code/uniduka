@@ -1,11 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, LogOut, RefreshCw } from 'lucide-react';
+import { Clock, LogOut, RefreshCw, CreditCard } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { LogoMark } from '../../components/ui/Logo';
+import PayForPlan from '../../components/billing/PayForPlan';
 
 export default function PendingApprovalPage() {
   const { user, account, setAuth, token, logout } = useAuthStore();
@@ -28,7 +29,21 @@ export default function PendingApprovalPage() {
     }
   }, [data, account, user, token, setAuth, navigate]);
 
+  const [showPay, setShowPay] = useState(false);
+
   function handleLogout() { logout(); navigate('/login'); }
+
+  /**
+   * A successful payment sets subscriptionActive on the server, so the gate
+   * that sent them here will now let them through. Going straight in beats
+   * leaving them on this screen until the 30-second poll notices.
+   */
+  function activated() {
+    if (account && user && token) {
+      setAuth(token, user, { ...account, subscriptionActive: true }, undefined);
+    }
+    navigate('/dashboard', { replace: true });
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F5F0] flex items-center justify-center px-4">
@@ -64,8 +79,23 @@ export default function PendingApprovalPage() {
             </div>
           </div>
 
+          {/* Waiting on someone else is a dead end. Paying is the one action
+              that ends it, and the shop can do it right here. */}
+          {showPay ? (
+            <div className="mb-6">
+              <PayForPlan compact onPaid={activated} />
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowPay(true)}
+              className="btn-primary w-full py-3 mb-4"
+            >
+              <CreditCard size={14} /> {t('billing.activateNow')}
+            </button>
+          )}
+
           <p className="text-xs text-stone-400 mb-6">
-            This page checks automatically every 30 seconds. You'll be redirected as soon as your account is activated.
+            {showPay ? t('billing.orWaitForApproval') : t('auth.pendingAutoCheck')}
           </p>
 
           <div className="flex gap-3">

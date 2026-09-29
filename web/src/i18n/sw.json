@@ -144,7 +144,8 @@
     "pendingMessage": "Akaunti yako inapitiwa. Tutakujulisha baada ya kuidhinishwa.",
     "subscriptionExpired": "Usajili Umeisha",
     "expiredMessage": "Usajili wako umeisha. Tafadhali wasiliana na msaada ili kuhuisha.",
-    "contactSupport": "Wasiliana na Msaada"
+    "contactSupport": "Wasiliana na Msaada",
+    "pendingAutoCheck": "Ukurasa huu hukagua kila sekunde 30. Utaelekezwa mara akaunti yako itakapowashwa."
   },
   "dashboard": {
     "title": "Dashibodi",
@@ -942,6 +943,9 @@
       "FAILED": "Imeshindikana",
       "CANCELLED": "Imeghairiwa",
       "EXPIRED": "Muda umeisha"
-    }
+    },
+    "activateNow": "Washa sasa kwa kulipa",
+    "orWaitForApproval": "Au subiri idhini. Ukurasa huu hukagua kila sekunde 30.",
+    "renewNow": "Lipia sasa"
   }
 }

@@ -1,9 +1,15 @@
+import { useState } from 'react';
+import { CreditCard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 import { LogoMark } from '../../components/ui/Logo';
 import { SUPPORT, waLinkTo } from '../../config';
+import PayForPlan from '../../components/billing/PayForPlan';
 
 export default function SubscriptionExpiredPage() {
+  const [showPay, setShowPay] = useState(false);
+  /** Renewing reactivates the account, so send them straight back in. */
+  const renewed = () => { window.location.href = '/dashboard'; };
   const { logout, user } = useAuthStore();
   const { t } = useTranslation();
 
@@ -34,6 +40,18 @@ export default function SubscriptionExpiredPage() {
           <p className="text-sm text-stone-500 mb-8">
             {t('auth.expiredMessage')}
           </p>
+
+          {/* Renewing is the thing that fixes this, so it leads. Support stays
+              below for anyone paying another way. */}
+          {showPay ? (
+            <div className="mb-8">
+              <PayForPlan compact onPaid={renewed} />
+            </div>
+          ) : (
+            <button onClick={() => setShowPay(true)} className="btn-primary w-full py-3 mb-6">
+              <CreditCard size={14} /> {t('billing.renewNow')}
+            </button>
+          )}
 
           {/* Contact options */}
           <div className="space-y-3 mb-8">

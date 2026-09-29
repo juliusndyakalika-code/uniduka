@@ -144,7 +144,8 @@
     "pendingMessage": "Your account is under review. We'll notify you once approved.",
     "subscriptionExpired": "Subscription Expired",
     "expiredMessage": "Your subscription has expired. Please contact support to renew.",
-    "contactSupport": "Contact Support"
+    "contactSupport": "Contact Support",
+    "pendingAutoCheck": "This page checks automatically every 30 seconds. You'll be redirected as soon as your account is activated."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -942,6 +943,9 @@
       "FAILED": "Failed",
       "CANCELLED": "Cancelled",
       "EXPIRED": "Timed out"
-    }
+    },
+    "activateNow": "Activate now by paying",
+    "orWaitForApproval": "Or wait for approval. This page checks every 30 seconds.",
+    "renewNow": "Renew now"
   }
 }

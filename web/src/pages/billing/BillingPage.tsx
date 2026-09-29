@@ -4,6 +4,7 @@ import { Check, Smartphone, AlertTriangle, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { PageLoader } from '../../components/ui/Loader';
+import PayForPlan from '../../components/billing/PayForPlan';
 
 interface PlanRow { plan: string; monthlyPrice: number }
 interface PlansResponse {
@@ -152,61 +153,7 @@ export default function BillingPage() {
       )}
 
       <div className="card p-5 mb-5">
-        <label className="label">{t('billing.choosePlan')}</label>
-        <div className="grid sm:grid-cols-2 gap-3 mb-5">
-          {info?.plans.map(p => (
-            <button key={p.plan} onClick={() => setPlan(p.plan)}
-              className={`text-left rounded-xl p-4 transition-all ${plan === p.plan ? 'ring-2 ring-stone-900' : ''}`}
-              style={{ background: '#E8EBF0',
-                       boxShadow: plan === p.plan
-                         ? 'inset 4px 4px 9px #c5cad3, inset -4px -4px 9px #ffffff'
-                         : '4px 4px 10px #c5cad3, -4px -4px 10px #ffffff' }}>
-              <p className="text-sm font-bold text-stone-900">{p.plan}</p>
-              <p className="text-xs text-stone-500 mt-0.5">{money(p.monthlyPrice)} {t('billing.perMonth')}</p>
-            </button>
-          ))}
-        </div>
-
-        <label className="label">{t('billing.howLong')}</label>
-        <div className="flex flex-wrap gap-2 mb-5">
-          {MONTH_CHOICES.map(m => (
-            <button key={m} onClick={() => setMonths(m)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${months === m ? 'text-stone-900' : 'text-stone-500'}`}
-              style={{ background: '#E8EBF0',
-                       boxShadow: months === m
-                         ? 'inset 3px 3px 7px #c5cad3, inset -3px -3px 7px #ffffff'
-                         : '3px 3px 8px #c5cad3, -3px -3px 8px #ffffff' }}>
-              {t('billing.months', { count: m })}
-            </button>
-          ))}
-        </div>
-
-        <label className="label">{t('billing.phone')}</label>
-        <input className="input-box mb-2" value={phone} placeholder="0712 345 678" inputMode="tel"
-               onChange={e => setPhone(e.target.value)} disabled={paying} />
-        <p className="text-[11px] text-stone-400 mb-5">{t('billing.phoneHint')}</p>
-
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs uppercase tracking-widest text-stone-400">{t('billing.total')}</span>
-          <span className="text-xl font-bold text-stone-900">{money(total)}</span>
-        </div>
-
-        <button className="btn-primary w-full py-3"
-                disabled={paying || !phone || !info?.paymentsEnabled}
-                onClick={pay}>
-          {watching ? (
-            <><Loader2 size={14} className="animate-spin" /> {t('billing.waitingForPin')}</>
-          ) : paying ? (
-            <><Loader2 size={14} className="animate-spin" /> {t('common.saving')}</>
-          ) : (
-            <><Smartphone size={14} /> {t('billing.payNow', { amount: money(total) })}</>
-          )}
-        </button>
-
-        {watching && (
-          <p className="text-xs text-stone-500 text-center mt-3">{t('billing.checkPhone')}</p>
-        )}
-        {error && <p className="text-xs text-red-600 text-center mt-3">{error}</p>}
+        <PayForPlan />
       </div>
 
       {(history?.data?.length ?? 0) > 0 && (
