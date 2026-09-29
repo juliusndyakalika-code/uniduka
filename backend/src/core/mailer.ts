@@ -34,6 +34,15 @@ function client(): Transporter {
       auth: { user: USER, pass: PASS },
       pool: true,
       maxConnections: 3,
+      // Without these, a blocked or unreachable SMTP port is not an error, it
+      // is a wait: nodemailer's defaults run to minutes, so the request that
+      // asked for a code sat spinning until the browser gave up. Railway
+      // blocks outbound SMTP below the Pro plan, which is exactly that case,
+      // and it has to surface as a failure the screen can report rather than
+      // as a hang.
+      connectionTimeout: 10_000,
+      greetingTimeout:   10_000,
+      socketTimeout:     15_000,
     });
   }
   return transport;
@@ -46,10 +55,19 @@ export interface Mail {
   html?: string;
 }
 
+/** Hard ceiling, so nothing upstream can wait on this longer than this. */
+const SEND_TIMEOUT_MS = 20_000;
+
 export async function sendMail(mail: Mail): Promise<boolean> {
   if (!mailReady) return false;
   try {
-    await client().sendMail({ from: FROM, ...mail });
+    // The transport timeouts above cover the usual failures; this covers the
+    // rest, because a request hanging is worse than one that fails.
+    await Promise.race([
+      client().sendMail({ from: FROM, ...mail }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Mail send timed out')), SEND_TIMEOUT_MS).unref()),
+    ]);
     return true;
   } catch (err) {
     // The address is not logged. It is the thing worth protecting in this line
