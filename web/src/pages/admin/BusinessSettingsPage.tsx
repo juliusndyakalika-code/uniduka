@@ -73,6 +73,12 @@ export default function BusinessSettingsPage() {
     queryFn: () => api.get('/tenant/').then(r => r.data.data),
   });
 
+  const enterpriseSubject = `Enterprise plan enquiry — ${info?.legalName ?? account?.legalName ?? ''}`.trim();
+  const enterpriseEnquiry =
+    `Hello, I would like to talk about the Enterprise plan for ` +
+    `${info?.legalName ?? account?.legalName ?? 'my business'}. ` +
+    `We are currently on the ${info?.subscriptionPlan ?? 'STARTER'} plan.`;
+
   useEffect(() => {
     if (info) reset({ legalName: info.legalName, tradingName: info.tradingName, email: info.email, phone: info.phone });
   }, [info, reset]);
@@ -176,7 +182,12 @@ export default function BusinessSettingsPage() {
 
         {/* Plan comparison */}
         <div className="mt-5 pt-5 border-t border-stone-100 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {(billing?.plans ?? []).map(plan => {
+          {(billing?.plans ?? [])
+            // Starter is the free trial everyone starts on and cannot be
+            // bought or returned to. Once an account has moved off it, showing
+            // it is an option they do not have.
+            .filter(p => p.plan !== 'STARTER' || info?.subscriptionPlan === 'STARTER')
+            .map(plan => {
             const isCurrent = info?.subscriptionPlan === plan.plan;
             return (
               <div key={plan.plan} className={`p-3 rounded-xl border-2 ${isCurrent ? 'border-primary-400 bg-primary-50' : 'border-stone-100'}`}>
@@ -187,6 +198,27 @@ export default function BusinessSettingsPage() {
                   {planLimit(plan.limits.staff, 'staff account', 'staff accounts')}
                 </p>
                 {isCurrent && <p className="text-[10px] text-primary-600 font-semibold mt-1">✓ {t('billing.currentPlan')}</p>}
+                {/* Enterprise has no price to pay online, so the card has to go
+                    somewhere rather than sit there as a dead end. The message
+                    is written for them, naming the business and the plan they
+                    are on, so support has the context without asking. */}
+                {!isCurrent && plan.monthlyPrice === null && (
+                  <div className="mt-2 flex flex-col gap-1">
+                    <a
+                      href={waLinkTo(enterpriseEnquiry)}
+                      target="_blank" rel="noreferrer"
+                      className="text-[10px] font-semibold text-primary-600 hover:underline"
+                    >
+                      {t('billing.talkToUs')} →
+                    </a>
+                    <a
+                      href={`mailto:${SUPPORT.supportEmail}?subject=${encodeURIComponent(enterpriseSubject)}&body=${encodeURIComponent(enterpriseEnquiry)}`}
+                      className="text-[10px] text-stone-400 hover:text-stone-600 hover:underline"
+                    >
+                      {t('billing.orEmailUs')}
+                    </a>
+                  </div>
+                )}
               </div>
             );
           })}

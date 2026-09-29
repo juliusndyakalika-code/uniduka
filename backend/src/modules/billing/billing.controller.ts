@@ -6,7 +6,7 @@ import * as R from '../../utils/response';
 import { logger } from '../../utils/logger';
 import { quoteChange } from '../../core/proration';
 import { smsPaymentReceived, smsPaymentFailed } from '../../core/notices';
-import { PLAN_PRICES, PLAN_LIMITS, PLAN_LABELS, PlanKey } from '../../core/plans';
+import { listPlans, getPlans as planConfig, PlanKey } from '../../core/plans';
 import {
   initiateMobileMoney, checkStatus, verifyWebhook, mapStatus, toMsisdn, splashpayReady, cancelPayment } from '../../core/splashpay';
 
@@ -26,13 +26,16 @@ export async function getPlans(req: AuthRequest, res: Response) {
     // Every plan, not only the buyable ones, and with their limits. The account
     // page used to carry its own hardcoded copy of this and had drifted to
     // prices that were wrong by a factor of six.
-    plans: (Object.keys(PLAN_LIMITS) as PlanKey[]).map(p => ({
-      plan:         p,
-      label:        PLAN_LABELS[p].label,
-      monthlyPrice: PLAN_PRICES[p],
-      buyable:      BUYABLE.includes(p),
-      limits:       PLAN_LIMITS[p],
-      support:      PLAN_LABELS[p].support,
+    // Straight from the runtime config, so a price an admin changes is live
+    // here without a deploy. Buyability is derived from the price rather than
+    // kept as a separate list that could disagree with it.
+    plans: (await listPlans()).map(p => ({
+      plan:         p.key,
+      label:        p.label,
+      monthlyPrice: p.monthlyPrice,
+      buyable:      p.buyable,
+      limits:       p.limits,
+      support:      p.support,
     })),
   });
 }
@@ -60,7 +63,8 @@ export async function getQuote(req: AuthRequest, res: Response) {
   });
   if (!account) return R.notFound(res, 'Account not found');
 
-  const price = PLAN_PRICES[plan as PlanKey] ?? 0;
+  const config = await planConfig();
+  const price  = config[plan as PlanKey]?.monthlyPrice ?? 0;
   const quote = quoteChange({
     currentPlan:   account.subscriptionPlan as PlanKey,
     currentExpiry: account.subscriptionExpiresAt,
@@ -68,6 +72,8 @@ export async function getQuote(req: AuthRequest, res: Response) {
     toPlan:        plan as PlanKey,
     months,
     amount:        price * months,
+    fromPrice:     config[account.subscriptionPlan as PlanKey]?.monthlyPrice ?? 0,
+    toPrice:       price,
   });
 
   return R.ok(res, { ...quote, expiresAt: quote.expiresAt.toISOString() });
@@ -94,7 +100,7 @@ export async function startPayment(req: AuthRequest, res: Response) {
   const msisdn = toMsisdn(phone);
   if (!msisdn) return R.badRequest(res, 'Enter a valid Tanzanian mobile money number.');
 
-  const price = PLAN_PRICES[plan as PlanKey];
+  const price = (await planConfig())[plan as PlanKey]?.monthlyPrice;
   if (!price) return R.badRequest(res, 'That plan cannot be paid for online.');
   const amount = price * monthCount;
 
@@ -364,6 +370,7 @@ async function applyResult(
   // instead, which is the only way an upgrade does not hand over the dearer
   // plan at the cheaper price and a downgrade does not bin what was paid for.
   const now = new Date();
+  const config = await planConfig();
   const quote = quoteChange({
     currentPlan:    (account?.subscriptionPlan ?? 'STARTER') as PlanKey,
     currentExpiry:  account?.subscriptionExpiresAt ?? null,
@@ -371,6 +378,8 @@ async function applyResult(
     toPlan:         payment.plan as PlanKey,
     months:         payment.months,
     amount:         payment.amount,
+    fromPrice:      config[(account?.subscriptionPlan ?? 'STARTER') as PlanKey]?.monthlyPrice ?? 0,
+    toPrice:        config[payment.plan as PlanKey]?.monthlyPrice ?? 0,
     now,
   });
   const until = quote.expiresAt;

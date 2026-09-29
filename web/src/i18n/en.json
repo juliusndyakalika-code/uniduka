@@ -60,7 +60,9 @@
     "addNewShop": "Add new shop",
     "noShopsYet": "No shops yet",
     "trialExpired": "Trial ended. Tap to renew",
-    "trialRemaining": "Trial: {{days}}d remaining"
+    "trialRemaining": "Trial: {{days}} days left",
+    "planRemaining": "{{plan}} · {{days}} days left",
+    "planExpired": "Subscription ended. Tap to renew"
   },
   "lang": {
     "en": "English",
@@ -1000,6 +1002,8 @@
     "cancelNote": "This stops the request on your phone. If you already approved it, the payment still goes through.",
     "changePlan": "Change plan",
     "quoteCredit": "Your {{days}} remaining days on {{plan}} are worth {{credit}}, which is added to this payment.",
-    "quoteResult": "That gives you {{days}} days on {{plan}}."
+    "quoteResult": "That gives you {{days}} days on {{plan}}.",
+    "talkToUs": "Talk to us",
+    "orEmailUs": "or email us"
   }
 }

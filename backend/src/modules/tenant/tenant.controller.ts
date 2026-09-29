@@ -3,7 +3,7 @@ import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
 import * as tz from '../../utils/tz';
-import { PLAN_LIMITS, PLAN_PRICES, PLAN_LABELS, type PlanKey } from '../../core/plans';
+import { getPlans, listPlans, type PlanKey } from '../../core/plans';
 
 
 export async function getAccount(req: AuthRequest, res: Response) {
@@ -15,7 +15,8 @@ export async function getAccount(req: AuthRequest, res: Response) {
   const daysRemaining = account.subscriptionExpiresAt
     ? Math.max(0, Math.ceil((account.subscriptionExpiresAt.getTime() - Date.now()) / 86_400_000))
     : null;
-  return R.ok(res, { ...account, limits: PLAN_LIMITS[account.subscriptionPlan], daysRemaining });
+  const config = await getPlans();
+  return R.ok(res, { ...account, limits: config[account.subscriptionPlan as PlanKey]?.limits, daysRemaining });
 }
 
 export async function updateAccount(req: AuthRequest, res: Response) {
@@ -30,12 +31,13 @@ export async function updateAccount(req: AuthRequest, res: Response) {
 export async function getSubscriptionPlans(_req: AuthRequest, res: Response) {
   // Built from the shared definition so the plans shown, the prices charged and
   // the limits enforced can never drift apart. Prices are TZS per month.
-  const plans = (Object.keys(PLAN_LIMITS) as PlanKey[]).map(plan => ({
-    plan,
-    ...PLAN_LIMITS[plan],
-    price:    PLAN_PRICES[plan],
+  const plans = (await listPlans()).map(p => ({
+    plan:     p.key,
+    ...p.limits,
+    price:    p.monthlyPrice,
     currency: 'TZS',
-    ...PLAN_LABELS[plan],
+    label:    p.label,
+    support:  p.support,
   }));
   return R.ok(res, plans);
 }

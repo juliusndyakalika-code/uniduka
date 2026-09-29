@@ -1,4 +1,4 @@
-import { PLAN_PRICES, PlanKey } from './plans';
+import { PlanKey } from './plans';
 
 /**
  * What a payment does to a subscription that is still running.
@@ -58,10 +58,14 @@ export function quoteChange(args: {
   toPlan: PlanKey;
   months: number;
   amount: number;
+  /** Monthly price of the plan they are on, so unused time can be valued. */
+  fromPrice: number | null;
+  /** Monthly price of the plan being bought. */
+  toPrice: number | null;
   now?: Date;
 }): Quote {
   const now = args.now ?? new Date();
-  const newPrice = PLAN_PRICES[args.toPlan] ?? 0;
+  const newPrice = args.toPrice ?? 0;
 
   // Only time that is both unexpired and actually active counts. A lapsed
   // subscription has nothing left to carry across, which is the same rule the
@@ -88,7 +92,7 @@ export function quoteChange(args: {
     };
   }
 
-  const oldPrice = PLAN_PRICES[args.currentPlan] ?? 0;
+  const oldPrice = args.fromPrice ?? 0;
   // A free plan has no value to carry. The guard below still stops a trial
   // being cut short by paying for something better.
   const creditApplied = Math.round(daysRemaining * (oldPrice / DAYS_PER_MONTH));

@@ -1704,3 +1704,71 @@ model EmailVerification {
   @@index([expiresAt])
   @@map("email_verifications")
 }
+
+// ─── PLATFORM CONFIGURATION ──────────────────────────────────────────────────
+
+// Prices and limits for one subscription tier.
+//
+// These began as constants in core/plans, which meant changing a price was a
+// deploy and the account page's own hardcoded copy drifted to six times the
+// real figure. The keys and their types still come from the code, so nothing
+// can invent a tier the limit checks do not understand; only the values live
+// here.
+//
+// A row absent from this table falls back to the compiled defaults, so an
+// empty table behaves exactly as before rather than selling everything for
+// nothing.
+model PlanConfig {
+  // STARTER, GROWTH, BUSINESS, ENTERPRISE. Matches PlanKey in core/plans.
+  key   String @id
+  label String
+
+  // TZS per month. Null means priced on application, which is what makes a
+  // tier un-buyable online rather than a separate flag.
+  monthlyPrice Int?
+
+  shops     Int
+  branches  Int
+  staff     Int
+  registers Int
+
+  // What the tier promises for support, shown on the comparison card.
+  support   String @default("Email support")
+  // Order on the comparison card, lowest first.
+  sortOrder Int    @default(0)
+
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("plan_configs")
+}
+
+// One piece of outbound copy, for one channel, in one language.
+//
+// The wording used to be string literals inside core/notices, so changing what
+// a customer is told meant editing TypeScript. Templates are rendered with
+// {{placeholders}}; an unknown placeholder is left alone rather than printed
+// as "undefined", because a half-rendered message is worse than an obvious one.
+model NotificationTemplate {
+  id String @id @default(cuid())
+
+  // payment_received, payment_failed, expiry_7, expiry_3, expiry_1, expiry_0…
+  key      String
+  // SMS or EMAIL.
+  channel  String
+  // en or sw.
+  language String
+
+  // Email only; ignored for SMS.
+  subject String?
+  body    String
+
+  // Off means fall back to the compiled default rather than send nothing.
+  isActive Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@unique([key, channel, language])
+  @@map("notification_templates")
+}

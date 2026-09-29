@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Calendar,
@@ -89,6 +89,13 @@ function NavGroup({ icon, label, prefix, badge, children }: {
 }
 
 interface Props { open: boolean; onClose: () => void; sessionSecs?: number; }
+/**
+ * Days out at which the subscription reminders begin, mirrored from
+ * core/notices on the backend. The badge turns red on the same day the first
+ * text goes out.
+ */
+const REMINDER_FROM_DAYS = 7;
+
 export default function Sidebar({ open, onClose, sessionSecs }: Props) {
   const { t } = useTranslation();
   const { user, account, shopId, shops, logout, setShopId } = useAuthStore();
@@ -402,20 +409,44 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
           )}
         </nav>
 
-        {/* Subscription banner */}
-        {isOwner && account?.daysRemaining !== null && account?.daysRemaining !== undefined && (
-          <div className={`mx-3 mb-2 px-3 py-2 rounded-lg text-[10px] leading-tight flex-shrink-0 ${
-            account.daysRemaining <= 3
-              ? 'bg-red-50 border border-red-200 text-red-700'
-              : account.daysRemaining <= 7
-              ? 'bg-amber-50 border border-amber-200 text-amber-700'
-              : 'bg-primary-50 border border-primary-200 text-primary-700'
-          }`}>
-            {account.daysRemaining === 0
-              ? t('common.trialExpired')
-              : t('common.trialRemaining', { days: account.daysRemaining })}
-          </div>
-        )}
+        {/* Subscription banner.
+
+            Every account has a daysRemaining, paid or not, so this used to
+            tell someone on a paid Growth plan they were on a trial with 30
+            days left. Only STARTER is the free trial; anything else is time
+            they bought, and it is worded as such.
+
+            It is a link now too, since a countdown that cannot be acted on
+            just makes people uneasy. */}
+        {isOwner && account?.daysRemaining !== null && account?.daysRemaining !== undefined && (() => {
+          const onTrial = (account.plan ?? 'STARTER') === 'STARTER';
+          const days    = account.daysRemaining as number;
+          const label   = days === 0
+            ? t(onTrial ? 'common.trialExpired' : 'common.planExpired')
+            : t(onTrial ? 'common.trialRemaining' : 'common.planRemaining',
+                { days, plan: account.plan });
+          return (
+            <Link to="/billing" className={`mx-3 mb-2 px-3 py-2 rounded-lg text-[10px] leading-tight flex-shrink-0 block hover:opacity-80 transition-opacity ${
+              // Red from the moment the reminders start, which is seven days
+              // out. Tying it to the same threshold means the badge and the
+              // SMS say the same thing on the same day rather than the screen
+              // staying calm while the texts get urgent.
+              //
+              // The warning applies whatever the plan: a paid subscription a
+              // week from lapsing is exactly as urgent as a trial is. Above
+              // that a paid account is in good standing and reads green, while
+              // a trial keeps the house colour, since it is not a problem but
+              // is running out by design.
+              days <= REMINDER_FROM_DAYS
+                ? 'bg-red-50 border border-red-200 text-red-700'
+                : onTrial
+                ? 'bg-primary-50 border border-primary-200 text-primary-700'
+                : 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+            }`}>
+              {label}
+            </Link>
+          );
+        })()}
 
         {/* User footer */}
         <div className="border-t border-stone-200 px-3 py-3 flex-shrink-0">
