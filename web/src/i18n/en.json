@@ -911,5 +911,37 @@
     "amount": "Amount",
     "method": "Paid with",
     "reference": "Reference"
+  },
+  "billing": {
+    "title": "Subscription",
+    "subtitle": "Your plan and payments",
+    "currentPlan": "Current plan",
+    "renewsOn": "Renews on",
+    "expiredOn": "Expired on",
+    "choosePlan": "Choose a plan",
+    "howLong": "How long",
+    "perMonth": "per month",
+    "months_one": "1 month",
+    "months_other": "{{count}} months",
+    "phone": "Mobile money number",
+    "phoneHint": "The number you will approve the payment on. Vodacom, Tigo, Airtel or Halotel.",
+    "total": "Total",
+    "payNow": "Pay {{amount}}",
+    "waitingForPin": "Waiting for your PIN",
+    "checkPhone": "Check your phone and enter your PIN to approve.",
+    "couldNotStart": "The payment could not be started. Try again.",
+    "notConfigured": "Online payment is not switched on yet. Contact support to pay for your plan.",
+    "paid": "Payment received",
+    "paidUntil": "Your plan is paid until {{date}}.",
+    "notPaid": "Payment not completed",
+    "history": "Past payments",
+    "status": {
+      "PENDING": "Waiting",
+      "PROCESSING": "Processing",
+      "SUCCESS": "Paid",
+      "FAILED": "Failed",
+      "CANCELLED": "Cancelled",
+      "EXPIRED": "Timed out"
+    }
   }
 }

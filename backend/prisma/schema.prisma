@@ -248,9 +248,10 @@ model OwnerAccount {
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
-  users   User[]
-  shops   Shop[]
-  tickets SupportTicket[]
+  users    User[]
+  shops    Shop[]
+  tickets  SupportTicket[]
+  payments SubscriptionPayment[]
 
   @@map("owner_accounts")
 }
@@ -1536,4 +1537,59 @@ model LoanPayment {
   @@index([loanId])
   @@index([shopId, paidAt])
   @@map("loan_payments")
+}
+
+// ── Subscription billing ─────────────────────────────────────────────────────
+// One row per attempt to pay for a plan, through SplashPay mobile money.
+//
+// Written before the customer is asked for anything, so a payment that
+// succeeds at the provider but never reaches us is still visible here and can
+// be reconciled. Without a row first there is nothing to reconcile against.
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
+model SubscriptionPayment {
+  id        String       @id @default(cuid())
+  accountId String
+  account   OwnerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  plan     SubscriptionPlan
+  months   Int              @default(1)
+  amount   Float
+  currency String           @default("TZS")
+
+  // Ours, and what SplashPay echoes back. Unique because it is the only thing
+  // tying a webhook to the attempt that started it.
+  reference         String  @unique
+  providerReference String?
+  provider          String?
+  channel           String?
+
+  phone         String
+  status        PaymentStatus @default(PENDING)
+  failureReason String?
+
+  // Set the moment the subscription is actually extended, and checked before
+  // extending. SplashPay retries a webhook up to eight times over 24 hours, so
+  // without this a shop that paid for one month could be granted eight.
+  appliedAt     DateTime?
+  expiresBefore DateTime?
+  expiresAfter  DateTime?
+
+  initiatedById String?
+  completedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountId, createdAt])
+  @@index([status])
+  @@map("subscription_payments")
 }

@@ -40,6 +40,7 @@ import ordersRoutes     from './modules/orders/orders.routes';
 import invoicesRoutes   from './modules/invoices/invoices.routes';
 import notificationRoutes from './modules/notifications/notifications.routes';
 import loansRoutes     from './modules/loans/loans.routes';
+import billingRoutes   from './modules/billing/billing.routes';
 
 const app  = express();
 const http = createServer(app);
@@ -102,7 +103,13 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 500, standardHeaders: true, l
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
 app.use(compression());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({
+  limit: '2mb',
+  // Keep the raw bytes. SplashPay signs the body it sent, and re-serialising
+  // the parsed object changes key order and whitespace, so the HMAC would
+  // never match. Costs one buffer reference per request.
+  verify: (req, _res, buf) => { (req as express.Request & { rawBody?: Buffer }).rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', { stream: { write: (m) => logger.http(m.trim()) } }));
 
@@ -138,6 +145,9 @@ app.use(`${v1}/orders`,       subscriptionGate, asyncRoutes(ordersRoutes));
 app.use(`${v1}/invoices`,     subscriptionGate, asyncRoutes(invoicesRoutes));
 app.use(`${v1}/notifications`, subscriptionGate, asyncRoutes(notificationRoutes));
 app.use(`${v1}/loans`,         subscriptionGate, asyncRoutes(loansRoutes));
+// Deliberately not behind subscriptionGate: an expired account has to be able
+// to reach the page that renews it.
+app.use(`${v1}/billing`,       asyncRoutes(billingRoutes));
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/', (_, res) => res.json({ status: 'ok', service: 'MauzoHalisi API', version: '4.0.0' }));

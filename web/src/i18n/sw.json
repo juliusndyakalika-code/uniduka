@@ -911,5 +911,37 @@
     "amount": "Kiasi",
     "method": "Umelipa kwa",
     "reference": "Kumbukumbu"
+  },
+  "billing": {
+    "title": "Malipo ya Huduma",
+    "subtitle": "Mpango wako na malipo",
+    "currentPlan": "Mpango wa sasa",
+    "renewsOn": "Unaisha tarehe",
+    "expiredOn": "Uliisha tarehe",
+    "choosePlan": "Chagua mpango",
+    "howLong": "Kwa muda gani",
+    "perMonth": "kwa mwezi",
+    "months_one": "Mwezi 1",
+    "months_other": "Miezi {{count}}",
+    "phone": "Namba ya simu",
+    "phoneHint": "Namba utakayotumia kuidhinisha malipo. Vodacom, Tigo, Airtel au Halotel.",
+    "total": "Jumla",
+    "payNow": "Lipa {{amount}}",
+    "waitingForPin": "Inasubiri PIN yako",
+    "checkPhone": "Angalia simu yako na weka PIN kuidhinisha.",
+    "couldNotStart": "Malipo hayakuanza. Jaribu tena.",
+    "notConfigured": "Malipo mtandaoni bado hayajawashwa. Wasiliana na msaada kulipia mpango wako.",
+    "paid": "Malipo yamepokelewa",
+    "paidUntil": "Mpango wako umelipwa hadi {{date}}.",
+    "notPaid": "Malipo hayakukamilika",
+    "history": "Malipo yaliyopita",
+    "status": {
+      "PENDING": "Inasubiri",
+      "PROCESSING": "Inachakatwa",
+      "SUCCESS": "Imelipwa",
+      "FAILED": "Imeshindikana",
+      "CANCELLED": "Imeghairiwa",
+      "EXPIRED": "Muda umeisha"
+    }
   }
 }

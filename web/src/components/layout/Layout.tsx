@@ -13,7 +13,11 @@ import { useOrderAlerts } from '../../hooks/useOrderAlerts';
 // Pages that stand on their own without a shop. Everything else is replaced by
 // the create-a-shop prompt until one exists, because the API answers those with
 // 403 "No active shop context" and a wall of failed panels explains nothing.
-const SHOPLESS_ROUTES = ['/account'];
+//
+// Billing belongs here for the same reason it sits outside the subscription
+// gate on the server: a lapsed account, or one that never finished setting up,
+// has to be able to reach the page that takes their money.
+const SHOPLESS_ROUTES = ['/account', '/billing'];
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
