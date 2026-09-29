@@ -35,7 +35,9 @@ export default function SubscriptionExpiredPage() {
 
           <h1 className="text-xl font-bold text-stone-900 mb-2">{t('auth.subscriptionExpired')}</h1>
           <p className="text-sm text-stone-500 mb-1">
-            {user?.fullName ? `Hi ${user.fullName.split(' ')[0]}, your` : 'Your'} MauzoHalisi subscription has ended.
+            {user?.fullName
+              ? t('auth.expiredIntroNamed', { name: user.fullName.split(' ')[0] })
+              : t('auth.expiredIntro')}
           </p>
           <p className="text-sm text-stone-500 mb-8">
             {t('auth.expiredMessage')}
@@ -57,7 +59,7 @@ export default function SubscriptionExpiredPage() {
           <div className="space-y-3 mb-8">
             <a
               href={`mailto:${SUPPORT.supportEmail}`}
-              className="btn-primary w-full flex items-center justify-center gap-2"
+              className="btn-secondary w-full flex items-center justify-center gap-2"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
                 <rect width="20" height="16" x="2" y="4" rx="2"/>
@@ -88,7 +90,7 @@ export default function SubscriptionExpiredPage() {
         </div>
 
         <p className="text-center text-xs text-stone-400 mt-6">
-          Your data is safe and will be restored when you reactivate.
+          {t('auth.dataSafe')}
         </p>
       </div>
     </div>

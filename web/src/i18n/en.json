@@ -59,7 +59,7 @@
     "selectShop": "Select Shop",
     "addNewShop": "Add new shop",
     "noShopsYet": "No shops yet",
-    "trialExpired": "Trial expired. Contact support",
+    "trialExpired": "Trial ended. Tap to renew",
     "trialRemaining": "Trial: {{days}}d remaining"
   },
   "lang": {
@@ -143,7 +143,7 @@
     "pendingApproval": "Account Pending Approval",
     "pendingMessage": "Your account is under review. We'll notify you once approved.",
     "subscriptionExpired": "Subscription Expired",
-    "expiredMessage": "Your subscription has expired. Please contact support to renew.",
+    "expiredMessage": "Renew below and you are straight back into your shop.",
     "contactSupport": "Contact Support",
     "pendingAutoCheck": "This page checks automatically every 30 seconds. You'll be redirected as soon as your account is activated.",
     "forgotPassword": "Forgot password?",
@@ -176,7 +176,10 @@
     "emailAddress": "Email address",
     "phoneNumber": "Phone number",
     "continue": "Continue",
-    "verifyContactsDoneOne": "You are all set."
+    "verifyContactsDoneOne": "You are all set.",
+    "expiredIntroNamed": "Hi {{name}}, your MauzoHalisi subscription has ended.",
+    "expiredIntro": "Your MauzoHalisi subscription has ended.",
+    "dataSafe": "Your data is safe and will be restored when you renew."
   },
   "dashboard": {
     "title": "Dashboard",

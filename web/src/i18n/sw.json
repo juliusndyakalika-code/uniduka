@@ -59,7 +59,7 @@
     "selectShop": "Chagua Duka",
     "addNewShop": "Ongeza Duka Jipya",
     "noShopsYet": "Hakuna maduka bado",
-    "trialExpired": "Jaribio limeisha. Wasiliana na msaada",
+    "trialExpired": "Jaribio limeisha. Gusa ulipie",
     "trialRemaining": "Jaribio: Siku {{days}} zimebaki"
   },
   "lang": {
@@ -143,7 +143,7 @@
     "pendingApproval": "Akaunti Inasubiri Idhini",
     "pendingMessage": "Akaunti yako inapitiwa. Tutakujulisha baada ya kuidhinishwa.",
     "subscriptionExpired": "Usajili Umeisha",
-    "expiredMessage": "Usajili wako umeisha. Tafadhali wasiliana na msaada ili kuhuisha.",
+    "expiredMessage": "Lipia hapa chini na utarudi dukani kwako papo hapo.",
     "contactSupport": "Wasiliana na Msaada",
     "pendingAutoCheck": "Ukurasa huu hukagua kila sekunde 30. Utaelekezwa mara akaunti yako itakapowashwa.",
     "forgotPassword": "Umesahau nenosiri?",
@@ -176,7 +176,10 @@
     "emailAddress": "Anwani ya barua pepe",
     "phoneNumber": "Namba ya simu",
     "continue": "Endelea",
-    "verifyContactsDoneOne": "Upo tayari."
+    "verifyContactsDoneOne": "Upo tayari.",
+    "expiredIntroNamed": "Habari {{name}}, usajili wako wa MauzoHalisi umeisha.",
+    "expiredIntro": "Usajili wako wa MauzoHalisi umeisha.",
+    "dataSafe": "Taarifa zako ziko salama na zitarudishwa utakapolipia."
   },
   "dashboard": {
     "title": "Dashibodi",
