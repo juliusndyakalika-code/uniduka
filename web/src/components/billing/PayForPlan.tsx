@@ -14,10 +14,15 @@ import PaymentStatusModal, { PayPhase } from './PaymentStatusModal';
  * gateway's behaviour changes.
  */
 
-interface PlanRow { plan: string; monthlyPrice: number }
+interface PlanRow { plan: string; monthlyPrice: number | null; buyable?: boolean }
 interface PlansResponse {
   current: string; active: boolean; expiresAt: string | null;
   paymentsEnabled: boolean; plans: PlanRow[];
+}
+export interface Quote {
+  fromPlan: string; toPlan: string; isRenewal: boolean;
+  daysRemaining: number; creditApplied: number; amount: number;
+  totalDays: number; expiresAt: string;
 }
 export interface Payment {
   reference: string; plan: string; months: number; amount: number;
@@ -64,7 +69,27 @@ export default function PayForPlan({ onPaid, compact }: {
     queryFn: () => api.get('/billing/plans').then(r => r.data),
   });
   const info = data?.data;
-  const chosen = info?.plans.find(p => p.plan === plan);
+
+  /**
+   * What this payment would actually do, asked of the server rather than
+   * recomputed here.
+   *
+   * Changing plan converts unused time into value, which on an upgrade can
+   * shorten a long remaining period: a year of Growth is worth six months of
+   * Business. That has to be agreed to before paying, not found out after.
+   */
+  const { data: quoteRes } = useQuery<{ data: Quote }>({
+    queryKey: ['billing-quote', plan, months],
+    queryFn: () => api.get('/billing/quote', { params: { plan, months } }).then(r => r.data),
+    enabled: Boolean(info?.paymentsEnabled !== false),
+  });
+  const quote = quoteRes?.data;
+  // /billing/plans returns every tier so the comparison table elsewhere can
+  // render them all. Only the buyable ones belong in this picker: Starter is
+  // free and Enterprise is priced on application, and both rendered as
+  // "TSh 0 per month" when they leaked in.
+  const buyable = (info?.plans ?? []).filter(p => p.buyable !== false && (p.monthlyPrice ?? 0) > 0);
+  const chosen = buyable.find(p => p.plan === plan);
   const total = (chosen?.monthlyPrice ?? 0) * months;
 
   // While a prompt sits on the customer's phone, ask the server where it got
@@ -216,7 +241,7 @@ export default function PayForPlan({ onPaid, compact }: {
 
       <label className="label">{t('billing.choosePlan')}</label>
       <div className={`grid sm:grid-cols-2 gap-3 ${compact ? 'mb-4' : 'mb-5'}`}>
-        {info?.plans.map(p => (
+        {buyable.map(p => (
           <button key={p.plan} onClick={() => setPlan(p.plan)} type="button"
             className={`text-left rounded-xl p-3 transition-all ${plan === p.plan ? 'ring-2 ring-stone-900' : ''}`}
             style={{ background: '#E8EBF0',
@@ -224,7 +249,7 @@ export default function PayForPlan({ onPaid, compact }: {
                        ? 'inset 4px 4px 9px #c5cad3, inset -4px -4px 9px #ffffff'
                        : '4px 4px 10px #c5cad3, -4px -4px 10px #ffffff' }}>
             <p className="text-sm font-bold text-stone-900">{p.plan}</p>
-            <p className="text-xs text-stone-500 mt-0.5">{money(p.monthlyPrice)} {t('billing.perMonth')}</p>
+            <p className="text-xs text-stone-500 mt-0.5">{money(p.monthlyPrice ?? 0)} {t('billing.perMonth')}</p>
           </button>
         ))}
       </div>
@@ -247,6 +272,27 @@ export default function PayForPlan({ onPaid, compact }: {
       <input className="input-box mb-2" value={phone} placeholder="0712 345 678" inputMode="tel"
              onChange={e => setPhone(e.target.value)} disabled={paying} />
       <p className={`text-[11px] text-stone-400 ${compact ? 'mb-4' : 'mb-5'}`}>{t('billing.phoneHint')}</p>
+
+      {quote && !quote.isRenewal && quote.daysRemaining > 0 && (
+        <div className="mb-4 rounded-xl bg-stone-50 p-3 text-xs leading-relaxed text-stone-600">
+          {quote.creditApplied > 0 ? (
+            <>
+              {t('billing.quoteCredit', {
+                days: quote.daysRemaining,
+                plan: quote.fromPlan,
+                credit: money(quote.creditApplied),
+              })}{' '}
+              <strong className="text-stone-900">
+                {t('billing.quoteResult', { days: quote.totalDays, plan: quote.toPlan })}
+              </strong>
+            </>
+          ) : (
+            <strong className="text-stone-900">
+              {t('billing.quoteResult', { days: quote.totalDays, plan: quote.toPlan })}
+            </strong>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between mb-4">
         <span className="text-xs uppercase tracking-widest text-stone-400">{t('billing.total')}</span>

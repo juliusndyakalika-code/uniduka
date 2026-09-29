@@ -950,7 +950,7 @@
   "billing": {
     "title": "Malipo ya Huduma",
     "subtitle": "Mpango wako na malipo",
-    "currentPlan": "Mpango wa sasa",
+    "currentPlan": "Kifurushi cha sasa",
     "renewsOn": "Unaisha tarehe",
     "expiredOn": "Uliisha tarehe",
     "choosePlan": "Chagua mpango",
@@ -997,6 +997,9 @@
     "stillWaiting": "Bado tunasubiri",
     "stillWaitingHelp": "Bado hatujapata jibu. Malipo yanaweza kuwa njiani, hivyo usilipe tena kwa sasa.",
     "keepWaiting": "Endelea kusubiri",
-    "cancelNote": "Hii inasitisha ombi kwenye simu yako. Kama tayari umeidhinisha, malipo yataendelea."
+    "cancelNote": "Hii inasitisha ombi kwenye simu yako. Kama tayari umeidhinisha, malipo yataendelea.",
+    "changePlan": "Badilisha kifurushi",
+    "quoteCredit": "Siku {{days}} zilizobaki kwenye {{plan}} zina thamani ya {{credit}}, nazo zinaongezwa kwenye malipo haya.",
+    "quoteResult": "Hii inakupa siku {{days}} kwenye {{plan}}."
   }
 }

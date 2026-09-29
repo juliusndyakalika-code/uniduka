@@ -997,6 +997,9 @@
     "stillWaiting": "Still waiting",
     "stillWaitingHelp": "We have not heard back yet. The payment may still be on its way, so do not pay again just yet.",
     "keepWaiting": "Keep waiting",
-    "cancelNote": "This stops the request on your phone. If you already approved it, the payment still goes through."
+    "cancelNote": "This stops the request on your phone. If you already approved it, the payment still goes through.",
+    "changePlan": "Change plan",
+    "quoteCredit": "Your {{days}} remaining days on {{plan}} are worth {{credit}}, which is added to this payment.",
+    "quoteResult": "That gives you {{days}} days on {{plan}}."
   }
 }

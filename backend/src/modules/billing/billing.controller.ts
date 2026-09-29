@@ -4,8 +4,9 @@ import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
 import { logger } from '../../utils/logger';
+import { quoteChange } from '../../core/proration';
 import { smsPaymentReceived, smsPaymentFailed } from '../../core/notices';
-import { PLAN_PRICES, PlanKey } from '../../core/plans';
+import { PLAN_PRICES, PLAN_LIMITS, PLAN_LABELS, PlanKey } from '../../core/plans';
 import {
   initiateMobileMoney, checkStatus, verifyWebhook, mapStatus, toMsisdn, splashpayReady, cancelPayment } from '../../core/splashpay';
 
@@ -22,8 +23,54 @@ export async function getPlans(req: AuthRequest, res: Response) {
     active: account?.subscriptionActive ?? false,
     expiresAt: account?.subscriptionExpiresAt ?? null,
     paymentsEnabled: splashpayReady,
-    plans: BUYABLE.map(p => ({ plan: p, monthlyPrice: PLAN_PRICES[p] })),
+    // Every plan, not only the buyable ones, and with their limits. The account
+    // page used to carry its own hardcoded copy of this and had drifted to
+    // prices that were wrong by a factor of six.
+    plans: (Object.keys(PLAN_LIMITS) as PlanKey[]).map(p => ({
+      plan:         p,
+      label:        PLAN_LABELS[p].label,
+      monthlyPrice: PLAN_PRICES[p],
+      buyable:      BUYABLE.includes(p),
+      limits:       PLAN_LIMITS[p],
+      support:      PLAN_LABELS[p].support,
+    })),
   });
+}
+
+/**
+ * GET /billing/quote?plan=&months=
+ *
+ * What a change would actually do, worked out by the same function that will
+ * do it. Shown before paying because converting unused time into days can
+ * shorten a long remaining period on an upgrade, and that is a thing to agree
+ * to in advance rather than discover afterwards.
+ */
+export async function getQuote(req: AuthRequest, res: Response) {
+  const plan   = String(req.query.plan ?? '');
+  const months = Number(req.query.months ?? 1);
+
+  if (!BUYABLE.includes(plan as PlanKey)) return R.badRequest(res, 'That plan cannot be paid for online.');
+  if (!Number.isInteger(months) || months < 1 || months > 12) {
+    return R.badRequest(res, 'Pay for between 1 and 12 months at a time.');
+  }
+
+  const account = await prisma.ownerAccount.findUnique({
+    where:  { id: req.user!.accountId },
+    select: { subscriptionPlan: true, subscriptionActive: true, subscriptionExpiresAt: true },
+  });
+  if (!account) return R.notFound(res, 'Account not found');
+
+  const price = PLAN_PRICES[plan as PlanKey] ?? 0;
+  const quote = quoteChange({
+    currentPlan:   account.subscriptionPlan as PlanKey,
+    currentExpiry: account.subscriptionExpiresAt,
+    currentActive: account.subscriptionActive,
+    toPlan:        plan as PlanKey,
+    months,
+    amount:        price * months,
+  });
+
+  return R.ok(res, { ...quote, expiresAt: quote.expiresAt.toISOString() });
 }
 
 /**
@@ -305,18 +352,34 @@ async function applyResult(
 
   const account = await prisma.ownerAccount.findUnique({
     where: { id: payment.accountId },
-    select: { subscriptionExpiresAt: true, suspendedAt: true },
+    select: {
+      subscriptionExpiresAt: true, suspendedAt: true,
+      subscriptionPlan: true, subscriptionActive: true,
+    },
   });
   const banned = Boolean(account?.suspendedAt);
 
-  // Extend from whichever is later. Paying early should add to the time already
-  // bought, not throw it away; paying after lapsing starts from today.
+  // Renewals extend from whichever is later, so paying early adds to the time
+  // already bought. A plan change carries the unused time across as value
+  // instead, which is the only way an upgrade does not hand over the dearer
+  // plan at the cheaper price and a downgrade does not bin what was paid for.
   const now = new Date();
-  const from = account?.subscriptionExpiresAt && account.subscriptionExpiresAt > now
-    ? account.subscriptionExpiresAt
-    : now;
-  const until = new Date(from);
-  until.setMonth(until.getMonth() + payment.months);
+  const quote = quoteChange({
+    currentPlan:    (account?.subscriptionPlan ?? 'STARTER') as PlanKey,
+    currentExpiry:  account?.subscriptionExpiresAt ?? null,
+    currentActive:  account?.subscriptionActive ?? false,
+    toPlan:         payment.plan as PlanKey,
+    months:         payment.months,
+    amount:         payment.amount,
+    now,
+  });
+  const until = quote.expiresAt;
+  if (!quote.isRenewal) {
+    logger.info(
+      `Plan change for ${payment.accountId}: ${quote.fromPlan} to ${quote.toPlan}, ` +
+      `${quote.daysRemaining}d credited as ${quote.creditApplied}, now ${quote.totalDays}d`,
+    );
+  }
 
   // Restoring access mirrors what a platform admin's activation does, rather
   // than setting the three subscription fields and leaving the owner locked
