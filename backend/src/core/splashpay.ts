@@ -12,21 +12,22 @@ const BASE    = process.env.SPLASHPAY_BASE_URL ?? 'https://api.splashpay.co.tz/a
 const KEY     = process.env.SPLASHPAY_API_KEY ?? '';
 const SECRET  = process.env.SPLASHPAY_API_SECRET ?? '';
 /**
- * Keys the webhook signature might be signed with.
+ * Keys a webhook signature is checked against, in order of preference.
  *
- * SplashPay's examples read a SPLASHPAY_WEBHOOK_SECRET, but their credentials
- * page issues only two values, pk_ and sk_, and documents no separate signing
- * key. So the API secret is almost certainly what signs callbacks, and a
- * dedicated secret may exist for some merchants or arrive later.
+ * SplashPay reveals a signing secret at the moment a webhook is created, which
+ * is why it is absent from the credentials page: it belongs to the webhook, not
+ * to the account. Once set, it is the only thing accepted.
  *
- * Rather than pick one and have every callback silently rejected if the guess
- * is wrong, both are accepted. This is not a weakening: each is a secret known
- * only to us and SplashPay, so matching either proves the same thing.
+ * The API secret is a fallback for the window before that webhook exists, so a
+ * callback arriving mid-setup is not silently refused. It is not accepted
+ * alongside a configured webhook secret, because the API secret travels in the
+ * header of every outbound request while the webhook secret is only ever used
+ * for verification. Honouring both would mean a leaked API key also bought the
+ * ability to forge subscription payments.
  */
-const HOOK_SECRETS = [
-  process.env.SPLASHPAY_WEBHOOK_SECRET ?? '',
-  process.env.SPLASHPAY_API_SECRET ?? '',
-].filter(Boolean);
+const HOOK_SECRETS = process.env.SPLASHPAY_WEBHOOK_SECRET
+  ? [process.env.SPLASHPAY_WEBHOOK_SECRET]
+  : [process.env.SPLASHPAY_API_SECRET ?? ''].filter(Boolean);
 
 export const splashpayReady = Boolean(KEY && SECRET);
 if (!splashpayReady) logger.warn('SplashPay keys not set — subscription payments are disabled');
@@ -168,8 +169,10 @@ export function verifyWebhook(rawBody: Buffer | string, signature?: string, time
 
   if (!matched) {
     logger.warn(
-      `SplashPay webhook signature did not match any configured secret ` +
-      `(tried ${HOOK_SECRETS.length}: ${process.env.SPLASHPAY_WEBHOOK_SECRET ? 'webhook secret, ' : ''}api secret)`,
+      'SplashPay webhook signature did not match the ' +
+      (process.env.SPLASHPAY_WEBHOOK_SECRET
+        ? 'configured webhook secret. Check it matches the one shown when the webhook was created.'
+        : 'API secret, and no SPLASHPAY_WEBHOOK_SECRET is set. Add the webhook in SplashPay and set the secret it shows.'),
     );
   }
   return matched;
