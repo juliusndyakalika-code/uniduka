@@ -17,6 +17,8 @@ interface AuthState {
   shops: ShopMeta[];
   isAuthenticated: boolean;
   setAuth: (token: string, user: User, account: Account, shopId?: string, refreshToken?: string) => void;
+  /** Bring the cached account back in line after a payment settles. */
+  applyPayment: (plan: string, expiresAt: string | null) => void;
   setShopId: (shopId: string, token?: string) => void;
   setShops: (shops: ShopMeta[]) => void;
   logout: () => void;
@@ -36,7 +38,7 @@ function lsParse<T>(key: string): T | null {
   try { return JSON.parse(lsGet(key) || 'null') as T; } catch { return null; }
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   token:           lsGet('ud_token'),
   user:            lsParse<User>('ud_user'),
   account:         lsParse<Account>('ud_account'),
@@ -51,6 +53,34 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (shopId) lsSet('ud_shop', shopId);
     if (refreshToken) lsSet('ud_refresh', refreshToken);
     set({ token, user, account, shopId: shopId || null, isAuthenticated: true });
+  },
+
+  /**
+   * Record a settled payment on the cached account.
+   *
+   * ProtectedRoute decides where someone lands from this cached copy, not from
+   * the server, so a renewal that does not update it sends the customer
+   * straight back to the expired screen they just paid to leave. That is
+   * exactly what happened: the expired screen reloaded to /dashboard while the
+   * stored account still said the subscription was inactive.
+   *
+   * The expiry comes from the payment itself, so no extra request is needed and
+   * the stored date matches what the server actually granted.
+   */
+  applyPayment: (plan, expiresAt) => {
+    const account = get().account;
+    if (!account) return;
+    const next = {
+      ...account,
+      plan: plan || account.plan,
+      subscriptionActive: true,
+      subscriptionExpiresAt: expiresAt ?? account.subscriptionExpiresAt,
+      daysRemaining: expiresAt
+        ? Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000))
+        : account.daysRemaining,
+    };
+    lsSet('ud_account', JSON.stringify(next));
+    set({ account: next });
   },
 
   setShopId: (shopId, token) => {

@@ -6,10 +6,10 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { LogoMark } from '../../components/ui/Logo';
-import PayForPlan from '../../components/billing/PayForPlan';
+import PayForPlan, { type Payment } from '../../components/billing/PayForPlan';
 
 export default function PendingApprovalPage() {
-  const { user, account, setAuth, token, logout } = useAuthStore();
+  const { user, account, token, logout, applyPayment } = useAuthStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -22,12 +22,14 @@ export default function PendingApprovalPage() {
   });
 
   useEffect(() => {
-    if (data?.subscriptionActive && account && user && token) {
-      // Update Zustand with the now-active account so the gate opens
-      setAuth(token, user, { ...account, subscriptionActive: true }, undefined);
+    if (data?.subscriptionActive) {
+      // Carries the plan and expiry the server just reported rather than only
+      // flipping the active flag: leaving a stale past expiry behind is what
+      // sent a freshly activated owner back to the expired screen.
+      applyPayment(data.plan ?? data.subscriptionPlan, data.subscriptionExpiresAt ?? null);
       navigate('/dashboard', { replace: true });
     }
-  }, [data, account, user, token, setAuth, navigate]);
+  }, [data, applyPayment, navigate]);
 
   const [showPay, setShowPay] = useState(false);
 
@@ -38,10 +40,11 @@ export default function PendingApprovalPage() {
    * that sent them here will now let them through. Going straight in beats
    * leaving them on this screen until the 30-second poll notices.
    */
-  function activated() {
-    if (account && user && token) {
-      setAuth(token, user, { ...account, subscriptionActive: true }, undefined);
-    }
+  function activated(p: Payment) {
+    // Shares the expired screen's path so the two cannot drift apart again.
+    // The previous version flipped subscriptionActive but left the old expiry
+    // date in place, which was stale the moment it was written.
+    applyPayment(p.plan, p.expiresAfter);
     navigate('/dashboard', { replace: true });
   }
 

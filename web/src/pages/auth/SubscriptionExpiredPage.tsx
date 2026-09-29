@@ -5,15 +5,25 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 import { LogoMark } from '../../components/ui/Logo';
 import { SUPPORT, waLinkTo } from '../../config';
-import PayForPlan from '../../components/billing/PayForPlan';
+import PayForPlan, { type Payment } from '../../components/billing/PayForPlan';
 
 export default function SubscriptionExpiredPage() {
   const [showPay, setShowPay] = useState(false);
-  /** Renewing reactivates the account, so send them straight back in. */
-  const renewed = () => { window.location.href = '/dashboard'; };
-  const { logout, user } = useAuthStore();
+  const { logout, user, applyPayment } = useAuthStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  /**
+   * Update the cached account before navigating.
+   *
+   * ProtectedRoute routes from that cache, so reloading straight to /dashboard
+   * without it sent the customer back here, to the screen they had just paid
+   * to leave.
+   */
+  const renewed = (p: Payment) => {
+    applyPayment(p.plan, p.expiresAfter);
+    navigate('/dashboard', { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6">
