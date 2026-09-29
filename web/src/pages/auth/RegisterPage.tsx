@@ -27,7 +27,11 @@ export default function RegisterPage() {
       // Straight into the app. Shop setup used to be bolted onto the end of
       // registration, which made signing up a six-step form before anyone had
       // seen the product. Layout prompts for a shop the moment a page needs one.
-      navigate('/dashboard');
+      // Both codes were sent as the account was created, so this screen opens
+      // with them already on their way. It can be skipped; nothing is gated on
+      // it, and locking someone out of a shop they just made because an SMS is
+      // slow would cost more than an unconfirmed number does.
+      navigate('/verify', { replace: true });
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Registration failed');
     } finally { setLoading(false); }

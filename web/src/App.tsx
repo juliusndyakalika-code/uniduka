@@ -11,6 +11,8 @@ import PlatformLayout from './components/layout/PlatformLayout';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import VerifyContactsPage from './pages/auth/VerifyContactsPage';
 import PendingApprovalPage from './pages/auth/PendingApprovalPage';
 import SubscriptionExpiredPage from './pages/auth/SubscriptionExpiredPage';
 
@@ -104,6 +106,8 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/verify" element={<VerifyContactsPage />} />
           <Route path="/pending" element={<PendingApprovalPage />} />
           <Route path="/expired" element={<SubscriptionExpiredPage />} />
           <Route path="/about"   element={<AboutPage />} />

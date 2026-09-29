@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [need2fa, setNeed2fa] = useState(false);
+  // Set by the reset screen, which issues no session, so the only sign that it
+  // worked is this message waiting on the form they are sent back to.
+  const justReset = (useLocation().state as { passwordReset?: boolean } | null)?.passwordReset;
 
   // Someone already signed in has no business on this screen. It matters most
   // in the Android app, which opens straight here: without this the owner would
@@ -61,6 +64,12 @@ export default function LoginPage() {
           <h2 className="text-lg font-bold text-stone-900 mb-1">{t('auth.signInTitle')}</h2>
           <p className="text-xs text-stone-400 mb-6">{t('auth.signInSubtitle')}</p>
 
+          {justReset && !error && (
+            <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">
+              {t('auth.passwordResetDone')}
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 px-3 py-2.5 bg-red-50 border border-red-200 rounded-sm text-xs text-red-700">{error}</div>
           )}
@@ -102,6 +111,9 @@ export default function LoginPage() {
           </form>
 
           <p className="text-center text-xs text-stone-400 mt-6">
+            <Link to="/forgot-password" className="text-stone-500 hover:text-stone-700">{t('auth.forgotPassword')}</Link>
+          </p>
+          <p className="mt-2 text-center text-sm text-stone-500">
             {t('auth.noAccount')}{' '}
             <Link to="/register" className="text-primary-600 font-semibold hover:underline">{t('auth.createOne')}</Link>
           </p>
