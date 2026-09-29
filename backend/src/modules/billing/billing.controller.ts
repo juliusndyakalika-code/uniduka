@@ -248,6 +248,19 @@ async function applyResult(
   const until = new Date(from);
   until.setMonth(until.getMonth() + payment.months);
 
+  // Mirrors what a platform admin's activation does, rather than only the
+  // three subscription fields it used to set.
+  //
+  // Until now an owner whose trial lapsed under the old expiry behaviour had
+  // their account's isActive switched off and every shop deactivated, and
+  // paying restored none of it: they were charged and stayed locked out. Expiry
+  // no longer does that, so this exists for accounts already in that state, and
+  // is written to be harmless for everyone else.
+  //
+  // It does mean a payment lifts an admin suspension, because the two states
+  // are recorded in the same column and cannot be told apart. That is the lesser
+  // fault: suspensions are rare and deliberate and an admin can reapply one,
+  // while the alternative charges real customers for access they never get.
   await prisma.$transaction([
     prisma.ownerAccount.update({
       where: { id: payment.accountId },
@@ -255,7 +268,12 @@ async function applyResult(
         subscriptionPlan: payment.plan,
         subscriptionActive: true,
         subscriptionExpiresAt: until,
+        isActive: true,
       },
+    }),
+    prisma.shop.updateMany({
+      where: { ownerAccountId: payment.accountId, isActive: false },
+      data:  { isActive: true },
     }),
     prisma.subscriptionPayment.update({
       where: { id: payment.id },

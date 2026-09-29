@@ -34,8 +34,18 @@ export default function ProtectedRoute({ roles }: Props) {
   if (!isAuthenticated || (expired && !canRefresh)) return <Navigate to="/login" replace />;
   // Platform admins belong in the /platform section
   if (user?.role === 'PLATFORM_ADMIN') return <Navigate to="/platform" replace />;
-  // Block access to shop functionality until subscription approved — but allow setup wizard
-  if (account && !account.subscriptionActive && !pathname.startsWith('/setup')) return <Navigate to="/pending" replace />;
+  // An inactive subscription has two quite different causes and they must not
+  // share a screen. An account that has never been activated is genuinely
+  // waiting on a human. One whose paid period ran out is waiting on nobody, and
+  // telling that owner their account is "under review" sends them off to wait
+  // for an approval that is never coming, when what they need is the renew
+  // button one route over.
+  if (account && !account.subscriptionActive && !pathname.startsWith('/setup')) {
+    const ended = account.subscriptionExpiresAt
+      ? new Date(account.subscriptionExpiresAt).getTime() <= Date.now()
+      : false;
+    return <Navigate to={ended ? '/expired' : '/pending'} replace />;
+  }
   if (roles && user && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />;
   return <Outlet />;
 }

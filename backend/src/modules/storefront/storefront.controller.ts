@@ -60,10 +60,32 @@ function publicProduct(
   };
 }
 
-/** Look up a live storefront by slug, or null. */
+/**
+ * Look up a live storefront by slug, or null.
+ *
+ * The owner's subscription is part of what "live" means. A lapsed shop used to
+ * disappear from here because expiry switched every shop's isActive off, which
+ * worked but overwrote the owner's own open/closed setting and left it
+ * overwritten after they paid. Reading the subscription directly gets the same
+ * result without touching anything: the storefront goes dark while unpaid and
+ * comes straight back on renewal, with the shop's own flag untouched.
+ */
 async function liveShop(slug: string) {
+  const now = new Date();
   return prisma.shop.findFirst({
-    where: { slug, storefrontEnabled: true, isActive: true },
+    where: {
+      slug,
+      storefrontEnabled: true,
+      isActive: true,
+      ownerAccount: {
+        isActive: true,
+        subscriptionActive: true,
+        OR: [
+          { subscriptionExpiresAt: null },          // never expires
+          { subscriptionExpiresAt: { gt: now } },
+        ],
+      },
+    },
   });
 }
 

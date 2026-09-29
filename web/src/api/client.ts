@@ -42,6 +42,15 @@ api.interceptors.response.use(
       return Promise.reject(err);
     }
 
+    // A suspension is an admin's decision, so it goes to the screen with the
+    // support contacts rather than the renew button. It used to arrive with no
+    // code at all, which matched nothing here and left the caller stranded on
+    // whatever screen it was on with a silent failure.
+    if (status === 402 && code === 'ACCOUNT_SUSPENDED') {
+      window.location.href = '/pending';
+      return Promise.reject(err);
+    }
+
     // ── Token expired — attempt silent refresh ────────────────────────────────
     if (status === 401 && !original._retry) {
       const storedRefresh = lsGet('ud_refresh');
