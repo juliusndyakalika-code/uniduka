@@ -11,7 +11,22 @@ import { logger } from '../utils/logger';
 const BASE    = process.env.SPLASHPAY_BASE_URL ?? 'https://api.splashpay.co.tz/api/v1';
 const KEY     = process.env.SPLASHPAY_API_KEY ?? '';
 const SECRET  = process.env.SPLASHPAY_API_SECRET ?? '';
-const HOOK    = process.env.SPLASHPAY_WEBHOOK_SECRET ?? '';
+/**
+ * Keys the webhook signature might be signed with.
+ *
+ * SplashPay's examples read a SPLASHPAY_WEBHOOK_SECRET, but their credentials
+ * page issues only two values, pk_ and sk_, and documents no separate signing
+ * key. So the API secret is almost certainly what signs callbacks, and a
+ * dedicated secret may exist for some merchants or arrive later.
+ *
+ * Rather than pick one and have every callback silently rejected if the guess
+ * is wrong, both are accepted. This is not a weakening: each is a secret known
+ * only to us and SplashPay, so matching either proves the same thing.
+ */
+const HOOK_SECRETS = [
+  process.env.SPLASHPAY_WEBHOOK_SECRET ?? '',
+  process.env.SPLASHPAY_API_SECRET ?? '',
+].filter(Boolean);
 
 export const splashpayReady = Boolean(KEY && SECRET);
 if (!splashpayReady) logger.warn('SplashPay keys not set — subscription payments are disabled');
@@ -126,8 +141,8 @@ export async function checkStatus(reference: string): Promise<{ status?: string;
  * is idempotent; this only turns away something ancient.
  */
 export function verifyWebhook(rawBody: Buffer | string, signature?: string, timestamp?: string): boolean {
-  if (!HOOK) {
-    logger.warn('SPLASHPAY_WEBHOOK_SECRET not set — refusing the webhook rather than trusting it');
+  if (HOOK_SECRETS.length === 0) {
+    logger.warn('No SplashPay secret configured — refusing the webhook rather than trusting it');
     return false;
   }
   if (!signature || !timestamp) return false;
@@ -136,13 +151,28 @@ export function verifyWebhook(rawBody: Buffer | string, signature?: string, time
   if (!Number.isFinite(age) || age > 26 * 60 * 60) return false;
 
   const body = typeof rawBody === 'string' ? rawBody : rawBody.toString('utf8');
-  const expected = crypto.createHmac('sha256', HOOK).update(`${timestamp}.${body}`).digest('hex');
+  const given = Buffer.from(signature, 'utf8');
 
-  // Compared byte by byte in constant time. A plain === leaks how much of the
-  // signature was right through how long the comparison took.
-  const a = Buffer.from(expected, 'utf8');
-  const b = Buffer.from(signature, 'utf8');
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+  // Every candidate is checked even after one matches, so the time taken does
+  // not reveal which secret was the right one.
+  let matched = false;
+  for (const secret of HOOK_SECRETS) {
+    const expected = Buffer.from(
+      crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex'),
+      'utf8',
+    );
+    // Compared byte by byte in constant time. A plain === leaks how much of the
+    // signature was right through how long the comparison took.
+    if (expected.length === given.length && crypto.timingSafeEqual(expected, given)) matched = true;
+  }
+
+  if (!matched) {
+    logger.warn(
+      `SplashPay webhook signature did not match any configured secret ` +
+      `(tried ${HOOK_SECRETS.length}: ${process.env.SPLASHPAY_WEBHOOK_SECRET ? 'webhook secret, ' : ''}api secret)`,
+    );
+  }
+  return matched;
 }
 
 /** Their status strings mapped onto ours. */
