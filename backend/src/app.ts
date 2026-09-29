@@ -11,6 +11,8 @@ import { Server as SocketServer } from 'socket.io';
 import { connectDB } from './core/prisma';
 import { startNoticeScheduler } from './core/notices';
 import { connectRedis } from './core/redis';
+import { globalLimiter } from './core/limiter';
+import { installSocketAuth } from './core/socketAuth';
 import { logger } from './utils/logger';
 import { asyncRoutes } from './utils/asyncRoutes';
 import { authenticate } from './middleware/auth';
@@ -100,7 +102,11 @@ app.get('/uniduka.apk',     (_req, res) => res.redirect(301, '/mauzohalisi.apk')
 app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({ origin: corsOrigin as never, credentials: true }));
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 500, standardHeaders: true, legacyHeaders: false }));
+// Backed by Redis so the ceiling is the number configured rather than that
+// number multiplied by however many replicas happen to be running. The old
+// in-process counter answered identical requests with a mix of 200 and 429
+// depending on which instance took them.
+app.use(globalLimiter);
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
 app.use(compression());
@@ -151,12 +157,27 @@ app.use(`${v1}/loans`,         subscriptionGate, asyncRoutes(loansRoutes));
 app.use(`${v1}/billing`,       asyncRoutes(billingRoutes));
 
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get('/', (_, res) => res.json({ status: 'ok', service: 'MauzoHalisi API', version: '4.0.0' }));
-app.get('/health', (_, res) => res.json({ status: 'ok', service: 'MauzoHalisi API', version: '4.0.0' }));
+// Deliberately says nothing but "up". The exact version told an unauthenticated
+// caller which published vulnerabilities to go looking for, and a health check
+// needs none of it. The build is still identifiable internally through Railway.
+app.get('/',       (_, res) => res.json({ status: 'ok' }));
+app.get('/health', (_, res) => res.json({ status: 'ok' }));
 
 // ── Global error handler ──────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  // A body the parser could not read is the caller's mistake, not ours. It
+  // was answering 500, which is wrong on its face and also fills the error
+  // logs with noise that hides real incidents.
+  const syntax = err as Error & { status?: number; type?: string };
+  if (syntax instanceof SyntaxError && syntax.status === 400 && 'body' in syntax) {
+    return res.status(400).json({ success: false, message: 'Malformed JSON in request body' });
+  }
+  // Likewise for a body over the limit, which express-json raises the same way.
+  if (syntax.type === 'entity.too.large') {
+    return res.status(413).json({ success: false, message: 'Request body too large' });
+  }
+
   logger.error(`Unhandled error: ${err.stack || err.message}`);
   res.status(500).json({
     success: false,
@@ -165,15 +186,10 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // ── Socket.IO (KDS + real-time POS) ──────────────────────────────────────────
-io.on('connection', (socket) => {
-  logger.info(`Socket connected: ${socket.id}`);
-  // Clients have historically emitted both spellings; accept either so a
-  // mismatch can't silently leave a page out of its shop room.
-  const join = (shopId: string) => { if (shopId) socket.join(`shop:${shopId}`); };
-  socket.on('join_shop', join);
-  socket.on('join:shop', join);
-  socket.on('disconnect', () => logger.info(`Socket disconnected: ${socket.id}`));
-});
+// Authentication and per-shop authorisation for the realtime channel. The
+// namespace used to accept any connection and join any shop id, which meant a
+// stranger could subscribe to another tenant's live orders.
+installSocketAuth(io);
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;

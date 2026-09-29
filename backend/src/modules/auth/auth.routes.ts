@@ -7,6 +7,22 @@ import { authenticate } from '../../middleware/auth';
 
 const router = Router();
 
+/**
+ * Never let a token-bearing response be stored.
+ *
+ * Registration, login and refresh return access and refresh tokens in the
+ * body. That is normal for a token API and is what the client needs, but it
+ * means any intermediary that caches the response holds a working session.
+ * The assessment flagged these bodies as credential exposure; the bodies
+ * carry no password and no hash, so the real exposure is a cached copy, and
+ * this is what forecloses it.
+ */
+router.use((_req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  next();
+});
+
 // A coarse backstop in front of the per-identifier caps in ./otp.
 //
 // The precise work is done there, keyed on the phone or address being targeted:

@@ -12,6 +12,7 @@ import { screenFields } from '../../core/profanity';
 import { normalizePhone, phoneVariants } from '../../utils/phone';
 import { sendOtp, verifyOtp, smsReady, OTP_TTL_MINUTES } from '../../core/sms';
 import { gateSend, gateCheck, recordFailure, clearAttempts } from './otp';
+import { checkAccountLock, recordLoginFailure, clearLoginFailures } from '../../core/limiter';
 
 const SECRET      = process.env.JWT_SECRET         || 'uniduka-secret-change-in-prod';
 const REFRESH_KEY = process.env.JWT_REFRESH_SECRET || 'uniduka-refresh-secret';
@@ -122,6 +123,20 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     const identifier = (username || '').trim();
     if (!identifier || !password) return R.badRequest(res, 'Username and password required');
 
+    // Checked before the password is compared, so a locked identity costs an
+    // attacker a lookup rather than a bcrypt round. Keyed on the username,
+    // which is the half they cannot rotate: spraying works by staying under a
+    // per-IP limit while walking many accounts, and only this sees that.
+    const lock = await checkAccountLock(identifier);
+    if (lock.locked) {
+      res.set('Retry-After', String(lock.retryAfter));
+      return res.status(429).json({
+        success: false,
+        message: 'Too many failed attempts on this account. Try again shortly.',
+        retryAfter: lock.retryAfter,
+      });
+    }
+
     const variants = phoneVariants(identifier);
 
     const matches = await prisma.user.findMany({
@@ -144,10 +159,18 @@ export async function login(req: Request, res: Response, next: NextFunction) {
         return R.badRequest(res, 'Multiple accounts share this phone number. Please sign in with your email address instead.');
       }
     }
-    if (!user || !user.isActive) return R.unauthorized(res, 'Invalid credentials');
+    if (!user || !user.isActive) {
+      // Counted even when no such user exists, so the lock cannot be used to
+      // tell a real account from an imaginary one by how it behaves.
+      await recordLoginFailure(identifier);
+      return R.unauthorized(res, 'Invalid credentials');
+    }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return R.unauthorized(res, 'Invalid credentials');
+    if (!valid) {
+      await recordLoginFailure(identifier);
+      return R.unauthorized(res, 'Invalid credentials');
+    }
 
     if (user.twoFaEnabled) {
       if (!totp) return res.status(200).json({ success: true, require2fa: true });
@@ -155,6 +178,9 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       if (!ok) return R.unauthorized(res, 'Invalid 2FA code');
     }
 
+    // Getting in clears the counter, so a few fumbled attempts do not follow
+    // someone into their next session.
+    await clearLoginFailures(identifier);
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
     const shopAccess = await prisma.userShopAccess.findFirst({ where: { userId: user.id } });

@@ -10,7 +10,8 @@
  */
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { io, type Socket } from 'socket.io-client';
+import { type Socket } from 'socket.io-client';
+import { connectSocket } from '../lib/socket';
 import { useAuthStore } from '../store/authStore';
 
 export interface IncomingOrder {
@@ -65,17 +66,20 @@ export function useOrderAlerts() {
   const dismiss = useCallback(() => setLatest(null), []);
 
   useEffect(() => {
-    if (!shopId) return;
+    // No token means no connection. The server refuses an unauthenticated
+    // socket now, so opening one without a session only produces a retry loop.
+    if (!shopId || !token) return;
 
-    const socket = io({ auth: { token } });
+    const socket = connectSocket(token);
+    if (!socket) return;
     socketRef.current = socket;
 
-    const joinRoom = () => {
-      socket.emit('join_shop', shopId);
-      socket.emit('join:shop', shopId);   // server accepts either
-    };
-    joinRoom();
-    socket.on('connect', joinRoom);       // rejoin after a reconnect
+    // Only after the handshake: emitting before connect is buffered, and the
+    // server cannot authorise a join until it knows who is asking.
+    const joinRoom = () => socket.emit('join_shop', shopId);
+    socket.on('connect', joinRoom);       // covers first connect and reconnects
+    socket.on('join_error', (e: { message?: string }) =>
+      console.warn('Realtime join refused:', e?.message));
 
     socket.on('order:new', (order: IncomingOrder) => {
       setLatest(order);

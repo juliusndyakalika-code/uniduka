@@ -11,6 +11,7 @@ FROM nginx:alpine
 RUN apk add --no-cache gettext
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
+COPY security-headers.conf /etc/nginx/conf.d/security-headers.conf.template
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 EXPOSE 80

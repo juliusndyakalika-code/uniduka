@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChefHat, Check, Clock } from 'lucide-react';
-import { io } from 'socket.io-client';
+import { connectSocket } from '../../lib/socket';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -39,8 +39,10 @@ export default function KdsPage() {
 
   useEffect(() => {
     if (!shopId || !token) return;
-    const socket = io({ auth: { token } });
-    socket.emit('join:shop', shopId);
+    const socket = connectSocket(token);
+    if (!socket) return;
+    // After the handshake, so the server knows who is asking before it decides.
+    socket.on('connect', () => socket.emit('join_shop', shopId));
     // The server emits 'kds_update'; the old 'transaction:new' listener never fired.
     socket.on('kds_update', () => qc.invalidateQueries({ queryKey: ['kds-orders'] }));
     return () => { socket.disconnect(); };
