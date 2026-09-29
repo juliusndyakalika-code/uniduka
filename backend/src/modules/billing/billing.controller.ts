@@ -54,9 +54,20 @@ export async function startPayment(req: AuthRequest, res: Response) {
 
   const account = await prisma.ownerAccount.findUnique({
     where: { id: req.user!.accountId },
-    select: { id: true, legalName: true, email: true, billingEmail: true },
+    select: { id: true, legalName: true, email: true, billingEmail: true, suspendedAt: true },
   });
   if (!account) return R.notFound(res, 'Account not found');
+
+  // Refused before the prompt reaches their phone. Paying would not get a
+  // suspended owner back in, since only an admin can lift that, so taking the
+  // money first and explaining afterwards is the one outcome to avoid.
+  if (account.suspendedAt) {
+    return res.status(402).json({
+      success: false,
+      code:    'ACCOUNT_SUSPENDED',
+      message: 'This account is suspended, so it cannot be renewed online. Please contact support.',
+    });
+  }
 
   // Leaving a prompt sitting on someone's phone while they start another is how
   // a shop ends up paying twice for one month.
@@ -236,8 +247,9 @@ async function applyResult(
 
   const account = await prisma.ownerAccount.findUnique({
     where: { id: payment.accountId },
-    select: { subscriptionExpiresAt: true },
+    select: { subscriptionExpiresAt: true, suspendedAt: true },
   });
+  const banned = Boolean(account?.suspendedAt);
 
   // Extend from whichever is later. Paying early should add to the time already
   // bought, not throw it away; paying after lapsing starts from today.
@@ -248,19 +260,17 @@ async function applyResult(
   const until = new Date(from);
   until.setMonth(until.getMonth() + payment.months);
 
-  // Mirrors what a platform admin's activation does, rather than only the
-  // three subscription fields it used to set.
+  // Restoring access mirrors what a platform admin's activation does, rather
+  // than setting the three subscription fields and leaving the owner locked
+  // out of shops that were still switched off. That is what repairs accounts
+  // broken by the old expiry behaviour, which deactivated the account and its
+  // shops and gave paying no way to undo it.
   //
-  // Until now an owner whose trial lapsed under the old expiry behaviour had
-  // their account's isActive switched off and every shop deactivated, and
-  // paying restored none of it: they were charged and stayed locked out. Expiry
-  // no longer does that, so this exists for accounts already in that state, and
-  // is written to be harmless for everyone else.
-  //
-  // It does mean a payment lifts an admin suspension, because the two states
-  // are recorded in the same column and cannot be told apart. That is the lesser
-  // fault: suspensions are rare and deliberate and an admin can reapply one,
-  // while the alternative charges real customers for access they never get.
+  // A suspended account is the one case where none of that happens. The money
+  // is still recorded and the subscription still extends, so nothing is taken
+  // without being credited, but isActive and the shops stay where the admin
+  // left them. Only an admin reinstating the account clears suspendedAt, so a
+  // ban cannot be bought off.
   await prisma.$transaction([
     prisma.ownerAccount.update({
       where: { id: payment.accountId },
@@ -268,13 +278,15 @@ async function applyResult(
         subscriptionPlan: payment.plan,
         subscriptionActive: true,
         subscriptionExpiresAt: until,
-        isActive: true,
+        ...(banned ? {} : { isActive: true }),
       },
     }),
-    prisma.shop.updateMany({
-      where: { ownerAccountId: payment.accountId, isActive: false },
-      data:  { isActive: true },
-    }),
+    ...(banned ? [] : [
+      prisma.shop.updateMany({
+        where: { ownerAccountId: payment.accountId, isActive: false },
+        data:  { isActive: true },
+      }),
+    ]),
     prisma.subscriptionPayment.update({
       where: { id: payment.id },
       data: {

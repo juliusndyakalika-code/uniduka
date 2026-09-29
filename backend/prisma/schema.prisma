@@ -243,6 +243,14 @@ model OwnerAccount {
   billingCycle          String?          @default("monthly")
   stripeCustomerId      String?
   isActive              Boolean          @default(true)
+  // Set only when a platform admin suspends the account, and the record of
+  // that decision. isActive alone could not carry it: expiry used to switch
+  // that same flag off, so a lapsed trial and a ban were the same state, and
+  // restoring access on payment would have lifted the ban with it.
+  //
+  // A payment never clears this. Only an admin reinstating the account does.
+  suspendedAt           DateTime?
+  suspendedReason       String?
   subscriptionActive    Boolean          @default(false)
   subscriptionExpiresAt DateTime? // null = never expires (paid/enterprise); set for trial & renewals
   createdAt             DateTime         @default(now())

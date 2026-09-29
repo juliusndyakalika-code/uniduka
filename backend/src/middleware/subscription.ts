@@ -7,13 +7,24 @@ export async function requireActiveSubscription(req: AuthRequest, res: Response,
 
   const account = await prisma.ownerAccount.findUnique({
     where:  { id: req.user.accountId },
-    select: { subscriptionActive: true, isActive: true, subscriptionExpiresAt: true, subscriptionPlan: true },
+    select: {
+      subscriptionActive: true, isActive: true, suspendedAt: true,
+      subscriptionExpiresAt: true, subscriptionPlan: true,
+    },
   });
 
-  // isActive is the platform admin's suspension switch, and nothing else may
-  // set it. It used to be flipped by the expiry branch below too, which made a
-  // lapsed trial indistinguishable from a banned account and left the owner
-  // reading "contact support" with nobody to contact.
+  // A suspension is an admin's decision and is checked before anything about
+  // money. suspendedAt is what records it: isActive alone could not, because
+  // expiry used to switch that same flag off, so a lapsed trial and a ban were
+  // the same state and paying would have lifted both.
+  if (account?.suspendedAt) {
+    return res.status(402).json({
+      success: false,
+      code:    'ACCOUNT_SUSPENDED',
+      message: 'Account suspended. Contact support.',
+    });
+  }
+
   if (!account?.isActive) {
     return res.status(402).json({
       success: false,

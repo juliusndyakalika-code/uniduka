@@ -79,6 +79,7 @@ async function liveShop(slug: string) {
       isActive: true,
       ownerAccount: {
         isActive: true,
+        suspendedAt: null,
         subscriptionActive: true,
         OR: [
           { subscriptionExpiresAt: null },          // never expires

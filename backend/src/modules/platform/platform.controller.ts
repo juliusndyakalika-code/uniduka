@@ -113,8 +113,13 @@ export async function activateAccount(req: Request, res: Response, next: NextFun
     const [account] = await prisma.$transaction([
       prisma.ownerAccount.update({
         where: { id: req.params.id },
-        data:  { subscriptionPlan: plan as SubscriptionPlan, subscriptionActive: true, isActive: true, subscriptionExpiresAt: expiresAt },
-        select: { id: true, legalName: true, subscriptionPlan: true, subscriptionActive: true, isActive: true, subscriptionExpiresAt: true },
+        // Reinstating clears the suspension. This is the only thing that does:
+        // a payment deliberately cannot, or a ban would be for sale.
+        data:  {
+          subscriptionPlan: plan as SubscriptionPlan, subscriptionActive: true, isActive: true,
+          subscriptionExpiresAt: expiresAt, suspendedAt: null, suspendedReason: null,
+        },
+        select: { id: true, legalName: true, subscriptionPlan: true, subscriptionActive: true, isActive: true, suspendedAt: true, subscriptionExpiresAt: true },
       }),
       prisma.shop.updateMany({ where: { ownerAccountId: req.params.id }, data: { isActive: true } }),
     ]);
@@ -128,11 +133,17 @@ export const approveAccount = activateAccount;
 // POST /api/v1/platform/accounts/:id/suspend
 export async function suspendAccount(req: Request, res: Response, next: NextFunction) {
   try {
+    const { reason } = (req.body ?? {}) as { reason?: string };
     const [account] = await prisma.$transaction([
       prisma.ownerAccount.update({
         where: { id: req.params.id },
-        data:  { subscriptionActive: false, isActive: false },
-        select: { id: true, legalName: true, subscriptionActive: true, isActive: true },
+        // suspendedAt is what makes this survive a payment. Leaving it to
+        // isActive alone is how a suspended account used to buy its way back in.
+        data:  {
+          subscriptionActive: false, isActive: false,
+          suspendedAt: new Date(), suspendedReason: reason?.trim() || null,
+        },
+        select: { id: true, legalName: true, subscriptionActive: true, isActive: true, suspendedAt: true, suspendedReason: true },
       }),
       prisma.shop.updateMany({
         where: { ownerAccountId: req.params.id },
