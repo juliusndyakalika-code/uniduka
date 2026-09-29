@@ -76,6 +76,8 @@ const BillingPage = lazy(() => import('./pages/billing/BillingPage'));
 const PlatformShops        = lazy(() => import('./pages/platform/PlatformShops'));
 const PlatformUsers        = lazy(() => import('./pages/platform/PlatformUsers'));
 const PlatformMonitor      = lazy(() => import('./pages/platform/PlatformMonitor'));
+const PlatformPlans        = lazy(() => import('./pages/platform/PlatformPlans'));
+const PlatformTemplates    = lazy(() => import('./pages/platform/PlatformTemplates'));
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -123,6 +125,8 @@ export default function App() {
               <Route path="/platform/accounts/:id" element={<PlatformAccountDetail />} />
               <Route path="/platform/shops"        element={<PlatformShops />} />
               <Route path="/platform/users"        element={<PlatformUsers />} />
+              <Route path="/platform/plans"        element={<PlatformPlans />} />
+              <Route path="/platform/messages"     element={<PlatformTemplates />} />
               <Route path="/platform/monitor"      element={<PlatformMonitor />} />
             </Route>
           </Route>

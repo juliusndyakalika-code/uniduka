@@ -4,21 +4,20 @@ import { useAuthStore } from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
 import LanguageToggle from '../../components/ui/LanguageToggle';
 import { LogoMark } from '../../components/ui/Logo';
-import ContactVerification, { pendingCount, type VerificationStatus }
+import ContactVerification, { type VerificationStatus }
   from '../../components/account/ContactVerification';
 
 /**
- * Confirm the phone number and email address on a new account.
+ * Confirm the phone number on a new account.
  *
- * Both codes were already sent when the account was created, so this opens
- * ready to accept them rather than making anyone ask first.
+ * The code was already sent as the account was created, so this opens ready to
+ * accept it rather than making anyone ask first.
  *
- * Nothing is gated on finishing it. The codes exist so we can reach the owner
- * about payments and an expiring subscription, and locking someone out of the
- * shop they just signed up for because an SMS is slow would cost far more than
- * an unconfirmed number does. Whatever is skipped stays finishable from the
- * account page, which is the part that was missing: this screen used to be
- * reachable only in the moment after sign-up, so "later" meant never.
+ * Confirming is required, because the number is where payment confirmations,
+ * expiry reminders and password recovery all go, and password recovery has no
+ * other route at all. The gate only applies when there is a number to confirm
+ * and an SMS gateway to confirm it with, and the screen keeps a sign out, so a
+ * code that never arrives is not a trap.
  */
 export default function VerifyContactsPage() {
   const { t } = useTranslation();
@@ -37,18 +36,10 @@ export default function VerifyContactsPage() {
     if (s.phone.verified) markPhoneVerified();
   }
 
-  const pending = pendingCount(status);
   // The phone is required, so it is the one thing that cannot be postponed.
   // Email can, and an account with no usable phone channel must not be trapped
   // here by a gate it has no way to satisfy.
   const phoneBlocking = Boolean(status?.phone.available && !status.phone.verified);
-  const available = status
-    ? [status.phone.available, status.email.available].filter(Boolean).length
-    : 0;
-
-  // "Both are confirmed" is wrong when only one channel exists, which is the
-  // normal case whenever no mail transport is reachable.
-  const doneCopy = available > 1 ? t('auth.verifyContactsDone') : t('auth.verifyContactsDoneOne');
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[#F8F5F0] px-4 py-10">
@@ -65,9 +56,7 @@ export default function VerifyContactsPage() {
         <div className="card p-8">
           <h1 className="mb-1 text-xl font-bold">{t('auth.verifyContactsTitle')}</h1>
           <p className="mb-6 text-sm text-stone-500">
-            {phoneBlocking
-              ? t('auth.verifyPhoneHelp')
-              : pending > 0 ? t('auth.verifyContactsHelp') : doneCopy}
+            {phoneBlocking ? t('auth.verifyPhoneHelp') : t('auth.verifyContactsDoneOne')}
           </p>
 
           <ContactVerification onChange={onStatus} />
@@ -89,23 +78,14 @@ export default function VerifyContactsPage() {
               </button>
             </>
           ) : (
-            <>
-              <button
-                type="button" onClick={() => navigate('/dashboard', { replace: true })}
-                className={pending > 0 ? 'mt-6 w-full text-sm text-stone-500 hover:text-stone-700' : 'btn-primary mt-6 w-full'}
-              >
-                {pending > 0 ? t('auth.verifyLater') : t('auth.continue')}
-              </button>
-
-              {/* Only the email can reach this, and saying where it can be
-                  finished makes skipping a postponement rather than a
-                  decision that cannot be revisited. */}
-              {pending > 0 && (
-                <p className="mt-3 text-center text-[11px] leading-snug text-stone-400">
-                  {t('auth.verifyLaterHint')}
-                </p>
-              )}
-            </>
+            // Nothing is pending once the phone is confirmed, since it is the
+            // only channel, so this is always a plain way onward.
+            <button
+              type="button" onClick={() => navigate('/dashboard', { replace: true })}
+              className="btn-primary mt-6 w-full"
+            >
+              {t('auth.continue')}
+            </button>
           )}
         </div>
       </div>

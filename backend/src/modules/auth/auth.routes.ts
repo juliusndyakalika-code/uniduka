@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { register, login, me, updateMe, refresh, changePassword, setup2fa, verify2fa, disable2fa,
          sendPhoneOtp, verifyPhoneOtp, forgotPassword, resetPassword,
-         sendEmailOtp, verifyEmailOtp, verificationStatus } from './auth.controller';
+         verificationStatus } from './auth.controller';
 import rateLimit from 'express-rate-limit';
 import { authenticate } from '../../middleware/auth';
 
@@ -36,8 +36,6 @@ router.put ('/password', authenticate, changePassword);
 router.get ('/verification',   authenticate, verificationStatus);
 router.post('/phone/send-otp', otpLimit, authenticate, sendPhoneOtp);
 router.post('/phone/verify',   otpLimit, authenticate, verifyPhoneOtp);
-router.post('/email/send-otp', otpLimit, authenticate, sendEmailOtp);
-router.post('/email/verify',   otpLimit, authenticate, verifyEmailOtp);
 router.post('/password/forgot', otpLimit, forgotPassword);
 router.post('/password/reset',  otpLimit, resetPassword);
 router.post('/2fa/setup',   authenticate, setup2fa);

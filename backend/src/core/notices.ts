@@ -1,6 +1,7 @@
 import { prisma } from './prisma';
 import { sendSms, smsReady } from './sms';
 import { logger } from '../utils/logger';
+import { compose } from './templates';
 
 /**
  * The SMS notices MauzoHalisi sends an account owner about their subscription.
@@ -58,9 +59,10 @@ export async function smsPaymentReceived(
     const phone = await ownerPhone(accountId);
     if (!phone) return;
     const period = args.months === 1 ? '1 month' : `${args.months} months`;
-    await sendSms(phone,
-      `MauzoHalisi: payment of ${money(args.amount)} received. ` +
-      `Your ${args.plan} plan is active for ${period}, until ${day(args.until)}. Asante.`);
+    const msg = await compose('payment_received', 'SMS', {
+      amount: money(args.amount), plan: args.plan, period, until: day(args.until),
+    });
+    if (msg) await sendSms(phone, msg.body);
   } catch (err) {
     logger.warn(`Payment received SMS failed for ${accountId}: ${(err as Error).message}`);
   }
@@ -78,9 +80,8 @@ export async function smsPaymentFailed(
     // The gateway's own reason codes are not repeated to the customer. They are
     // written for us (AMOUNT_MISMATCH, INSUFFICIENT_BALANCE) and read as noise
     // or as alarm on a phone; the actionable part is the same either way.
-    await sendSms(phone,
-      `MauzoHalisi: your payment of ${money(args.amount)} did not go through. ` +
-      `No money has been taken. Open the app to try again.`);
+    const msg = await compose('payment_failed', 'SMS', { amount: money(args.amount) });
+    if (msg) await sendSms(phone, msg.body);
   } catch (err) {
     logger.warn(`Payment failed SMS failed for ${accountId}: ${(err as Error).message}`);
   }
@@ -89,14 +90,12 @@ export async function smsPaymentFailed(
 /** Days before expiry that a reminder goes out. 0 is the day it lapses. */
 const STAGES = [7, 3, 1, 0] as const;
 
-function expiryCopy(stage: number, plan: string, until: Date): string {
-  if (stage === 0) {
-    return `MauzoHalisi: your ${plan} subscription has expired. ` +
-           `Renew in the app to get back into your shop. Your data is safe.`;
-  }
-  const when = stage === 1 ? 'tomorrow' : `in ${stage} days`;
-  return `MauzoHalisi: your ${plan} subscription ends ${when} (${day(until)}). ` +
-         `Renew in the app to avoid interruption.`;
+/** The reminder copy for one stage, from the editable templates. */
+async function expiryCopy(stage: number, plan: string, until: Date): Promise<string | null> {
+  const msg = await compose(`expiry_${stage}`, 'SMS', {
+    plan, date: day(until), days: stage,
+  });
+  return msg?.body ?? null;
 }
 
 /**
@@ -164,7 +163,8 @@ export async function runExpiryReminders(): Promise<void> {
 
     const phone = await ownerPhone(account.id);
     if (!phone) continue;
-    await sendSms(phone, expiryCopy(stage, account.subscriptionPlan, until));
+    const body = await expiryCopy(stage, account.subscriptionPlan, until);
+    if (body) await sendSms(phone, body);
   }
 }
 

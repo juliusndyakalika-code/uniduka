@@ -1,15 +1,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Check, Mail, Smartphone, Loader2 } from 'lucide-react';
+import { Check, Smartphone, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 
 /**
- * Confirming the phone number and email address on an account.
+ * Confirming the phone number on an account.
  *
- * Lives here rather than only on the screen shown after registration, because
- * that screen was reachable for about thirty seconds and never again: its only
- * route was the redirect out of sign-up, and "Do this later" meant later never
- * came. Anything still unverified has to be finishable from the account page.
+ * Phone only. Email confirmation was removed: it could not be delivered from
+ * this host, since Railway blocks outbound SMTP below the Pro plan, and an
+ * address nobody could ever confirm was worse on screen than none at all.
  */
 
 interface Channel {
@@ -18,7 +17,7 @@ interface Channel {
   address?: string | null;
   number?: string | null;
 }
-export interface VerificationStatus { email: Channel; phone: Channel }
+export interface VerificationStatus { phone: Channel }
 
 export default function ContactVerification({ onChange }: {
   /** Told after every reload, so a host screen can react to it being finished. */
@@ -28,10 +27,9 @@ export default function ContactVerification({ onChange }: {
 
   const [status, setStatus]   = useState<VerificationStatus | null>(null);
   const [phoneCode, setPhone] = useState('');
-  const [emailCode, setEmail] = useState('');
-  const [busy, setBusy]       = useState<'phone' | 'email' | null>(null);
-  const [resent, setResent]   = useState<'phone' | 'email' | null>(null);
-  const [errors, setErrors]   = useState<{ phone?: string; email?: string }>({});
+  const [busy, setBusy]       = useState<'phone' | null>(null);
+  const [resent, setResent]   = useState<'phone' | null>(null);
+  const [errors, setErrors]   = useState<{ phone?: string }>({});
 
   /**
    * Held in a ref rather than named as a dependency.
@@ -63,19 +61,19 @@ export default function ContactVerification({ onChange }: {
   const readError = (e: unknown, fallback: string) =>
     (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
 
-  async function verify(channel: 'phone' | 'email') {
-    const code = channel === 'phone' ? phoneCode : emailCode;
+  async function verify(channel: 'phone') {
+    const code = phoneCode;
     setBusy(channel); setErrors((p) => ({ ...p, [channel]: undefined }));
     try {
       await api.post(`/auth/${channel}/verify`, { code });
-      if (channel === 'phone') setPhone(''); else setEmail('');
+      setPhone('');
       await load();
     } catch (e) {
       setErrors((p) => ({ ...p, [channel]: readError(e, t('auth.codeWrong')) }));
     } finally { setBusy(null); }
   }
 
-  async function resend(channel: 'phone' | 'email') {
+  async function resend(channel: 'phone') {
     setBusy(channel); setErrors((p) => ({ ...p, [channel]: undefined }));
     try {
       await api.post(`/auth/${channel}/send-otp`);
@@ -92,7 +90,7 @@ export default function ContactVerification({ onChange }: {
   if (!status) return null;
 
   function panel(
-    channel: 'phone' | 'email',
+    channel: 'phone',
     ch: Channel,
     icon: React.ReactNode,
     label: string,
@@ -100,9 +98,9 @@ export default function ContactVerification({ onChange }: {
     code: string,
     setCode: (v: string) => void,
   ) {
-    // A channel the server reports as unavailable gets no box at all. Email is
-    // exactly that whenever no mail transport is reachable, and an input that
-    // cannot work is worse than an absent one.
+    // A channel the server reports as unavailable gets no box at all, which
+    // is what an account with no number, or a deployment with no SMS gateway,
+    // looks like. An input that cannot work is worse than an absent one.
     if (!ch.available) return null;
 
     return (
@@ -154,7 +152,6 @@ export default function ContactVerification({ onChange }: {
   return (
     <div className="space-y-5">
       {panel('phone', status.phone, <Smartphone size={16} />, t('auth.phoneNumber'), status.phone.number, phoneCode, setPhone)}
-      {panel('email', status.email, <Mail size={16} />, t('auth.emailAddress'), status.email.address, emailCode, setEmail)}
     </div>
   );
 }
@@ -162,8 +159,5 @@ export default function ContactVerification({ onChange }: {
 /** How many channels are available but still unconfirmed. */
 export function pendingCount(s: VerificationStatus | null): number {
   if (!s) return 0;
-  return [
-    s.phone.available && !s.phone.verified,
-    s.email.available && !s.email.verified,
-  ].filter(Boolean).length;
+  return s.phone.available && !s.phone.verified ? 1 : 0;
 }

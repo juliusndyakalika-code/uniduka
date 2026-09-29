@@ -12,8 +12,6 @@ import { screenFields } from '../../core/profanity';
 import { normalizePhone, phoneVariants } from '../../utils/phone';
 import { sendOtp, verifyOtp, smsReady, OTP_TTL_MINUTES } from '../../core/sms';
 import { gateSend, gateCheck, recordFailure, clearAttempts } from './otp';
-import { sendVerificationEmail, mailReady } from '../../core/mailer';
-import crypto from 'crypto';
 
 const SECRET      = process.env.JWT_SECRET         || 'uniduka-secret-change-in-prod';
 const REFRESH_KEY = process.env.JWT_REFRESH_SECRET || 'uniduka-refresh-secret';
@@ -73,13 +71,10 @@ export async function register(req: Request, res: Response, next: NextFunction) 
 
     const user = account.users[0];
 
-    // Both codes go out now, so the verification step that follows registration
-    // finds them already sent rather than making the user ask. Fired without
-    // await and without a catch that matters: neither a mail server nor an SMS
-    // gateway is allowed to decide whether an account gets created, and both
-    // codes can be resent from inside the app.
-    void issueEmailCode(user.id, user.email ?? email, user.fullName)
-      .catch((err) => logger.warn(`Registration email code failed: ${(err as Error).message}`));
+    // The code goes out now, so the verification step that follows registration
+    // finds it already sent rather than making the user ask. Fired without
+    // await: an SMS gateway is not allowed to decide whether an account gets
+    // created, and the code can be resent from the same screen.
     if (phone) {
       void gateSend(phone, 'verify')
         .then((gate) => (gate.allowed ? sendOtp(phone) : false))
@@ -103,7 +98,6 @@ export async function register(req: Request, res: Response, next: NextFunction) 
         daysRemaining,
       },
       verification: {
-        emailSent: mailReady,
         phoneSent: smsReady && Boolean(phone),
       },
     });
@@ -419,143 +413,18 @@ function maskPhone(phone: string): string {
   return `${phone.slice(0, phone.length - 6)}•••${phone.slice(-3)}`;
 }
 
-// ─── EMAIL VERIFICATION ──────────────────────────────────────────────────────
-
-/** How long an email code stays usable. Matches the SMS side deliberately. */
-const EMAIL_CODE_TTL_MS = 30 * 60_000;
-/** Wrong guesses against one issued code before it is burned. */
-const EMAIL_CODE_MAX_ATTEMPTS = 5;
-
-/**
- * A six digit code from the CSPRNG.
- *
- * Math.random is not used here. It is seeded predictably and is not meant to
- * resist anyone trying to guess its next output, which is the whole job.
- */
-function sixDigits(): string {
-  return String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
-}
-
-const hashCode = (code: string) => crypto.createHash('sha256').update(code).digest('hex');
-
-/**
- * Issue and send a fresh email code.
- *
- * Any code still outstanding for the user is consumed first, so only the most
- * recent message works. Without that, every resend would leave another live
- * code behind and asking for five would give an attacker five chances instead
- * of one.
- */
-async function issueEmailCode(userId: string, email: string, name?: string): Promise<boolean> {
-  const code = sixDigits();
-  await prisma.$transaction([
-    prisma.emailVerification.updateMany({
-      where: { userId, consumedAt: null },
-      data:  { consumedAt: new Date() },
-    }),
-    prisma.emailVerification.create({
-      data: {
-        userId,
-        email: email.trim().toLowerCase(),
-        codeHash: hashCode(code),
-        expiresAt: new Date(Date.now() + EMAIL_CODE_TTL_MS),
-      },
-    }),
-  ]);
-  return sendVerificationEmail(email, code, name);
-}
-
-// POST /api/v1/auth/email/send-otp — code to the signed-in user's address
-export async function sendEmailOtp(req: AuthRequest, res: Response) {
-  if (!mailReady) return R.badRequest(res, 'Email is not configured');
-
-  const user = await prisma.user.findUnique({
-    where:  { id: req.user!.sub },
-    select: { email: true, fullName: true, emailVerified: true },
-  });
-  if (!user?.email) return R.badRequest(res, 'No email address on this account');
-  if (user.emailVerified) return R.ok(res, { alreadyVerified: true });
-
-  const gate = await gateSend(user.email, 'email');
-  if (!gate.allowed) return throttled(res, gate);
-
-  const sent = await issueEmailCode(req.user!.sub, user.email, user.fullName);
-  if (!sent) return R.serverError(res, 'Could not send the code. Please try again shortly.');
-
-  return R.ok(res, { sent: true, email: maskEmail(user.email), expiresInMinutes: 30 });
-}
-
-// POST /api/v1/auth/email/verify — consume the code, mark the address confirmed
-export async function verifyEmailOtp(req: AuthRequest, res: Response) {
-  const { code } = req.body ?? {};
-  if (!code) return R.badRequest(res, 'Enter the code we emailed you');
-
-  const user = await prisma.user.findUnique({
-    where:  { id: req.user!.sub },
-    select: { email: true, emailVerified: true },
-  });
-  if (!user?.email) return R.badRequest(res, 'No email address on this account');
-  if (user.emailVerified) return R.ok(res, { verified: true });
-
-  const gate = await gateCheck(user.email, 'email');
-  if (!gate.allowed) return throttled(res, gate);
-
-  const wrong = () => R.badRequest(res, 'That code is wrong or has expired');
-
-  const pending = await prisma.emailVerification.findFirst({
-    where:   { userId: req.user!.sub, consumedAt: null, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: 'desc' },
-  });
-  if (!pending) return wrong();
-
-  // The code was issued for whatever address was on the account then. If the
-  // address has changed since, that code must not confirm the new one.
-  if (pending.email !== user.email.trim().toLowerCase()) return wrong();
-
-  if (pending.attempts >= EMAIL_CODE_MAX_ATTEMPTS) {
-    await prisma.emailVerification.update({
-      where: { id: pending.id }, data: { consumedAt: new Date() },
-    });
-    return wrong();
-  }
-
-  // Compared as fixed-length hex digests under timingSafeEqual, so the
-  // comparison itself tells an attacker nothing about how much of a guess was
-  // right.
-  const supplied = Buffer.from(hashCode(String(code).trim()), 'hex');
-  const stored   = Buffer.from(pending.codeHash, 'hex');
-  const match    = supplied.length === stored.length && crypto.timingSafeEqual(supplied, stored);
-
-  if (!match) {
-    await prisma.emailVerification.update({
-      where: { id: pending.id }, data: { attempts: { increment: 1 } },
-    });
-    await recordFailure(user.email, 'email');
-    return wrong();
-  }
-
-  await prisma.$transaction([
-    prisma.emailVerification.update({ where: { id: pending.id }, data: { consumedAt: new Date() } }),
-    prisma.user.update({ where: { id: req.user!.sub }, data: { emailVerified: true } }),
-  ]);
-  await clearAttempts(user.email, 'email');
-  return R.ok(res, { verified: true });
-}
-
 // GET /api/v1/auth/verification — what still needs confirming
 export async function verificationStatus(req: AuthRequest, res: Response) {
   const user = await prisma.user.findUnique({
     where:  { id: req.user!.sub },
-    select: { email: true, phone: true, emailVerified: true, phoneVerified: true },
+    select: { phone: true, phoneVerified: true },
   });
   if (!user) return R.notFound(res, 'User not found');
 
+  // Phone only. Email confirmation was removed: it could not be delivered from
+  // this host anyway, since Railway blocks outbound SMTP below the Pro plan,
+  // and an unverifiable address on screen is worse than none.
   return R.ok(res, {
-    email: {
-      address:   user.email ? maskEmail(user.email) : null,
-      verified:  user.emailVerified,
-      available: mailReady && Boolean(user.email),
-    },
     phone: {
       number:    user.phone ? maskPhone(user.phone) : null,
       verified:  user.phoneVerified,
@@ -564,10 +433,3 @@ export async function verificationStatus(req: AuthRequest, res: Response) {
   });
 }
 
-/** asha@example.com → a••••@example.com */
-function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  if (!domain) return '•••';
-  const head = local.slice(0, 1);
-  return `${head}${'•'.repeat(Math.max(1, local.length - 1))}@${domain}`;
-}
