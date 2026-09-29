@@ -34,6 +34,22 @@ export default function ProtectedRoute({ roles }: Props) {
   if (!isAuthenticated || (expired && !canRefresh)) return <Navigate to="/login" replace />;
   // Platform admins belong in the /platform section
   if (user?.role === 'PLATFORM_ADMIN') return <Navigate to="/platform" replace />;
+  // Phone verification is required before the app opens.
+  //
+  // It is the channel everything important travels on: payment confirmations,
+  // the reminders before a subscription lapses, and password recovery, which
+  // has no other route. An unconfirmed number means all three fail silently
+  // and the owner finds out by losing access.
+  //
+  // Deliberately conditional on the account having a number at all. An account
+  // created without one, or a deployment with no SMS gateway configured,
+  // cannot satisfy this, and a gate nobody can pass is a lockout rather than a
+  // safeguard. Email stays optional and is prompted on the account page.
+  if (user && user.hasPhone && user.phoneVerified === false
+      && !pathname.startsWith('/verify') && !pathname.startsWith('/setup')) {
+    return <Navigate to="/verify" replace />;
+  }
+
   // An inactive subscription has two quite different causes and they must not
   // share a screen. An account that has never been activated is genuinely
   // waiting on a human. One whose paid period ran out is waiting on nobody, and

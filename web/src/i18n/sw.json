@@ -181,7 +181,10 @@
     "verifyContactsDoneOne": "Upo tayari.",
     "expiredIntroNamed": "Habari {{name}}, usajili wako wa MauzoHalisi umeisha.",
     "expiredIntro": "Usajili wako wa MauzoHalisi umeisha.",
-    "dataSafe": "Taarifa zako ziko salama na zitarudishwa utakapolipia."
+    "dataSafe": "Taarifa zako ziko salama na zitarudishwa utakapolipia.",
+    "verifyLaterHint": "Unaweza kumaliza hili wakati wowote kwenye Mipangilio ya Biashara.",
+    "verifyPhoneHelp": "Tumetuma msimbo kwenye simu yako. Kuthibitisha kunatuwezesha kukufikia kuhusu malipo, usajili wako, na kurejesha nenosiri.",
+    "phoneRequiredHint": "Ni lazima uthibitishe namba yako ya simu ili kuendelea."
   },
   "dashboard": {
     "title": "Dashibodi",

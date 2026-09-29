@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { Building2, CreditCard, Shield, CheckCircle2 } from 'lucide-react';
+import { Building2, CreditCard, Shield, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/authStore';
 import { PageLoader } from '../../components/ui/Loader';
 import { SUPPORT, waLinkTo } from '../../config';
 import PayForPlan, { type Payment } from '../../components/billing/PayForPlan';
+import ContactVerification, { pendingCount } from '../../components/account/ContactVerification';
 
 interface AccountInfo {
   id: string; legalName: string; tradingName?: string; email?: string; phone?: string;
@@ -46,6 +47,9 @@ const planLimit = (n: number, one: string, many: string) =>
 export default function BusinessSettingsPage() {
   const { account, applyPayment } = useAuthStore();
   const [changing, setChanging] = useState(false);
+  // Starts at 1 so the card renders while the status loads, then corrects
+  // itself. Starting at 0 would hide it for a beat on every visit.
+  const [verifyPending, setVerifyPending] = useState(1);
 
   // The same source the payment flow itself reads, so the comparison table and
   // what is actually charged can never disagree.
@@ -224,6 +228,22 @@ export default function BusinessSettingsPage() {
           })}
         </div>
       </div>
+
+      {/* Contact verification.
+
+          The screen after sign-up could be skipped and never reopened, so an
+          owner who tapped "Do this later" had no way back to it. This is that
+          way back, and it also lets someone verify a number they changed. */}
+      {verifyPending > 0 && (
+        <div className="card p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <ShieldCheck size={16} className="text-primary-600" />
+            <h3 className="text-sm font-bold text-stone-900">{t('auth.verifyContactsTitle')}</h3>
+          </div>
+          <p className="mb-5 text-xs text-stone-500">{t('auth.verifyContactsHelp')}</p>
+          <ContactVerification onChange={(s) => setVerifyPending(pendingCount(s))} />
+        </div>
+      )}
 
       {/* Security */}
       <div className="card p-6">

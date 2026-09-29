@@ -94,7 +94,8 @@ export async function register(req: Request, res: Response, next: NextFunction) 
 
     return R.created(res, {
       accessToken, refreshToken,
-      user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
+      user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role,
+              phoneVerified: user.phoneVerified ?? false, hasPhone: Boolean(user.phone) },
       account: {
         id: account.id, legalName: account.legalName,
         plan: account.subscriptionPlan, subscriptionActive: account.subscriptionActive,
@@ -174,7 +175,8 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 
     return R.ok(res, {
       accessToken, refreshToken,
-      user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
+      user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role,
+              phoneVerified: user.phoneVerified ?? false, hasPhone: Boolean(user.phone) },
       account: {
         id:                   user.ownerAccountId,
         legalName:            acct?.legalName ?? '',
@@ -208,7 +210,7 @@ export async function refresh(req: Request, res: Response) {
 export async function me(req: AuthRequest, res: Response) {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.sub },
-    select: { id: true, email: true, fullName: true, phone: true, avatarUrl: true, role: true, twoFaEnabled: true, lastLoginAt: true, ownerAccount: { select: { id: true, legalName: true, subscriptionPlan: true } } },
+    select: { id: true, email: true, fullName: true, phone: true, phoneVerified: true, emailVerified: true, avatarUrl: true, role: true, twoFaEnabled: true, lastLoginAt: true, ownerAccount: { select: { id: true, legalName: true, subscriptionPlan: true } } },
   });
   if (!user) return R.notFound(res, 'User not found');
   return R.ok(res, user);

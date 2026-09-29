@@ -1,7 +1,11 @@
 import { create } from 'zustand';
 
 interface ShopMeta { id: string; tradingName: string; businessType: string; }
-interface User { id: string; email?: string | null; phone?: string | null; fullName: string; role: string; }
+interface User { id: string; email?: string | null; phone?: string | null; fullName: string; role: string;
+  /** Drives the verification gate, so it travels with the session. */
+  phoneVerified?: boolean;
+  hasPhone?: boolean;
+}
 interface Account {
   id: string; legalName: string; plan: string;
   subscriptionActive: boolean;
@@ -19,6 +23,8 @@ interface AuthState {
   setAuth: (token: string, user: User, account: Account, shopId?: string, refreshToken?: string) => void;
   /** Bring the cached account back in line after a payment settles. */
   applyPayment: (plan: string, expiresAt: string | null) => void;
+  /** Record that the phone is confirmed, which is what opens the gate. */
+  markPhoneVerified: () => void;
   setShopId: (shopId: string, token?: string) => void;
   setShops: (shops: ShopMeta[]) => void;
   logout: () => void;
@@ -81,6 +87,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     };
     lsSet('ud_account', JSON.stringify(next));
     set({ account: next });
+  },
+
+  /**
+   * ProtectedRoute reads phoneVerified from the cached user, so verifying
+   * without updating it would redirect straight back to the screen that just
+   * succeeded. This is what breaks that loop.
+   */
+  markPhoneVerified: () => {
+    const user = get().user;
+    if (!user || user.phoneVerified) return;
+    const next = { ...user, phoneVerified: true };
+    lsSet('ud_user', JSON.stringify(next));
+    set({ user: next });
   },
 
   setShopId: (shopId, token) => {

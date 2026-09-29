@@ -181,7 +181,10 @@
     "verifyContactsDoneOne": "You are all set.",
     "expiredIntroNamed": "Hi {{name}}, your MauzoHalisi subscription has ended.",
     "expiredIntro": "Your MauzoHalisi subscription has ended.",
-    "dataSafe": "Your data is safe and will be restored when you renew."
+    "dataSafe": "Your data is safe and will be restored when you renew.",
+    "verifyLaterHint": "You can finish this any time from Business Settings.",
+    "verifyPhoneHelp": "We sent a code to your phone. Confirming it lets us reach you about payments, your subscription, and resetting your password.",
+    "phoneRequiredHint": "Confirming your phone number is required to continue."
   },
   "dashboard": {
     "title": "Dashboard",
