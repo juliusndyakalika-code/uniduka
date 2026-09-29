@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { authenticate, authorize } from '../../middleware/auth';
-import { getPlans, startPayment, paymentStatus, listPayments, webhook } from './billing.controller';
+import { getPlans, startPayment, paymentStatus, listPayments, webhook, cancelOwnPayment } from './billing.controller';
 
 const router = Router();
 
@@ -22,6 +22,7 @@ router.get('/payments',  listPayments);
 // Each attempt sends a prompt to someone's phone, so the ceiling is low enough
 // that a stuck button cannot turn into a stream of them.
 router.post('/pay', rateLimit({ windowMs: 10 * 60_000, max: 5, standardHeaders: true, legacyHeaders: false }), startPayment);
+router.post('/payments/:reference/cancel', cancelOwnPayment);
 
 router.get('/payments/:reference', paymentStatus);
 

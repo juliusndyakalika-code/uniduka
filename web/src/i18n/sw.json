@@ -996,6 +996,7 @@
     "tryAgain": "Jaribu tena",
     "stillWaiting": "Bado tunasubiri",
     "stillWaitingHelp": "Bado hatujapata jibu. Malipo yanaweza kuwa njiani, hivyo usilipe tena kwa sasa.",
-    "keepWaiting": "Endelea kusubiri"
+    "keepWaiting": "Endelea kusubiri",
+    "cancelNote": "Hii inasitisha ombi kwenye simu yako. Kama tayari umeidhinisha, malipo yataendelea."
   }
 }

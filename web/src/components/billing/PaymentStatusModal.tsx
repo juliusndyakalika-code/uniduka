@@ -137,12 +137,19 @@ export default function PaymentStatusModal({
               </p>
             )}
 
-            {/* An out, because a modal with no exit is its own kind of failure.
-                Closing stops the watching, not the payment. */}
-            <button type="button" onClick={onClose}
-                    className="mt-6 text-xs text-stone-400 underline-offset-2 hover:text-stone-600 hover:underline">
-              {t('billing.checkLater')}
+            {/* A modal with no exit is its own kind of failure, so the way
+                out is a real button rather than a line of small print.
+
+                It stops the watching, not the payment: the prompt lives on the
+                network's side and nothing here can withdraw it. Saying so
+                matters, because someone who has already entered their PIN and
+                then taps Cancel would otherwise expect no charge. */}
+            <button type="button" onClick={onClose} className="btn-secondary mt-6 w-full py-2.5">
+              {t('common.cancel')}
             </button>
+            <p className="mt-3 text-[11px] leading-snug text-stone-400">
+              {t('billing.cancelNote')}
+            </p>
           </>
         )}
 

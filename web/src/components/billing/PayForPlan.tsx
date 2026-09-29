@@ -137,8 +137,25 @@ export default function PayForPlan({ onPaid, compact }: {
     }
   }
 
-  /** Close the modal without touching the payment, which settles regardless. */
+  /**
+   * Withdraw the prompt, not just the spinner.
+   *
+   * Closing the modal alone left the payment live at the gateway, which kept
+   * re-asking the customer for a PIN they had already declined. The cancel is
+   * fired and not awaited: the screen should close the moment they ask it to,
+   * and losing the race to an approval is handled by the server, which reads
+   * the real status back rather than assuming.
+   */
   function dismiss() {
+    const ref = watching ?? lastRef.current;
+    if (ref) {
+      void api.post(`/billing/payments/${ref}/cancel`)
+        .then(() => {
+          qc.invalidateQueries({ queryKey: ['billing-plans'] });
+          qc.invalidateQueries({ queryKey: ['billing-payments'] });
+        })
+        .catch(() => { /* the payment settles on its own either way */ });
+    }
     setPhase(null); setWatching(null); setPaying(false);
   }
 

@@ -7,8 +7,7 @@ import { logger } from '../../utils/logger';
 import { smsPaymentReceived, smsPaymentFailed } from '../../core/notices';
 import { PLAN_PRICES, PlanKey } from '../../core/plans';
 import {
-  initiateMobileMoney, checkStatus, verifyWebhook, mapStatus, toMsisdn, splashpayReady,
-} from '../../core/splashpay';
+  initiateMobileMoney, checkStatus, verifyWebhook, mapStatus, toMsisdn, splashpayReady, cancelPayment } from '../../core/splashpay';
 
 /** Plans a shop can buy themselves. Enterprise is priced by conversation. */
 const BUYABLE: PlanKey[] = ['GROWTH', 'BUSINESS'];
@@ -144,6 +143,56 @@ export async function paymentStatus(req: AuthRequest, res: Response) {
     }
   }
   return R.ok(res, slim(payment));
+}
+
+/**
+ * POST /billing/payments/:reference/cancel
+ *
+ * Withdraws the prompt at the gateway, rather than only stopping our own
+ * polling. Leaving it pending is what caused the customer to be asked for
+ * their PIN again and again for money they had already declined: as far as the
+ * gateway was concerned the payment was still live.
+ *
+ * Losing the race is a normal outcome, not a failure. If they approved it a
+ * moment before cancelling, the gateway refuses and the payment stands, so the
+ * caller is told that plainly instead of being shown an error for something
+ * that worked.
+ */
+export async function cancelOwnPayment(req: AuthRequest, res: Response) {
+  const payment = await prisma.subscriptionPayment.findFirst({
+    where: { reference: req.params.reference, accountId: req.user!.accountId },
+  });
+  if (!payment) return R.notFound(res, 'Payment not found');
+
+  if (payment.status !== 'PENDING' && payment.status !== 'PROCESSING') {
+    // Already settled one way or the other; nothing to withdraw.
+    return R.ok(res, { cancelled: false, status: payment.status, alreadySettled: true });
+  }
+
+  const out = await cancelPayment(payment.reference);
+
+  if (out.tooLate) {
+    // The customer completed it first. Ask the gateway what it became rather
+    // than guessing, so the record matches reality.
+    const live = await checkStatus(payment.reference);
+    if (live.status) {
+      await applyResult(payment.reference, mapStatus(live.status), {
+        providerReference: live.providerReference,
+      });
+    }
+    const fresh = await prisma.subscriptionPayment.findUnique({ where: { id: payment.id } });
+    return R.ok(res, { cancelled: false, tooLate: true, status: fresh?.status ?? payment.status });
+  }
+
+  if (out.cancelled) {
+    await applyResult(payment.reference, 'CANCELLED', { failureReason: 'CANCELLED_BY_USER' });
+    return R.ok(res, { cancelled: true, status: 'CANCELLED' });
+  }
+
+  // The gateway could not be reached. Our record stays pending on purpose: a
+  // webhook may still arrive, and marking it cancelled here would mean a
+  // payment that actually succeeded went uncredited.
+  return R.ok(res, { cancelled: false, unreachable: true, status: payment.status });
 }
 
 export async function listPayments(req: AuthRequest, res: Response) {

@@ -996,6 +996,7 @@
     "tryAgain": "Try again",
     "stillWaiting": "Still waiting",
     "stillWaitingHelp": "We have not heard back yet. The payment may still be on its way, so do not pay again just yet.",
-    "keepWaiting": "Keep waiting"
+    "keepWaiting": "Keep waiting",
+    "cancelNote": "This stops the request on your phone. If you already approved it, the payment still goes through."
   }
 }

@@ -130,6 +130,42 @@ export async function checkStatus(reference: string): Promise<{ status?: string;
 }
 
 /**
+ * Withdraw a prompt that is still sitting on the customer's phone.
+ *
+ * Only possible while the payment is pending or processing; once it has
+ * succeeded, failed or expired the gateway refuses with PAYMENT_NOT_CANCELLABLE.
+ * That refusal is not an error condition here, it is the answer: the customer
+ * got there first, and the payment stands.
+ *
+ * Worth doing rather than merely stopping our own polling. A payment we leave
+ * pending is one the gateway still considers live, and the customer keeps being
+ * re-prompted for money they already declined.
+ */
+export async function cancelPayment(reference: string): Promise<{
+  cancelled: boolean;
+  /** True when the gateway says it is too late, which is a real outcome. */
+  tooLate: boolean;
+  code?: string;
+}> {
+  if (!splashpayReady) return { cancelled: false, tooLate: false };
+  try {
+    const res = await fetch(`${BASE}/payments/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-KEY': KEY, 'X-API-SECRET': SECRET },
+      body: JSON.stringify({ reference }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const body = await res.json().catch(() => ({})) as { status?: string; code?: string };
+    const code = body?.code;
+    if (res.ok && body?.status === 'success') return { cancelled: true, tooLate: false, code };
+    return { cancelled: false, tooLate: code === 'PAYMENT_NOT_CANCELLABLE', code };
+  } catch (err) {
+    logger.warn(`SplashPay cancel failed for ${reference}: ${(err as Error).message}`);
+    return { cancelled: false, tooLate: false };
+  }
+}
+
+/**
  * Verify a webhook really came from SplashPay.
  *
  * Signed as HMAC_SHA256(timestamp + "." + rawBody, WEBHOOK_SECRET), so the raw
