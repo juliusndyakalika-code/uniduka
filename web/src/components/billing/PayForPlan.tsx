@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Smartphone, AlertTriangle, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import PaymentStatusModal, { PayPhase } from './PaymentStatusModal';
 
 /**
  * Choosing a plan and paying for it.
@@ -26,6 +27,17 @@ export interface Payment {
 }
 
 const MONTH_CHOICES = [1, 3, 6, 12];
+/** How often the server is asked where the payment got to. */
+const POLL_MS = 3000;
+/**
+ * How long to watch before giving up.
+ *
+ * Matched to the mobile money prompt itself, which the networks expire at
+ * around three minutes. Watching past that only shows a spinner for something
+ * that can no longer be approved.
+ */
+const WAIT_SECONDS = 180;
+const MAX_TRIES = WAIT_SECONDS / (POLL_MS / 1000);
 export const money = (n: number) => `TSh ${Math.round(n).toLocaleString()}`;
 
 export default function PayForPlan({ onPaid, compact }: {
@@ -44,6 +56,8 @@ export default function PayForPlan({ onPaid, compact }: {
   const [paying, setPaying]     = useState(false);
   const [watching, setWatching] = useState<string | null>(null);
   const [result, setResult]     = useState<Payment | null>(null);
+  const [phase, setPhase]       = useState<PayPhase | null>(null);
+  const [left, setLeft]         = useState(0);
 
   const { data } = useQuery<{ data: PlansResponse }>({
     queryKey: ['billing-plans'],
@@ -56,42 +70,100 @@ export default function PayForPlan({ onPaid, compact }: {
   // While a prompt sits on the customer's phone, ask the server where it got
   // to. The webhook is what settles it; this is so the screen does not hang on
   // a spinner if that webhook is slow or lost.
+  const lastRef = useRef<string | null>(null);
   const timer = useRef<number | null>(null);
+  const clock = useRef<number | null>(null);
   useEffect(() => {
     if (!watching) return;
+
+    // A visible countdown, because during the wait the spinner is the only
+    // thing moving and it says nothing about how much patience is left.
+    setLeft(WAIT_SECONDS);
+    clock.current = window.setInterval(() => setLeft(s => (s > 0 ? s - 1 : 0)), 1000);
+
     let tries = 0;
+    const stopClock = () => { if (clock.current) window.clearInterval(clock.current); };
+
     const tick = async () => {
       tries++;
       try {
         const r = await api.get(`/billing/payments/${watching}`);
         const p: Payment = r.data.data;
         if (p.status !== 'PENDING' && p.status !== 'PROCESSING') {
+          stopClock();
           setResult(p); setWatching(null); setPaying(false);
           qc.invalidateQueries({ queryKey: ['billing-plans'] });
           qc.invalidateQueries({ queryKey: ['billing-payments'] });
-          if (p.status === 'SUCCESS') onPaid?.(p);
+
+          if (p.status === 'SUCCESS') {
+            setPhase('success');
+            // Long enough for the tick and the chime to register as the answer
+            // to what they just did, short enough not to feel like a hang.
+            window.setTimeout(() => onPaid?.(p), 1600);
+          } else {
+            setPhase('failed');
+          }
           return;
         }
       } catch { /* a blip should not end the wait */ }
-      // Mobile money prompts time out around three minutes.
-      if (tries > 60) { setWatching(null); setPaying(false); return; }
-      timer.current = window.setTimeout(tick, 3000);
+
+      // Giving up is a separate outcome from failing. The payment may still be
+      // travelling, so this says so rather than claiming it failed.
+      if (tries >= MAX_TRIES) {
+        stopClock();
+        setWatching(null); setPaying(false); setPhase('timeout');
+        return;
+      }
+      timer.current = window.setTimeout(tick, POLL_MS);
     };
-    timer.current = window.setTimeout(tick, 3000);
-    return () => { if (timer.current) window.clearTimeout(timer.current); };
+
+    timer.current = window.setTimeout(tick, POLL_MS);
+    return () => {
+      if (timer.current) window.clearTimeout(timer.current);
+      stopClock();
+    };
   }, [watching, qc, onPaid]);
 
   async function pay() {
-    setError(''); setResult(null); setPaying(true);
+    setError(''); setResult(null); setPaying(true); setPhase('waiting');
     try {
       const r = await api.post('/billing/pay', { plan, months, phone });
+      lastRef.current = r.data.data.reference;
       setWatching(r.data.data.reference);
     } catch (e) {
-      setPaying(false);
+      setPaying(false); setPhase(null);
       setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message
         || t('billing.couldNotStart'));
     }
   }
+
+  /** Close the modal without touching the payment, which settles regardless. */
+  function dismiss() {
+    setPhase(null); setWatching(null); setPaying(false);
+  }
+
+  /** Give the same reference more time rather than starting a second payment. */
+  function keepWaiting() {
+    if (result) return;
+    setPhase('waiting');
+    setPaying(true);
+    setWatching(w => w ?? lastRef.current);
+    if (!watching && lastRef.current) setWatching(lastRef.current);
+  }
+
+  // Built once and included by every branch below, so whichever card is on
+  // screen the modal still sits over it.
+  const modal = phase ? (
+    <PaymentStatusModal
+      phase={phase}
+      amount={money(total)}
+      reason={result?.failureReason ?? result?.status ?? null}
+      secondsLeft={left}
+      onRetry={() => { setPhase(null); setResult(null); pay(); }}
+      onClose={dismiss}
+      onKeepWaiting={keepWaiting}
+    />
+  ) : null;
 
   if (info && !info.paymentsEnabled) {
     return (
@@ -104,6 +176,8 @@ export default function PayForPlan({ onPaid, compact }: {
 
   if (result?.status === 'SUCCESS') {
     return (
+      <>
+      {modal}
       <div className="flex items-start gap-3 text-left">
         <Check size={18} className="text-emerald-600 mt-0.5 shrink-0" />
         <div>
@@ -115,22 +189,13 @@ export default function PayForPlan({ onPaid, compact }: {
           </p>
         </div>
       </div>
+      </>
     );
   }
 
   return (
     <div className="text-left">
-      {result && (
-        <div className="flex items-start gap-2 mb-4">
-          <AlertTriangle size={15} className="text-red-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-stone-900">{t('billing.notPaid')}</p>
-            <p className="text-xs text-stone-500">
-              {t(`billing.status.${result.status}`, { defaultValue: result.status })}
-            </p>
-          </div>
-        </div>
-      )}
+      {modal}
 
       <label className="label">{t('billing.choosePlan')}</label>
       <div className={`grid sm:grid-cols-2 gap-3 ${compact ? 'mb-4' : 'mb-5'}`}>
@@ -172,16 +237,13 @@ export default function PayForPlan({ onPaid, compact }: {
       </div>
 
       <button className="btn-primary w-full py-3" disabled={paying || !phone} onClick={pay} type="button">
-        {watching ? (
-          <><Loader2 size={14} className="animate-spin" /> {t('billing.waitingForPin')}</>
-        ) : paying ? (
+        {paying ? (
           <><Loader2 size={14} className="animate-spin" /> {t('common.saving')}</>
         ) : (
           <><Smartphone size={14} /> {t('billing.payNow', { amount: money(total) })}</>
         )}
       </button>
 
-      {watching && <p className="text-xs text-stone-500 text-center mt-3">{t('billing.checkPhone')}</p>}
       {error && <p className="text-xs text-red-600 text-center mt-3">{error}</p>}
     </div>
   );

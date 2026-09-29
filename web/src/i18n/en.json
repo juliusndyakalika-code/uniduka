@@ -980,6 +980,22 @@
     },
     "activateNow": "Activate now by paying",
     "orWaitForApproval": "Or wait for approval. This page checks every 30 seconds.",
-    "renewNow": "Renew now"
+    "renewNow": "Renew now",
+    "verifyingPayment": "Verifying payment",
+    "checkPhonePin": "Check your phone and enter your PIN to approve {{amount}}.",
+    "waitingSeconds": "Waiting… {{seconds}}s",
+    "checkLater": "I'll check later",
+    "paymentComplete": "Payment complete",
+    "takingYouIn": "Taking you to your dashboard…",
+    "paymentFailed": "Payment failed",
+    "failNoBalance": "There was not enough balance in the mobile money account. Top up and try again.",
+    "failCancelled": "The payment was cancelled on the phone. You can try again.",
+    "failExpired": "The prompt expired before it was approved. Try again.",
+    "failPin": "The PIN was not accepted. Try again.",
+    "failGeneric": "The payment did not go through. No money has been taken.",
+    "tryAgain": "Try again",
+    "stillWaiting": "Still waiting",
+    "stillWaitingHelp": "We have not heard back yet. The payment may still be on its way, so do not pay again just yet.",
+    "keepWaiting": "Keep waiting"
   }
 }

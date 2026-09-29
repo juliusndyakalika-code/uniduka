@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { CreditCard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +12,7 @@ export default function SubscriptionExpiredPage() {
   /** Renewing reactivates the account, so send them straight back in. */
   const renewed = () => { window.location.href = '/dashboard'; };
   const { logout, user } = useAuthStore();
+  const navigate = useNavigate();
   const { t } = useTranslation();
 
   return (
@@ -82,7 +84,7 @@ export default function SubscriptionExpiredPage() {
           </div>
 
           <button
-            onClick={() => logout()}
+            onClick={() => { logout(); navigate('/login', { replace: true }); }}
             className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
           >
             {t('sidebar.signOut')}

@@ -980,6 +980,22 @@
     },
     "activateNow": "Washa sasa kwa kulipa",
     "orWaitForApproval": "Au subiri idhini. Ukurasa huu hukagua kila sekunde 30.",
-    "renewNow": "Lipia sasa"
+    "renewNow": "Lipia sasa",
+    "verifyingPayment": "Tunathibitisha malipo",
+    "checkPhonePin": "Angalia simu yako na weka PIN kuidhinisha {{amount}}.",
+    "waitingSeconds": "Tunasubiri… sekunde {{seconds}}",
+    "checkLater": "Nitaangalia baadaye",
+    "paymentComplete": "Malipo yamekamilika",
+    "takingYouIn": "Tunakupeleka kwenye dashibodi…",
+    "paymentFailed": "Malipo hayakufanikiwa",
+    "failNoBalance": "Salio halikutosha kwenye akaunti ya simu. Weka salio kisha ujaribu tena.",
+    "failCancelled": "Malipo yalighairiwa kwenye simu. Unaweza kujaribu tena.",
+    "failExpired": "Muda wa kuidhinisha uliisha. Jaribu tena.",
+    "failPin": "PIN haikukubaliwa. Jaribu tena.",
+    "failGeneric": "Malipo hayakupita. Hakuna pesa iliyotolewa.",
+    "tryAgain": "Jaribu tena",
+    "stillWaiting": "Bado tunasubiri",
+    "stillWaitingHelp": "Bado hatujapata jibu. Malipo yanaweza kuwa njiani, hivyo usilipe tena kwa sasa.",
+    "keepWaiting": "Endelea kusubiri"
   }
 }

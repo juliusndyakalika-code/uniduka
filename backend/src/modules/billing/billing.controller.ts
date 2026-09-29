@@ -186,6 +186,10 @@ export async function webhook(req: Request, res: Response) {
     provider: data.provider,
     channel: data.channel,
     amount: data.amount != null ? Number(data.amount) : undefined,
+    // The gateway's own words for what went wrong. Without this the only thing
+    // stored is our status, so the screen can say a payment failed but never
+    // why, and "top up and try again" becomes unsayable.
+    failureReason: data.failure_reason ?? data.message ?? data.reason,
   });
 
   // Always 200 once the signature is good. Anything else and SplashPay retries
@@ -202,7 +206,10 @@ export async function webhook(req: Request, res: Response) {
 async function applyResult(
   reference: string,
   status: ReturnType<typeof mapStatus>,
-  extra: { providerReference?: string; provider?: string; channel?: string; amount?: number },
+  extra: {
+    providerReference?: string; provider?: string; channel?: string;
+    amount?: number; failureReason?: string;
+  },
 ) {
   const payment = await prisma.subscriptionPayment.findUnique({ where: { reference } });
   if (!payment) {
@@ -220,7 +227,9 @@ async function applyResult(
       where: { id: payment.id },
       data: {
         status,
-        failureReason: status === 'PENDING' ? null : status,
+        // The gateway's reason when it gave one, falling back to our status so
+        // the column is never blank on a terminal outcome.
+        failureReason: status === 'PENDING' ? null : (extra.failureReason ?? status),
         providerReference: extra.providerReference ?? payment.providerReference,
         completedAt: status === 'PENDING' || status === 'PROCESSING' ? null : new Date(),
       },
