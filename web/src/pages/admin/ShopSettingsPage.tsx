@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { Store, MapPin, Layers, Receipt, Package, Check, Plus, Trash2, ShieldCheck, Smartphone, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import ReportSchedule from '../../components/reports/ReportSchedule';
 import { useAuthStore } from '../../store/authStore';
 
 interface ShopConfig {
@@ -158,6 +159,9 @@ export default function ShopSettingsPage() {
       </div>
 
       {/* TRA Compliance */}
+      {/* Automatic business reports, by push where possible and SMS otherwise. */}
+      <ReportSchedule />
+
       <div className="card p-6">
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck size={16} className="text-primary-600" />

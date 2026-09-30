@@ -89,7 +89,7 @@ export async function previewReport(req: AuthRequest, res: Response) {
   const { from, to } = periodRange(period, new Date(), shop.timezone);
   const metrics = await shopMetrics(id, from, to);
   const label   = periodLabel(period, to, shop.timezone);
-  const body    = composeReport(shop.tradingName, label, metrics);
+  const body    = composeReport(shop.tradingName, period, label, metrics);
 
   return R.ok(res, {
     period,

@@ -120,17 +120,40 @@ export function periodLabel(period: Period, end: Date, zone: string): string {
  * standing up; anything longer is skimmed, and every line beyond the fourth is
  * paid for twice if it tips the message over 160 characters.
  */
-export function composeReport(shopName: string, label: string, m: Metrics): string {
+export function composeReport(
+  shopName: string,
+  period: Period,
+  label: string,
+  m: Metrics,
+): string {
+  // The brand leads, so the message is recognisable before it is read and
+  // cannot be mistaken for a stranger texting figures about a business. The
+  // period is named rather than implied: "Daily Report" tells the owner what
+  // window the numbers cover without working it out from the date.
+  const heading = `MauzoHalisi ${PERIOD_WORD[period]} Report`;
+
   // The shop name is the only unbounded part, so it is the part that is cut.
-  const name = shopName.length > 22 ? shopName.slice(0, 21) + '…' : shopName;
+  // Everything else has a known ceiling, which is what keeps the whole message
+  // inside one billed part.
+  const name = shopName.length > 24 ? shopName.slice(0, 23) + '…' : shopName;
+
   return [
-    `${name} ${label}`,
+    heading,
+    `${name} · ${label}`,
     `Sales ${shortMoney(m.revenue)}`,
     `Profit ${shortMoney(m.netProfit)}`,
     `Receipts ${m.transactions}`,
     `Stock ${shortMoney(m.stockValue)}`,
   ].join('\n');
 }
+
+const PERIOD_WORD: Record<Period, string> = {
+  daily:     'Daily',
+  weekly:    'Weekly',
+  monthly:   'Monthly',
+  quarterly: 'Quarterly',
+  yearly:    'Annual',
+};
 
 /** Billed SMS parts for a message. */
 export const smsParts = (body: string) => Math.max(1, Math.ceil(body.length / 160));

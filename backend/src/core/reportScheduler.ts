@@ -97,7 +97,7 @@ async function sendOne(
   }
 
   const label = periodLabel(period, to, shop.timezone);
-  const body  = composeReport(shop.tradingName, label, metrics);
+  const body  = composeReport(shop.tradingName, period, label, metrics);
 
   // Push is free and reaches the same person, so it is tried first and SMS is
   // only the fallback. The device check comes before the send, not after:
@@ -106,8 +106,11 @@ async function sendOne(
   if (webPushReady && await hasPushDevice(shop.id)) {
     try {
       await pushToShop(shop.id, {
-        title: `${shop.tradingName} — ${label}`,
-        body,
+        // The title carries the brand and the window; the body is the same
+        // text the SMS would have carried, minus its heading, which the title
+        // already says.
+        title: `MauzoHalisi ${label} — ${shop.tradingName}`,
+        body: body.split('\n').slice(2).join('\n'),
         url: '/reports',
         tag: `report-${period}`,
       });
