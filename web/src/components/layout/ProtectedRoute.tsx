@@ -12,8 +12,18 @@ function tokenExpired(token: string | null): boolean {
   }
 }
 
+/**
+ * Whether a silent refresh is worth attempting.
+ *
+ * It used to look for a refresh token in localStorage. That token is an
+ * httpOnly cookie now, so the page cannot see it and cannot answer this
+ * question. Assuming one exists is the right default: the cost of being wrong
+ * is a single failed refresh that logs the user out, which is exactly what
+ * would have happened anyway, while assuming the opposite logs out people
+ * whose session is perfectly good.
+ */
 function hasRefreshToken(): boolean {
-  try { return !!localStorage.getItem('ud_refresh'); } catch { return false; }
+  return true;
 }
 
 interface Props { roles?: string[]; }

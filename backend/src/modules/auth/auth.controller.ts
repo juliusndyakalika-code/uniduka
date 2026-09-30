@@ -13,17 +13,13 @@ import { normalizePhone, phoneVariants } from '../../utils/phone';
 import { sendOtp, verifyOtp, smsReady, OTP_TTL_MINUTES } from '../../core/sms';
 import { gateSend, gateCheck, recordFailure, clearAttempts } from './otp';
 import { checkAccountLock, recordLoginFailure, clearLoginFailures } from '../../core/limiter';
+import { issueRefresh, rotateRefresh, revokeCurrent, revokeAll } from '../../core/session';
 
 const SECRET      = process.env.JWT_SECRET         || 'uniduka-secret-change-in-prod';
-const REFRESH_KEY = process.env.JWT_REFRESH_SECRET || 'uniduka-refresh-secret';
 const ACCESS_TTL  = '20m';
-const REFRESH_TTL = '7d';
 
 function signAccess(payload: Omit<JwtPayload, 'iat' | 'exp'>) {
   return jwt.sign(payload, SECRET, { expiresIn: ACCESS_TTL });
-}
-function signRefresh(userId: string) {
-  return jwt.sign({ sub: userId }, REFRESH_KEY, { expiresIn: REFRESH_TTL });
 }
 
 // POST /api/v1/auth/register — creates owner account + first user
@@ -82,14 +78,16 @@ export async function register(req: Request, res: Response, next: NextFunction) 
         .catch((err) => logger.warn(`Registration phone code failed: ${(err as Error).message}`));
     }
 
-    const accessToken  = signAccess({ sub: user.id, accountId: account.id, role: user.role });
-    const refreshToken = signRefresh(user.id);
+    const accessToken = signAccess({ sub: user.id, accountId: account.id, role: user.role });
+    // Set as an httpOnly cookie rather than returned, so no script on the page
+    // can read it.
+    await issueRefresh(res, req, user.id);
     const daysRemaining = account.subscriptionExpiresAt
       ? Math.max(0, Math.ceil((account.subscriptionExpiresAt.getTime() - Date.now()) / 86_400_000))
       : null;
 
     return R.created(res, {
-      accessToken, refreshToken,
+      accessToken,
       user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role,
               phoneVerified: user.phoneVerified ?? false, hasPhone: Boolean(user.phone) },
       account: {
@@ -184,8 +182,8 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
     const shopAccess = await prisma.userShopAccess.findFirst({ where: { userId: user.id } });
-    const accessToken  = signAccess({ sub: user.id, accountId: user.ownerAccountId, role: user.role, shopId: shopAccess?.shopId });
-    const refreshToken = signRefresh(user.id);
+    const accessToken = signAccess({ sub: user.id, accountId: user.ownerAccountId, role: user.role, shopId: shopAccess?.shopId });
+    await issueRefresh(res, req, user.id);
 
     const acct = user.ownerAccount;
     const expiresAt = acct?.subscriptionExpiresAt ?? null;
@@ -194,7 +192,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       : null;
 
     return R.ok(res, {
-      accessToken, refreshToken,
+      accessToken,
       user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role,
               phoneVerified: user.phoneVerified ?? false, hasPhone: Boolean(user.phone) },
       account: {
@@ -211,19 +209,50 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 }
 
 // POST /api/v1/auth/refresh
+/**
+ * Exchange the refresh cookie for a new access token.
+ *
+ * The token is no longer read from the body, because it is no longer given to
+ * the page: it lives in an httpOnly cookie that script cannot reach, which is
+ * the point of the change. It rotates on every use, and a spent one being
+ * presented again revokes every session for that user.
+ */
 export async function refresh(req: Request, res: Response) {
-  const { refreshToken } = req.body;
-  if (!refreshToken) return R.badRequest(res, 'Refresh token required');
-  try {
-    const payload = jwt.verify(refreshToken, REFRESH_KEY) as { sub: string };
-    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-    if (!user || !user.isActive) return R.unauthorized(res);
-    const shopAccess = await prisma.userShopAccess.findFirst({ where: { userId: user.id } });
-    const newAccess = signAccess({ sub: user.id, accountId: user.ownerAccountId, role: user.role, shopId: shopAccess?.shopId });
-    return R.ok(res, { accessToken: newAccess });
-  } catch {
-    return R.unauthorized(res, 'Invalid refresh token');
+  const result = await rotateRefresh(req, res);
+  if (!result.ok) {
+    return R.unauthorized(res, result.reuse
+      // Said plainly, because the honest client in this situation is the one
+      // that was logged out, and it deserves to know why.
+      ? 'Your session was ended for security reasons. Please sign in again.'
+      : 'Session expired. Please sign in again.');
   }
+
+  const user = await prisma.user.findUnique({ where: { id: result.userId! } });
+  if (!user || !user.isActive) return R.unauthorized(res);
+
+  const shopAccess = await prisma.userShopAccess.findFirst({ where: { userId: user.id } });
+  const accessToken = signAccess({
+    sub: user.id, accountId: user.ownerAccountId, role: user.role, shopId: shopAccess?.shopId,
+  });
+  return R.ok(res, { accessToken });
+}
+
+/**
+ * Sign out.
+ *
+ * There was no server-side sign out at all: the client dropped its copy and
+ * the refresh token stayed valid for its full week. This revokes it.
+ */
+export async function logout(req: Request, res: Response) {
+  await revokeCurrent(req, res);
+  return R.ok(res, { signedOut: true });
+}
+
+/** Sign out everywhere, which is what someone does after a scare. */
+export async function logoutAll(req: AuthRequest, res: Response) {
+  await revokeAll(req.user!.sub);
+  await revokeCurrent(req, res);
+  return R.ok(res, { signedOut: true });
 }
 
 // GET /api/v1/auth/me

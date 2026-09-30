@@ -2,7 +2,9 @@ import axios from 'axios';
 import { API_BASE } from '../config';
 import { useAuthStore } from '../store/authStore';
 
-export const api = axios.create({ baseURL: API_BASE });
+// withCredentials so the refresh cookie travels. It is httpOnly, so this is
+// the only way the browser can send it and no script can read it.
+export const api = axios.create({ baseURL: API_BASE, withCredentials: true });
 
 api.interceptors.request.use((config) => {
   let token: string | null = null;
@@ -53,13 +55,9 @@ api.interceptors.response.use(
 
     // ── Token expired — attempt silent refresh ────────────────────────────────
     if (status === 401 && !original._retry) {
-      const storedRefresh = lsGet('ud_refresh');
-
-      // No refresh token stored → hard logout immediately
-      if (!storedRefresh) {
-        useAuthStore.getState().logout();
-        return Promise.reject(err);
-      }
+      // No local check for a stored refresh token any more: it lives in an
+      // httpOnly cookie that script cannot see. Whether one exists is the
+      // server's answer to give, and a failed refresh is what tells us.
 
       // If another request is already refreshing, queue this one
       if (isRefreshing) {
@@ -76,7 +74,8 @@ api.interceptors.response.use(
       isRefreshing    = true;
 
       try {
-        const resp = await axios.post(`${API_BASE}/auth/refresh`, { refreshToken: storedRefresh });
+        // The cookie is the credential; there is nothing to put in the body.
+        const resp = await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true });
         const newToken: string = resp.data.data.accessToken;
 
         lsSet('ud_token', newToken);

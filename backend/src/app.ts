@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
@@ -109,6 +110,8 @@ app.use(cors({ origin: corsOrigin as never, credentials: true }));
 app.use(globalLimiter);
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
+// The refresh token arrives as a cookie now, so it has to be parsed.
+app.use(cookieParser());
 app.use(compression());
 app.use(express.json({
   limit: '2mb',

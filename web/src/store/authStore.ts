@@ -57,7 +57,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     lsSet('ud_user', JSON.stringify(user));
     lsSet('ud_account', JSON.stringify(account));
     if (shopId) lsSet('ud_shop', shopId);
-    if (refreshToken) lsSet('ud_refresh', refreshToken);
+    // The refresh token is never stored by the page. It arrives as an httpOnly
+    // cookie the browser keeps and script cannot read, which is the whole
+    // point: an XSS that reached localStorage used to walk away with a week of
+    // persistent access, not just the twenty minutes the access token buys.
     set({ token, user, account, shopId: shopId || null, isAuthenticated: true });
   },
 
@@ -111,6 +114,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setShops: (shops) => set({ shops }),
 
   logout: () => {
+    /**
+     * Tell the server first, so the refresh token is actually revoked.
+     *
+     * Signing out used to be purely local: the page forgot its copy and the
+     * refresh token stayed valid for its full week. Fired without awaiting,
+     * because the session must end on screen whether or not the request
+     * lands, and the cookie is cleared by the response when it does.
+     */
+    try {
+      const base = (import.meta.env.VITE_API_URL as string) || '/api/v1';
+      // keepalive, because signing out is immediately followed by clearing
+      // state and navigating, and the browser cancels in-flight requests on
+      // navigation. Without it the revocation was dispatched and dropped, and
+      // the refresh token stayed valid exactly as before.
+      void fetch(`${base}/auth/logout`, {
+        method: 'POST', credentials: 'include', keepalive: true,
+      }).catch(() => {});
+    } catch { /* never let signing out fail */ }
+
+    // ud_refresh is listed so that a token stored by an older build is cleared
+    // on the next sign out rather than lingering.
     ['ud_token', 'ud_refresh', 'ud_user', 'ud_account', 'ud_shop'].forEach(lsRemove);
     set({ token: null, user: null, account: null, shopId: null, shops: [], isAuthenticated: false });
   },

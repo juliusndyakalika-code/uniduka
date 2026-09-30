@@ -444,6 +444,7 @@ model User {
   InvoicePayment     InvoicePayment[]
   pushSubscriptions  PushSubscription[]
   emailVerifications EmailVerification[]
+  refreshTokens      RefreshToken[]
 
   @@map("users")
 }
@@ -1771,4 +1772,39 @@ model NotificationTemplate {
 
   @@unique([key, channel, language])
   @@map("notification_templates")
+}
+
+// A refresh token that has been issued, so it can be rotated and revoked.
+//
+// The token used to be a bare JWT handed to the browser and kept in
+// localStorage, with no server-side record: any copy of it worked until it
+// expired and nothing could stop it. Storing a hash gives three things the
+// assessment asked for — rotation, revocation, and detection when a token is
+// presented twice, which is the signature of a stolen one.
+//
+// Only the hash is kept. A leaked backup of this table must not hand anyone a
+// working session, exactly as with a password.
+model RefreshToken {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String   @unique
+  expiresAt DateTime
+
+  // Set when the token is exchanged. A used token presented again means the
+  // holder is not the only one with a copy.
+  usedAt    DateTime?
+  // Set when the whole family is revoked, which is what reuse triggers.
+  revokedAt DateTime?
+
+  // Kept only to make an incident legible afterwards.
+  userAgent String?
+  ip        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
