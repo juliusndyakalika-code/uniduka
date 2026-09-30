@@ -100,7 +100,8 @@
     "shopSettings": "Mipangilio ya Duka",
     "businessSettings": "Mipangilio ya Biashara",
     "timeclock": "Saa za Kazi",
-    "expenses": "Matumizi"
+    "expenses": "Matumizi",
+    "salesCalendar": "Kalenda ya mauzo"
   },
   "sidebar": {
     "changePassword": "Badilisha Nenosiri",
@@ -983,5 +984,32 @@
     "quoteResult": "Hii inakupa siku {{days}} kwenye {{plan}}.",
     "talkToUs": "Ongea nasi",
     "orEmailUs": "au tutumie barua pepe"
+  },
+  "calendar": {
+    "title": "Kalenda ya mauzo",
+    "previousMonth": "Mwezi uliopita",
+    "nextMonth": "Mwezi ujao",
+    "monthSales": "Mauzo mwezi huu",
+    "monthProfit": "Faida halisi",
+    "tradingDays": "Siku za biashara",
+    "averageDay": "Wastani kwa siku",
+    "sun": "Jpl",
+    "mon": "Jtt",
+    "tue": "Jnn",
+    "wed": "Jtn",
+    "thu": "Alh",
+    "fri": "Iju",
+    "sat": "Jmo",
+    "quiet": "Kimya",
+    "best": "Bora {{amount}}",
+    "noTrading": "Hakuna mauzo siku hii.",
+    "sales": "Mauzo",
+    "grossProfit": "Faida ghafi",
+    "expenses": "Matumizi",
+    "netProfit": "Faida halisi",
+    "netLoss": "Hasara halisi",
+    "receipts": "Risiti",
+    "avgTicket": "Wastani wa mauzo",
+    "margin": "Kiwango cha faida"
   }
 }

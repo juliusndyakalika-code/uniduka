@@ -505,3 +505,108 @@ export async function productSalesReport(req: AuthRequest, res: Response) {
 
   return R.ok(res, { rows, totals, productCount });
 }
+
+
+/**
+ * GET /reporting/calendar?month=YYYY-MM — a month of trading, day by day.
+ *
+ * The sales report already answers "how did this period do". This answers a
+ * different question an owner actually asks: which days were good, and is
+ * there a pattern. A table of thirty rows does not show that; a month grid
+ * does at a glance, which is the whole reason for laying it out as a calendar.
+ *
+ * Every day in the month is returned, including the empty ones. A calendar
+ * with holes in it cannot be rendered, and a day with no sales is itself the
+ * finding.
+ */
+export async function salesCalendar(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const zone = await shopTimezone(shop(req));
+    const raw = String((req.query.month as string) ?? '').trim();
+
+    // Defaults to the month in progress, in the shop's timezone rather than
+    // the server's, which is three hours behind and would show the wrong
+    // month for the first hours of every day.
+    const nowYmd = tz.ymdInTz(new Date(), zone);
+    const month = /^\d{4}-\d{2}$/.test(raw) ? raw : nowYmd.slice(0, 7);
+    const [y, m] = month.split('-').map(Number);
+
+    const from = tz.startOfDateString(`${month}-01`, zone);
+    const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const to = tz.endOfDateString(`${month}-${String(daysInMonth).padStart(2, '0')}`, zone);
+
+    const transactions = await prisma.transaction.findMany({
+      where:  { shopId: shop(req), status: 'COMPLETED', createdAt: { gte: from, lte: to } },
+      select: {
+        total: true, createdAt: true,
+        items: { select: { quantity: true, product: { select: { costPrice: true } } } },
+      },
+    });
+
+    // Expenses land on their own dates, so profit per day is only right if
+    // they are bucketed the same way the sales are.
+    const expenses = await prisma.expense.findMany({
+      where:  { shopId: shop(req), incurredAt: { gte: from, lte: to } },
+      select: { amount: true, incurredAt: true },
+    });
+
+    const byDay = new Map<string, { date: string; revenue: number; grossProfit: number; expenses: number; transactions: number }>();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = `${month}-${String(d).padStart(2, '0')}`;
+      byDay.set(date, { date, revenue: 0, grossProfit: 0, expenses: 0, transactions: 0 });
+    }
+
+    for (const t of transactions) {
+      const row = byDay.get(tz.ymdInTz(t.createdAt, zone));
+      if (!row) continue;
+      const cost = t.items.reduce((c, i) => c + (i.product?.costPrice ?? 0) * i.quantity, 0);
+      row.revenue     += t.total;
+      row.grossProfit += t.total - cost;
+      row.transactions++;
+    }
+    for (const e of expenses) {
+      const row = byDay.get(tz.ymdInTz(e.incurredAt, zone));
+      if (row) row.expenses += e.amount;
+    }
+
+    // The square shows sales alone; hovering reveals the rest, so every
+    // figure the tooltip needs is sent with the day rather than fetched again
+    // one day at a time.
+    const days = [...byDay.values()].map(d => ({
+      date: d.date,
+      revenue: d.revenue,
+      grossProfit: d.grossProfit,
+      expenses: d.expenses,
+      netProfit: d.grossProfit - d.expenses,
+      transactions: d.transactions,
+      averageTicket: d.transactions > 0 ? Math.round(d.revenue / d.transactions) : 0,
+      // Margin on the day's own trading, which is the figure an owner compares
+      // between days rather than the shilling amounts.
+      marginPct: d.revenue > 0 ? Math.round((d.grossProfit / d.revenue) * 1000) / 10 : 0,
+    }));
+
+    const trading = days.filter(d => d.transactions > 0);
+    const revenues = trading.map(d => d.revenue);
+
+    return R.ok(res, {
+      month,
+      timezone: zone,
+      days,
+      summary: {
+        revenue:      days.reduce((s, d) => s + d.revenue, 0),
+        netProfit:    days.reduce((s, d) => s + d.netProfit, 0),
+        expenses:     days.reduce((s, d) => s + d.expenses, 0),
+        transactions: days.reduce((s, d) => s + d.transactions, 0),
+        tradingDays:  trading.length,
+        // The scale the shading is drawn against. Sent rather than derived on
+        // the client so every device grades the month identically.
+        best:  revenues.length ? Math.max(...revenues) : 0,
+        // Average over days that actually traded: including the closed ones
+        // drags it down and makes an ordinary day look good.
+        averageTradingDay: trading.length
+          ? Math.round(trading.reduce((s, d) => s + d.revenue, 0) / trading.length)
+          : 0,
+      },
+    });
+  } catch (err) { next(err); }
+}

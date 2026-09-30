@@ -6,8 +6,7 @@ import {
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
-  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ReceiptText, Globe, Inbox, FileText, HandCoins, CreditCard,
-} from 'lucide-react';
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ReceiptText, Globe, Inbox, FileText, HandCoins, CreditCard, CalendarDays } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
@@ -387,6 +386,7 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
 
               <NavGroup icon={<TrendingUp size={16} />} label={t('nav.reports')} prefix="/reports">
                 <NavItem to="/reports/sales" icon={<TrendingUp size={14} />} label={t('nav.sales')} />
+                <NavItem to="/reports/calendar" icon={<CalendarDays size={14} />} label={t('nav.salesCalendar')} />
                 <NavItem to="/reports/staff" icon={<Users size={14} />}      label={isHotel ? 'By Receptionist' : t('nav.bySeller')} />
                 {!isHotel && <NavItem to="/reports/products"  icon={<BarChart2 size={14} />} label="By Product" />}
                 {!isHotel && <NavItem to="/reports/inventory" icon={<Package size={14} />}   label={t('nav.stock')} />}

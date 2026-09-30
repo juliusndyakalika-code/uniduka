@@ -100,7 +100,8 @@
     "shopSettings": "Shop Settings",
     "businessSettings": "Business Settings",
     "timeclock": "Timeclock",
-    "expenses": "Expenses"
+    "expenses": "Expenses",
+    "salesCalendar": "Sales calendar"
   },
   "sidebar": {
     "changePassword": "Change Password",
@@ -983,5 +984,32 @@
     "quoteResult": "That gives you {{days}} days on {{plan}}.",
     "talkToUs": "Talk to us",
     "orEmailUs": "or email us"
+  },
+  "calendar": {
+    "title": "Sales calendar",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "monthSales": "Sales this month",
+    "monthProfit": "Net profit",
+    "tradingDays": "Trading days",
+    "averageDay": "Average trading day",
+    "sun": "Sun",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "quiet": "Quiet",
+    "best": "Best {{amount}}",
+    "noTrading": "No sales on this day.",
+    "sales": "Sales",
+    "grossProfit": "Gross profit",
+    "expenses": "Expenses",
+    "netProfit": "Net profit",
+    "netLoss": "Net loss",
+    "receipts": "Receipts",
+    "avgTicket": "Average sale",
+    "margin": "Margin"
   }
 }

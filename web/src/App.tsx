@@ -51,6 +51,7 @@ const ConsignmentPage      = lazy(() => import('./pages/consignment/ConsignmentP
 const ExpensesPage         = lazy(() => import('./pages/expenses/ExpensesPage'));
 
 const SalesReportPage      = lazy(() => import('./pages/reports/SalesReportPage'));
+const SalesCalendarPage    = lazy(() => import('./pages/reports/SalesCalendarPage'));
 const InventoryReportPage  = lazy(() => import('./pages/reports/InventoryReportPage'));
 const StaffReportPage      = lazy(() => import('./pages/reports/StaffReportPage'));
 const ProductSalesPage     = lazy(() => import('./pages/reports/ProductSalesPage'));
@@ -165,6 +166,7 @@ export default function App() {
               <Route path="/appointments"  element={<AppointmentsPage />} />
 
               <Route path="/reports/sales"      element={<SalesReportPage />} />
+              <Route path="/reports/calendar"   element={<SalesCalendarPage />} />
               <Route path="/reports/inventory"  element={<InventoryReportPage />} />
               <Route path="/reports/staff"      element={<StaffReportPage />} />
               <Route path="/reports/products"   element={<ProductSalesPage />} />
