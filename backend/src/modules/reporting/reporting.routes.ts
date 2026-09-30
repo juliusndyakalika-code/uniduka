@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { salesReport, inventoryReport, staffReport, businessTypeReport, dashboardStats, productSalesReport } from './reporting.controller';
 import { authenticate, requireShop } from '../../middleware/auth';
-import { getReportPrefs, updateReportPrefs, previewReport } from './reportPrefs.controller';
+import { getReportPrefs, updateReportPrefs, previewReport, sendTestReport } from './reportPrefs.controller';
 
 const router = Router();
 router.use(authenticate, requireShop);
@@ -9,6 +9,7 @@ router.use(authenticate, requireShop);
 router.get  ('/schedule',         getReportPrefs);
 router.patch('/schedule',         updateReportPrefs);
 router.get  ('/schedule/preview', previewReport);
+router.post ('/schedule/test',    sendTestReport);
 
 router.get('/dashboard',      dashboardStats);
 router.get('/sales',          salesReport);

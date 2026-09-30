@@ -3,6 +3,9 @@ import { prisma } from '../../core/prisma';
 import { AuthRequest } from '../../types';
 import * as R from '../../utils/response';
 import { shopMetrics, composeReport, periodRange, periodLabel, smsParts, type Period } from '../../core/reports';
+import { sendSms, smsReady } from '../../core/sms';
+import { prisma as db } from '../../core/prisma';
+import { logger } from '../../utils/logger';
 
 /**
  * Which periodic reports a shop wants, and a preview of what one looks like.
@@ -14,8 +17,11 @@ import { shopMetrics, composeReport, periodRange, periodLabel, smsParts, type Pe
 
 const PERIODS: Period[] = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'];
 
+// The active shop comes from the token, as everywhere else in this module.
+// Reading it from a header instead would let a caller name any shop they
+// liked, which is the whole reason the rest of the codebase does not.
 function shopId(req: AuthRequest): string | null {
-  return (req.headers['x-shop-id'] as string) || req.user?.shopId || null;
+  return req.user?.shopId ?? null;
 }
 
 export async function getReportPrefs(req: AuthRequest, res: Response) {
@@ -102,4 +108,80 @@ export async function previewReport(req: AuthRequest, res: Response) {
     wouldSend: !metrics.quiet,
     metrics,
   });
+}
+
+
+/**
+ * POST /reporting/schedule/test — send one report now, to prove the path works.
+ *
+ * Exists because the scheduled send is the worst possible place to discover
+ * that a sender name is unapproved or a number is wrong: it happens once a day
+ * at a fixed hour, to everyone, and silently. This makes the same journey on
+ * demand, through the same composer and the same gateway.
+ *
+ * Deliberately SMS rather than push. The thing that needs proving is the
+ * expensive, externally-dependent channel; push working tells you nothing
+ * about whether Textify will accept your sender name.
+ */
+export async function sendTestReport(req: AuthRequest, res: Response) {
+  const id = shopId(req);
+  if (!id) return R.forbidden(res, 'No active shop context');
+  if (!smsReady) return R.badRequest(res, 'SMS is not configured on this server');
+
+  const period = String(req.body?.period ?? 'daily') as Period;
+  if (!PERIODS.includes(period)) return R.badRequest(res, 'Unknown report period');
+
+  const shop = await db.shop.findUnique({
+    where:  { id },
+    select: {
+      tradingName: true, timezone: true, phone: true,
+      reportPreference: { select: { phone: true } },
+      ownerAccount: { select: { phone: true } },
+    },
+  });
+  if (!shop) return R.notFound(res, 'Shop not found');
+
+  const to = req.body?.phone || shop.reportPreference?.phone || shop.phone || shop.ownerAccount?.phone;
+  if (!to) return R.badRequest(res, 'No phone number to send to. Add one above first.');
+
+  // A test costs a real message, so it is capped. Five a day is enough to
+  // check a number and a sender name without becoming a way to spend balance.
+  const since = new Date(Date.now() - 24 * 60 * 60_000);
+  const recent = await db.reportDelivery.count({
+    where: { shopId: id, period: 'test', sentAt: { gte: since } },
+  });
+  if (recent >= 5) {
+    return res.status(429).json({
+      success: false,
+      message: 'Five test reports have been sent today. Try again tomorrow.',
+    });
+  }
+
+  const { from, to: periodEnd } = periodRange(period, new Date(), shop.timezone);
+  const metrics = await shopMetrics(id, from, periodEnd);
+  const label   = periodLabel(period, periodEnd, shop.timezone);
+  // Sent even when the period is quiet: the point is proving delivery, and a
+  // test that silently sends nothing teaches the opposite of what it should.
+  const body    = composeReport(shop.tradingName, period, label, metrics);
+
+  const ok = await sendSms(to, body);
+
+  await db.reportDelivery.create({
+    data: {
+      shopId: id, period: 'test', periodKey: `${Date.now()}`,
+      channel: ok ? 'sms' : 'failed', parts: ok ? smsParts(body) : 0,
+    },
+  }).catch(() => { /* the record is for accounting, not for the send */ });
+
+  if (!ok) {
+    logger.warn(`Test report failed for shop ${id}`);
+    return R.serverError(res, 'The gateway would not take the message. Check the sender name is approved and the account has balance.');
+  }
+
+  return R.ok(res, { sent: true, to: maskPhone(to), parts: smsParts(body), body });
+}
+
+/** +255764628075 → +255764•••075 */
+function maskPhone(phone: string): string {
+  return phone.length < 7 ? '•••' : `${phone.slice(0, phone.length - 6)}•••${phone.slice(-3)}`;
 }

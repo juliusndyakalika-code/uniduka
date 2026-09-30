@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BellRing, Check, Loader2, MessageSquare, Smartphone } from 'lucide-react';
+import { BellRing, Check, Loader2, MessageSquare, Send, Smartphone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 
@@ -54,6 +54,29 @@ export default function ReportSchedule() {
     queryKey: ['report-preview', preview],
     queryFn: () => api.get('/reporting/schedule/preview', { params: { period: preview } }).then(r => r.data),
     enabled: Boolean(preview),
+  });
+
+  /**
+   * Send one report now.
+   *
+   * The scheduled send is the worst place to find out a number is wrong or a
+   * sender name is unapproved: once a day, at a fixed hour, silently. This
+   * makes the same journey on demand.
+   */
+  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+  const test = useMutation({
+    mutationFn: () => api.post('/reporting/schedule/test', { period: preview ?? 'daily' }).then(r => r.data),
+    onSuccess: (r) => {
+      setTestError(null);
+      setTestResult(r?.data?.to ?? '');
+      setTimeout(() => setTestResult(null), 8000);
+    },
+    onError: (e: unknown) => {
+      setTestResult(null);
+      setTestError((e as { response?: { data?: { message?: string } } })?.response?.data?.message
+        || 'Could not send the test message.');
+    },
   });
 
   const save = useMutation({
@@ -207,6 +230,26 @@ export default function ReportSchedule() {
           {t('reports.totalPerYear', { count: perYear })}
         </p>
       )}
+
+      <div className="mt-4 border-t border-stone-100 pt-4">
+        <button
+          type="button"
+          className="btn-secondary px-4 py-2 text-xs"
+          disabled={test.isPending}
+          onClick={() => test.mutate()}
+        >
+          {test.isPending
+            ? <Loader2 size={13} className="animate-spin" />
+            : <><Send size={13} /> {t('reports.sendTest')}</>}
+        </button>
+        <p className="mt-2 text-[11px] text-stone-400">{t('reports.sendTestHint')}</p>
+        {testResult !== null && (
+          <p className="mt-2 text-[11px] text-emerald-700">
+            {t('reports.sendTestDone', { phone: testResult })}
+          </p>
+        )}
+        {testError && <p className="mt-2 text-[11px] text-red-600">{testError}</p>}
+      </div>
     </div>
   );
 }

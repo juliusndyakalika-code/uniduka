@@ -391,7 +391,10 @@
     "phonePlaceholder": "Namba ya simu ya duka",
     "phoneHint": "Acha wazi kutumia namba ya duka.",
     "pauseAll": "Simamisha ripoti zote",
-    "totalPerYear": "Takriban ujumbe {{count}} kwa mwaka kwa mipangilio hii."
+    "totalPerYear": "Takriban ujumbe {{count}} kwa mwaka kwa mipangilio hii.",
+    "sendTest": "Nitumie jaribio sasa",
+    "sendTestHint": "Inatuma SMS moja halisi yenye takwimu zako, ili uhakikishe inafika. Mara tano kwa siku.",
+    "sendTestDone": "Imetumwa kwa {{phone}}. Inapaswa kufika ndani ya dakika moja."
   },
   "timeclock": {
     "title": "Saa za Kazi za Wafanyakazi",

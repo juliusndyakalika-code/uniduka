@@ -391,7 +391,10 @@
     "phonePlaceholder": "Shop phone number",
     "phoneHint": "Leave empty to use the shop's number.",
     "pauseAll": "Pause all reports",
-    "totalPerYear": "About {{count}} messages a year at these settings."
+    "totalPerYear": "About {{count}} messages a year at these settings.",
+    "sendTest": "Send me a test now",
+    "sendTestHint": "Sends one real SMS with your actual figures, so you can check it arrives. Five a day.",
+    "sendTestDone": "Sent to {{phone}}. It should arrive within a minute."
   },
   "timeclock": {
     "title": "Staff Timeclock",
