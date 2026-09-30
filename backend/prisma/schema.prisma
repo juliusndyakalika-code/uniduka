@@ -362,6 +362,8 @@ model Shop {
   docSequences        DocumentSequence[]
   pushSubscriptions   PushSubscription[]
   loans               Loan[]
+  reportPreference    ReportPreference?
+  reportDeliveries    ReportDelivery[]
 
   @@map("shops")
 }
@@ -1807,4 +1809,66 @@ model RefreshToken {
   @@index([userId, revokedAt])
   @@index([expiresAt])
   @@map("refresh_tokens")
+}
+
+// Which business reports a shop wants by SMS, and how often.
+//
+// Every period is opt-in except the weekly one, because the cost of these is
+// carried by us: one SMS per shop per day is 365 a year each, and most of them
+// would report a day that the owner already watched happen. A shop with a row
+// here has chosen; a shop without one gets the default.
+model ReportPreference {
+  id     String @id @default(cuid())
+  shopId String @unique
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  daily     Boolean @default(false)
+  weekly    Boolean @default(true)
+  monthly   Boolean @default(true)
+  quarterly Boolean @default(false)
+  yearly    Boolean @default(false)
+
+  // Where it goes. Falls back to the owner's number when unset.
+  phone String?
+
+  // Hour of day, in the shop's own timezone, that a report is sent. Evening by
+  // default: a day's figures are only worth reading once the day is done.
+  sendHour Int @default(20)
+
+  // False silences everything without losing the rest of the settings.
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("report_preferences")
+}
+
+// One report actually sent, which is what stops it being sent twice.
+//
+// The scheduler wakes on a timer and several instances run it, so the same
+// shop and period come round repeatedly. The unique index is the claim: the
+// insert is what grants the right to send, and whoever loses the race sends
+// nothing.
+model ReportDelivery {
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  // daily | weekly | monthly | quarterly | yearly
+  period    String
+  // The period it covered, as a key: 2026-09-30, 2026-W40, 2026-09, 2026-Q3, 2026.
+  periodKey String
+
+  // sms | push | none. "none" records a deliberate skip, so a quiet day is
+  // distinguishable from a failure when someone asks why no report arrived.
+  channel String
+  // Characters sent, so SMS spend can be accounted for without guessing.
+  parts   Int    @default(0)
+
+  sentAt DateTime @default(now())
+
+  @@unique([shopId, period, periodKey])
+  @@index([sentAt])
+  @@map("report_deliveries")
 }

@@ -11,6 +11,7 @@ import { Server as SocketServer } from 'socket.io';
 
 import { connectDB } from './core/prisma';
 import { startNoticeScheduler } from './core/notices';
+import { startReportScheduler } from './core/reportScheduler';
 import { connectRedis } from './core/redis';
 import { globalLimiter } from './core/limiter';
 import { installSocketAuth } from './core/socketAuth';
@@ -215,6 +216,7 @@ process.on('unhandledRejection', (reason) => {
   http.listen(PORT, () => {
     logger.info(`MauzoHalisi API listening on :${PORT}`);
     startNoticeScheduler();
+    startReportScheduler();
   });
 })();
 
