@@ -207,27 +207,23 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Sales calendar — the month's shape, directly under the figures it
-          belongs with. Dense, so it reads as a companion to the cards above
-          rather than competing with them, and links out to the full page for
-          anyone who wants the month totals too. */}
-      {/* The card hugs the calendar rather than stretching across the page:
-          a narrow grid inside a full-width card left a large empty field
-          beside it and pushed the link off to the far edge. */}
-      <div className="card w-full p-4 sm:w-fit">
-        <div className="mb-3 flex items-center gap-4">
-          <CalendarDays size={14} className="text-primary-600" />
-          <h3 className="text-sm font-semibold text-stone-700">{t('calendar.title')}</h3>
-          <Link to="/reports/calendar" className="ml-auto whitespace-nowrap text-[11px] text-primary-600 hover:underline">
-            {t('dashboard.viewFull')}
-          </Link>
+      {/* The month's shape beside the fortnight's, both sitting under the
+          figures they describe. Half the row each: a third of it left the
+          squares at 43px, too small to read a number in, and a full-width
+          card of its own made them enormous. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="card min-w-0 p-5">
+          <div className="mb-3 flex items-center gap-3">
+            <CalendarDays size={14} className="text-primary-600" />
+            <h3 className="text-sm font-semibold text-stone-700">{t('calendar.title')}</h3>
+            <Link to="/reports/calendar" className="ml-auto whitespace-nowrap text-[11px] text-primary-600 hover:underline">
+              {t('dashboard.viewFull')}
+            </Link>
+          </div>
+          <SalesCalendar dense />
         </div>
-        <SalesCalendar dense />
-      </div>
 
-      {/* Charts + top products */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="card p-5 lg:col-span-2 min-w-0">
+        <div className="card min-w-0 p-5">
           <h3 className="text-sm font-semibold text-stone-700 mb-4">{t('dashboard.salesChart')}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data?.salesChart ?? []} barSize={14}>
@@ -238,6 +234,9 @@ export default function Dashboard() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
         <div className="card p-5">
           <h3 className="text-sm font-semibold text-stone-700 mb-4">{t('dashboard.topProducts')}</h3>
           <div className="space-y-3">

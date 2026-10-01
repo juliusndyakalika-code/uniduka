@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -67,6 +68,9 @@ export default function SalesCalendar({ dense = false, onData }: {
   const { t } = useTranslation();
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [open, setOpen] = useState<string | null>(null);   // tapped day, for touch
+  // Where the panel should appear, measured from the square it belongs to.
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const { data } = useQuery<{ data: CalendarData }>({
     queryKey: ['sales-calendar', month],
@@ -110,10 +114,11 @@ export default function SalesCalendar({ dense = false, onData }: {
                     t('calendar.thu'), t('calendar.fri'), t('calendar.sat')];
 
   return (
-    // A square takes its size from the column it sits in, so the only way to
-    // shrink the dense calendar is to narrow the grid itself. Capped rather
-    // than scaled, so the squares stay square and the month stays readable.
-    <div className={dense ? 'max-w-[20rem]' : ''}>
+    // The grid fills whatever column it is given; `dense` only tightens the
+    // type and spacing. An earlier version capped the width here, which made
+    // the dashboard copy far too small to read and stranded it against the
+    // left edge of its card.
+    <div>
       <div className={`flex items-center gap-1 ${dense ? 'mb-2' : 'mb-3'}`}>
         <span className={`font-semibold text-stone-700 ${dense ? 'text-xs' : 'text-sm'}`}>{monthLabel}</span>
         <div className="ml-auto flex items-center">
@@ -136,7 +141,7 @@ export default function SalesCalendar({ dense = false, onData }: {
         {weekdays.map(d => <div key={d}>{d}</div>)}
       </div>
 
-      <div className={`grid grid-cols-7 ${dense ? 'gap-1' : 'gap-1.5'}`}>
+      <div ref={gridRef} className={`grid grid-cols-7 ${dense ? 'gap-1' : 'gap-1.5'}`}>
         {/* Blanks before the 1st so the month lands on the right weekday. */}
         {Array.from({ length: firstWeekday }, (_, i) => <div key={`pad${i}`} />)}
 
@@ -146,14 +151,19 @@ export default function SalesCalendar({ dense = false, onData }: {
           // .card clips its overflow for the water-drop decoration, so a panel
           // drawn above a top-row square is cut off entirely. The top row
           // opens downwards instead.
-          const topRow = Math.floor((firstWeekday + idx) / 7) === 0;
           return (
             <div key={day.date} className="relative">
               <button
                 type="button"
                 // Tapping is how a phone hovers, so both open the same panel.
-                onClick={() => setOpen(isOpen ? null : day.date)}
-                onMouseEnter={() => setOpen(day.date)}
+                onClick={e => {
+                  setAnchor(e.currentTarget.getBoundingClientRect());
+                  setOpen(isOpen ? null : day.date);
+                }}
+                onMouseEnter={e => {
+                  setAnchor(e.currentTarget.getBoundingClientRect());
+                  setOpen(day.date);
+                }}
                 onMouseLeave={() => setOpen(o => (o === day.date ? null : o))}
                 className={`flex aspect-square w-full flex-col items-center justify-center rounded-lg transition-colors ${
                   dense ? 'p-0.5' : 'p-1'
@@ -167,7 +177,7 @@ export default function SalesCalendar({ dense = false, onData }: {
                 </span>
               </button>
 
-              {isOpen && <DayDetail day={day} below={topRow} />}
+              {isOpen && anchor && <DayDetail day={day} anchor={anchor} />}
             </div>
           );
         })}
@@ -189,21 +199,41 @@ export default function SalesCalendar({ dense = false, onData }: {
 /**
  * Everything about one day, shown on hover.
  *
- * Not interactive on purpose: it appears on hover, and a panel that had to be
- * reached with the pointer would close on the way there.
+ * Rendered into document.body rather than beside its square. The calendar
+ * lives inside a .card, and .card clips its overflow for the water-drop
+ * decoration, so a panel drawn in place is cut off by whichever edge it
+ * reaches first — the top for the first row, the sides for the first and last
+ * columns. A portal escapes every ancestor, and the position is then clamped
+ * to the viewport so it stays whole wherever the square happens to be.
+ *
+ * Not interactive on purpose: it follows the pointer's square, and a panel
+ * that had to be reached would close on the way there.
  */
-function DayDetail({ day, below }: { day: CalendarDay; below: boolean }) {
+function DayDetail({ day, anchor }: { day: CalendarDay; anchor: DOMRect }) {
   const { t } = useTranslation();
   const date = new Intl.DateTimeFormat('en-GB', {
     weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
   }).format(new Date(`${day.date}T00:00:00Z`));
 
-  return (
+  const WIDTH = 208;
+  const GAP = 8;
+  const MARGIN = 8;
+
+  // Above the square by default, below it when there is no room above.
+  const estimatedHeight = day.transactions === 0 ? 72 : 168;
+  const openBelow = anchor.top - estimatedHeight - GAP < MARGIN;
+
+  const left = Math.min(
+    Math.max(MARGIN, anchor.left + anchor.width / 2 - WIDTH / 2),
+    window.innerWidth - WIDTH - MARGIN,
+  );
+  const top = openBelow ? anchor.bottom + GAP : anchor.top - GAP - estimatedHeight;
+
+  return createPortal(
     <div
       role="tooltip"
-      className={`pointer-events-none absolute left-1/2 z-30 w-52 -translate-x-1/2 rounded-xl bg-stone-900 p-3 text-left shadow-xl ${
-        below ? 'top-full mt-2' : 'bottom-full mb-2'
-      }`}
+      style={{ position: 'fixed', left, top, width: WIDTH }}
+      className="pointer-events-none z-[60] rounded-xl bg-stone-900 p-3 text-left shadow-xl"
     >
       <p className="mb-2 text-[11px] font-semibold text-white">{date}</p>
 
@@ -227,11 +257,8 @@ function DayDetail({ day, below }: { day: CalendarDay; below: boolean }) {
           </div>
         </dl>
       )}
-
-      <span className={`absolute left-1/2 -translate-x-1/2 border-4 border-transparent ${
-        below ? 'bottom-full border-b-stone-900' : 'top-full border-t-stone-900'
-      }`} />
-    </div>
+    </div>,
+    document.body,
   );
 }
 
