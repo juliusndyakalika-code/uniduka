@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Store, CreditCard, Printer, X, Wallet, Boxes } from 'lucide-react';
+import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Store, CreditCard, Printer, X, Wallet, Boxes, CalendarDays } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from 'react-i18next';
+import SalesCalendar from '../../components/reports/SalesCalendar';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { printReceipt as doPrint } from '../../utils/printReceipt';
@@ -204,6 +205,24 @@ export default function Dashboard() {
             color="bg-amber-50 text-amber-600"
             to="/inventory" />
         )}
+      </div>
+
+      {/* Sales calendar — the month's shape, directly under the figures it
+          belongs with. Dense, so it reads as a companion to the cards above
+          rather than competing with them, and links out to the full page for
+          anyone who wants the month totals too. */}
+      {/* The card hugs the calendar rather than stretching across the page:
+          a narrow grid inside a full-width card left a large empty field
+          beside it and pushed the link off to the far edge. */}
+      <div className="card w-full p-4 sm:w-fit">
+        <div className="mb-3 flex items-center gap-4">
+          <CalendarDays size={14} className="text-primary-600" />
+          <h3 className="text-sm font-semibold text-stone-700">{t('calendar.title')}</h3>
+          <Link to="/reports/calendar" className="ml-auto whitespace-nowrap text-[11px] text-primary-600 hover:underline">
+            {t('dashboard.viewFull')}
+          </Link>
+        </div>
+        <SalesCalendar dense />
       </div>
 
       {/* Charts + top products */}

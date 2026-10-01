@@ -210,7 +210,8 @@
     "stockInvestment": "Stock Investment",
     "owedOnLoans": "{{amount}} still owed on loans",
     "netProfitToday": "Net Profit Today",
-    "fromSalesToday": "from today's sales"
+    "fromSalesToday": "from today's sales",
+    "viewFull": "View full"
   },
   "pos": {
     "title": "Point of Sale",

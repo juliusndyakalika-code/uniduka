@@ -210,7 +210,8 @@
     "stockInvestment": "Uwekezaji wa Hisa",
     "owedOnLoans": "{{amount}} bado unadaiwa kwa mikopo",
     "netProfitToday": "Faida Halisi Leo",
-    "fromSalesToday": "kutoka mauzo ya leo"
+    "fromSalesToday": "kutoka mauzo ya leo",
+    "viewFull": "Ona yote"
   },
   "pos": {
     "title": "Mauzo (POS)",
