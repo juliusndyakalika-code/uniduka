@@ -97,14 +97,28 @@ export default function SalesCalendar({ dense = false, onData }: {
    * day for a wholesaler differ by orders of magnitude, and a fixed scale
    * would render one of them entirely blank.
    */
+  /**
+   * Shading, scaled against the month's best day.
+   *
+   * Relative rather than absolute, because a good day for a kiosk and a good
+   * day for a wholesaler differ by orders of magnitude, and a fixed scale
+   * would render one of them entirely blank.
+   *
+   * The ink is chosen per step rather than set once, because the figures sit
+   * on the fill and have to survive it. White was used throughout before, and
+   * measured 1.92:1 on the mid step and 2.54:1 on the one above — well under
+   * the 4.5:1 small text needs, which is why the numbers were unreadable.
+   * Dark ink carries every step except the darkest, where white reaches 5.48.
+   * Every pairing below was computed, not judged by eye.
+   */
   const shade = (revenue: number): string => {
-    if (revenue <= 0) return 'bg-stone-50 text-stone-300';
+    if (revenue <= 0) return 'bg-stone-100 text-stone-600';          // 6.47:1
     const r = summary.best > 0 ? revenue / summary.best : 0;
-    if (r >= 0.8) return 'bg-emerald-600 text-white';
-    if (r >= 0.6) return 'bg-emerald-500 text-white';
-    if (r >= 0.4) return 'bg-emerald-400 text-white';
-    if (r >= 0.2) return 'bg-emerald-200 text-emerald-900';
-    return 'bg-emerald-100 text-emerald-800';
+    if (r >= 0.8) return 'bg-emerald-700 text-white';                // 5.48:1
+    if (r >= 0.6) return 'bg-emerald-500 text-emerald-950';          // 5.97:1
+    if (r >= 0.4) return 'bg-emerald-400 text-emerald-950';          // 7.88:1
+    if (r >= 0.2) return 'bg-emerald-300 text-emerald-950';          // 9.94:1
+    return 'bg-emerald-100 text-emerald-950';                        // 13.36:1
   };
 
   const monthLabel = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
@@ -169,10 +183,10 @@ export default function SalesCalendar({ dense = false, onData }: {
                   dense ? 'p-0.5' : 'p-1'
                 } ${shade(day.revenue)}`}
               >
-                <span className={`font-medium opacity-70 ${dense ? 'text-[8px] leading-none' : 'text-[10px]'}`}>
+                <span className={`font-medium leading-none ${dense ? 'text-[10px]' : 'text-[11px]'}`}>
                   {dayNum}
                 </span>
-                <span className={`font-bold leading-tight ${dense ? 'text-[10px]' : 'text-[11px] sm:text-xs'}`}>
+                <span className={`font-bold leading-tight ${dense ? 'text-[11px]' : 'text-xs sm:text-sm'}`}>
                   {day.revenue > 0 ? compactMoney(day.revenue) : '—'}
                 </span>
               </button>
@@ -185,11 +199,12 @@ export default function SalesCalendar({ dense = false, onData }: {
 
       <div className={`flex items-center gap-2 text-stone-400 ${dense ? 'mt-2.5 text-[9px]' : 'mt-4 text-[10px]'}`}>
         <span>{t('calendar.quiet')}</span>
-        <span className="h-3 w-5 rounded bg-stone-50 ring-1 ring-stone-200" />
+        <span className="h-3 w-5 rounded bg-stone-100 ring-1 ring-stone-200" />
         <span className="h-3 w-5 rounded bg-emerald-100" />
-        <span className="h-3 w-5 rounded bg-emerald-200" />
+        <span className="h-3 w-5 rounded bg-emerald-300" />
         <span className="h-3 w-5 rounded bg-emerald-400" />
-        <span className="h-3 w-5 rounded bg-emerald-600" />
+        <span className="h-3 w-5 rounded bg-emerald-500" />
+        <span className="h-3 w-5 rounded bg-emerald-700" />
         <span>{t('calendar.best', { amount: compactMoney(summary.best) })}</span>
       </div>
     </div>
