@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { pagesFor } from '../../lib/pages';
 
 /**
  * One box that reaches everything.
@@ -60,55 +61,6 @@ function pushRecent(e: RecentEntry) {
     const next = [e, ...readRecent().filter(r => r.key !== e.key)].slice(0, MAX_RECENT);
     localStorage.setItem(RECENT_KEY, JSON.stringify(next));
   } catch { /* private window */ }
-}
-
-/**
- * Every page the palette can reach, with who is allowed to see it.
- *
- * Deliberately a flat list rather than a read of the sidebar: the sidebar
- * groups things for browsing, and search has no use for groups. The gates
- * mirror it, so nothing becomes reachable here that is hidden there.
- */
-interface PageDef { path: string; label: string; group: string; owner?: boolean; types?: string[] }
-
-function pagesFor(t: (k: string) => string, role: string, businessType: string | undefined): PageDef[] {
-  const isOwner = role === 'ACCOUNT_OWNER';
-  const all: PageDef[] = [
-    { path: '/dashboard',               label: t('nav.dashboard'),       group: '' },
-    { path: '/pos',                     label: t('nav.pos'),             group: '' },
-    { path: '/pos/transactions',        label: t('nav.sales'),           group: t('nav.sales') },
-    { path: '/pos/debts',               label: t('nav.debts'),           group: t('nav.sales') },
-    { path: '/pos/voids',               label: t('nav.voidedSales'),     group: t('nav.sales') },
-    { path: '/invoices',                label: 'Invoices',               group: t('nav.sales') },
-    { path: '/orders',                  label: 'Online Orders',          group: t('nav.sales') },
-    { path: '/inventory',               label: t('nav.stockOverview'),   group: t('nav.inventory') },
-    { path: '/inventory/products',      label: t('nav.products'),        group: t('nav.inventory') },
-    { path: '/inventory/stock',         label: t('nav.stockMovements'),  group: t('nav.inventory') },
-    { path: '/inventory/purchase-orders', label: t('nav.purchaseOrders'), group: t('nav.inventory') },
-    { path: '/inventory/suppliers',     label: 'Suppliers',              group: t('nav.inventory') },
-    { path: '/customers',               label: t('nav.customers'),       group: t('nav.customers') },
-    { path: '/loyalty',                 label: t('nav.loyalty'),         group: t('nav.customers') },
-    { path: '/expenses',                label: t('nav.expenses'),        group: '' },
-    { path: '/loans',                   label: 'Loans',                  group: '' },
-    { path: '/reports/sales',           label: t('nav.sales'),           group: t('nav.reports') },
-    { path: '/reports/calendar',        label: t('nav.salesCalendar'),   group: t('nav.reports') },
-    { path: '/reports/products',        label: t('nav.products'),        group: t('nav.reports') },
-    { path: '/reports/staff',           label: t('nav.bySeller'),        group: t('nav.reports') },
-    { path: '/reports/inventory',       label: t('nav.stock'),           group: t('nav.reports') },
-    { path: '/billing',                 label: t('nav.management'),      group: '', owner: true },
-    { path: '/admin/users',             label: t('nav.usersStaff'),      group: t('nav.management'), owner: true },
-    { path: '/admin/shop',              label: t('nav.shopSettings'),    group: t('nav.management'), owner: true },
-    { path: '/admin/business',          label: t('nav.businessSettings'), group: t('nav.management'), owner: true },
-    { path: '/timeclock',               label: t('nav.timeclock'),       group: t('nav.management') },
-    // The business-type screens. One tap for the trade that uses them, and
-    // absent for everyone else, exactly as in the sidebar.
-    { path: '/kds',                     label: t('nav.kitchenDisplay'),  group: '', types: ['RESTAURANT', 'CAFE_QSR', 'BAR_NIGHTCLUB'] },
-    { path: '/hotel',                   label: t('nav.hotelRooms'),      group: '', types: ['HOTEL_GUESTHOUSE'] },
-    { path: '/repairs/work-orders',     label: t('nav.workOrders'),      group: '', types: ['REPAIR_WORKSHOP'] },
-    { path: '/appointments',            label: t('nav.appointments'),    group: '', types: ['SALON_SPA', 'CLINIC_MEDICAL'] },
-  ];
-  return all.filter(p =>
-    (!p.owner || isOwner) && (!p.types || (businessType && p.types.includes(businessType))));
 }
 
 const money = (n: number) => `TZS ${Math.round(n).toLocaleString('en-US')}`;
@@ -232,7 +184,7 @@ export default function CommandPalette() {
     }
 
     const pages = pagesFor(t, user?.role ?? '', shops.find(s => s.id === shopId)?.businessType)
-      .filter(p => match(p.label) || match(p.group))
+      .filter(p => match(p.label) || match(p.group ?? ''))
       .slice(0, needle ? 5 : 6)
       .map(p => ({
         key: 'page:' + p.path, kind: 'page' as const, title: p.label, detail: p.group || undefined,

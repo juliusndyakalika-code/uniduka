@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Bell, X, Package, Clock, Search } from 'lucide-react';
+import { Menu, Bell, X, Package, Clock, Search, ChevronRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { QuickSaleButton } from '../pos/QuickSale';
+import { breadcrumbFor } from '../../lib/pages';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { enablePush, pushSupported, permission as pushPermission } from '../../utils/push';
@@ -39,6 +41,8 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigat
 
 export default function Topbar({ onMenuClick }: Props) {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
+  const crumb = breadcrumbFor(pathname, t);
   const { shopId } = useAuthStore();
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(getReadIds);
@@ -84,16 +88,35 @@ export default function Topbar({ onMenuClick }: Props) {
   }
 
   return (
-    <header className="h-14 flex items-center gap-4 px-4 flex-shrink-0" style={{ background: '#E8EBF0', borderBottom: '1px solid rgba(163,177,198,0.25)', boxShadow: '0 3px 12px rgba(197,202,211,0.5)' }}>
-      <button onClick={onMenuClick} className="lg:hidden p-1.5 text-stone-500 hover:text-stone-900">
-        <Menu size={20} />
-      </button>
+    // Three tracks rather than a row of flexing children: the search stays on
+    // the middle of the screen whatever the breadcrumb says and however many
+    // controls sit on the right, which a flex row cannot promise.
+    <header className="h-14 grid grid-cols-[1fr_minmax(0,26rem)_1fr] items-center gap-3 px-4 flex-shrink-0" style={{ background: '#E8EBF0', borderBottom: '1px solid rgba(163,177,198,0.25)', boxShadow: '0 3px 12px rgba(197,202,211,0.5)' }}>
+      <div className="flex min-w-0 items-center gap-2">
+        <button onClick={onMenuClick} className="lg:hidden p-1.5 text-stone-500 hover:text-stone-900">
+          <Menu size={20} />
+        </button>
+
+        {/* Where you are. The section is a link back to nothing in
+            particular, so it stays plain text and only the page is weighted. */}
+        {crumb && (
+          <nav aria-label="Breadcrumb" className="hidden min-w-0 items-center gap-1.5 text-sm md:flex">
+            {crumb.group && crumb.group !== crumb.label && (
+              <>
+                <span className="truncate text-stone-400">{crumb.group}</span>
+                <ChevronRight size={13} className="shrink-0 text-stone-300" />
+              </>
+            )}
+            <span className="truncate font-semibold text-stone-900" aria-current="page">{crumb.label}</span>
+          </nav>
+        )}
+      </div>
 
       {/* The palette's own control. A shortcut nobody is told about is a
           shortcut nobody uses, so the key is printed on the button. */}
       <button
         onClick={() => window.dispatchEvent(new Event('mh:open-search'))}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-stone-400 transition-colors hover:text-stone-600 sm:max-w-sm"
+        className="flex w-full min-w-0 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-stone-400 transition-colors hover:text-stone-600"
         style={{ boxShadow: 'inset 2px 2px 5px #c5cad3, inset -2px -2px 5px #ffffff' }}
       >
         <Search size={15} className="shrink-0" />
@@ -103,8 +126,7 @@ export default function Topbar({ onMenuClick }: Props) {
         </kbd>
       </button>
 
-      <div className="flex-1 sm:flex-none" />
-
+      <div className="flex min-w-0 items-center justify-end gap-3">
       <QuickSaleButton />
 
       {/* Bell + dropdown */}
@@ -186,6 +208,7 @@ export default function Topbar({ onMenuClick }: Props) {
             )}
           </div>
         )}
+      </div>
       </div>
     </header>
   );
