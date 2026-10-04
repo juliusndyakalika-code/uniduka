@@ -216,6 +216,19 @@
     box-shadow: inset 4px 4px 9px #c5cad3, inset -4px -4px 9px #ffffff;
   }
 
+  /* ── App shell ────────────────────────────────────────────────────────────── */
+  /* 100dvh follows the viewport as browser chrome and the keyboard come and
+     go; 100vh is the fallback for anything that does not know dvh. Declared
+     in that order on purpose. */
+  .app-shell {
+    height: 100vh;
+    height: 100dvh;
+    /* Set only while a keyboard is actually covering the screen, and only
+       on browsers that ignore interactive-widget. Empty the rest of the
+       time, which makes this declaration invalid and leaves dvh in place. */
+    height: var(--app-h, 100dvh);
+  }
+
   /* ── A plan close to expiry ───────────────────────────────────────────────── */
   /* Slow enough to read as a pulse rather than a flicker, and only ever on
      the one state that wants acting on. */
