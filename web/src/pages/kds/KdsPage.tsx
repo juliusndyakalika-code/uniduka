@@ -26,14 +26,14 @@ export default function KdsPage() {
 
   const { data: orders = [] } = useQuery<KdsOrder[]>({
     queryKey: ['kds-orders', shopId, filter],
-    queryFn: () => api.get('/kds/orders', { params: { filter } }).then(r => r.data.data),
+    queryFn: () => api.get('/kds', { params: { filter } }).then(r => r.data.data),
     enabled: !!shopId,
     refetchInterval: 15_000,
   });
 
   const { mutate: updateStatus } = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      api.patch(`/kds/orders/${id}/status`, { status }),
+      api.put(`/kds/${id}`, { status }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['kds-orders'] }),
   });
 

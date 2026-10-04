@@ -1,0 +1,1300 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MauzoHalisi Mwongozo</title>
+<style>
+:root{
+  --paper:#FBF8F3; --card:#FFFFFF; --ink:#2A1F14; --ink-2:#5E5042; --ink-3:#8A7A67;
+  --ochre:#A66624; --ochre-ink:#88501C; --ochre-soft:#F6EADA; --green:#0F6B4F;
+  --green-soft:#E4F0EA; --red:#9E2B1B; --red-soft:#F7E6E3; --rule:#E8DCCA;
+  --shadow:0 1px 2px rgba(42,31,20,.05), 0 10px 30px rgba(42,31,20,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#14100C; --card:#1E1812; --ink:#F1E8DB; --ink-2:#C6B8A5; --ink-3:#9B8C78;
+    --ochre:#E0A75C; --ochre-ink:#E8BC7C; --ochre-soft:#2C2114; --green:#5FC49C;
+    --green-soft:#132A22; --red:#E88C7D; --red-soft:#2C1714; --rule:#352B21;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#14100C; --card:#1E1812; --ink:#F1E8DB; --ink-2:#C6B8A5; --ink-3:#9B8C78;
+  --ochre:#E0A75C; --ochre-ink:#E8BC7C; --ochre-soft:#2C2114; --green:#5FC49C;
+  --green-soft:#132A22; --red:#E88C7D; --red-soft:#2C1714; --rule:#352B21;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:84px}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:16px; line-height:1.6; -webkit-text-size-adjust:100%;
+}
+h1,h2,h3{font-family:"Iowan Old Style",Georgia,"Times New Roman",serif; text-wrap:balance; margin:0}
+
+/* Language switching: hide the half you are not reading. */
+html[data-lang="en"] [lang="sw"]{display:none !important}
+html[data-lang="sw"] [lang="en"]{display:none !important}
+
+/* ---------- header ---------- */
+header{
+  position:sticky; top:0; z-index:30; background:var(--paper);
+  border-bottom:1px solid var(--rule);
+}
+.bar{
+  max-width:1120px; margin:0 auto; padding:12px 16px;
+  display:flex; align-items:center; gap:12px;
+}
+.brand{display:flex; align-items:baseline; gap:8px; min-width:0}
+.brand b{font-family:"Iowan Old Style",Georgia,serif; font-size:18px; letter-spacing:-.01em}
+.brand span{font-size:11px; text-transform:uppercase; letter-spacing:.14em; color:var(--ink-3)}
+.spacer{flex:1}
+.toggle{display:flex; border:1px solid var(--rule); border-radius:999px; overflow:hidden; background:var(--card)}
+.toggle button{
+  font:inherit; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  padding:7px 14px; border:0; background:transparent; color:var(--ink-2); cursor:pointer;
+}
+.toggle button[aria-pressed="true"]{background:var(--ochre); color:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .toggle button[aria-pressed="true"]{color:#1A1309}}
+:root[data-theme="dark"] .toggle button[aria-pressed="true"]{color:#1A1309}
+.toggle button:focus-visible{outline:2px solid var(--ochre); outline-offset:-2px}
+
+/* ---------- shell ---------- */
+.shell{max-width:1120px; margin:0 auto; padding:0 16px 80px; display:grid; gap:40px}
+@media(min-width:960px){ .shell{grid-template-columns:238px 1fr; gap:56px; align-items:start} }
+
+nav.toc{display:none}
+@media(min-width:960px){
+  nav.toc{display:block; position:sticky; top:84px; padding-top:40px}
+  nav.toc ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px}
+  nav.toc a{
+    display:grid; grid-template-columns:22px 1fr; gap:8px; align-items:baseline;
+    padding:6px 8px; border-radius:7px; text-decoration:none; color:var(--ink-2); font-size:13.5px;
+  }
+  nav.toc a em{font-style:normal; color:var(--ink-3); font-variant-numeric:tabular-nums; font-size:11.5px}
+  nav.toc a:hover{background:var(--ochre-soft); color:var(--ink)}
+  nav.toc a.on{background:var(--ochre-soft); color:var(--ochre-ink); font-weight:600}
+  nav.toc a.on em{color:var(--ochre-ink)}
+}
+
+main{min-width:0; padding-top:40px}
+
+/* ---------- hero ---------- */
+.hero{padding-bottom:36px; border-bottom:1px solid var(--rule); margin-bottom:8px}
+.hero h1{font-size:clamp(30px,6vw,46px); line-height:1.1; letter-spacing:-.02em}
+.hero p.lede{font-size:17px; color:var(--ink-2); max-width:62ch; margin:14px 0 0}
+.who{
+  margin-top:24px; display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+}
+.who div{background:var(--card); border:1px solid var(--rule); border-radius:12px; padding:12px 14px; box-shadow:var(--shadow)}
+.who b{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--ochre-ink)}
+.who p{margin:4px 0 0; font-size:13.5px; color:var(--ink-2)}
+
+/* ---------- sections ---------- */
+section{padding-top:48px}
+.kicker{
+  font-size:11.5px; text-transform:uppercase; letter-spacing:.16em; color:var(--ink-3);
+  font-variant-numeric:tabular-nums;
+}
+section>h2{font-size:clamp(22px,4vw,28px); letter-spacing:-.015em; margin:6px 0 10px}
+section>p{color:var(--ink-2); max-width:66ch; margin:0 0 18px}
+
+h3{font-size:16.5px; margin:28px 0 10px}
+
+/* numbered steps */
+ol.steps{list-style:none; counter-reset:s; margin:0 0 18px; padding:0 0 0 2px}
+ol.steps>li{
+  counter-increment:s; position:relative; padding:0 0 16px 38px; border-left:2px solid var(--rule);
+  margin-left:12px; padding-top:1px;
+}
+ol.steps>li:last-child{border-left-color:transparent; padding-bottom:4px}
+ol.steps>li::before{
+  content:counter(s); position:absolute; left:-13px; top:0;
+  width:24px; height:24px; border-radius:50%; background:var(--ochre-soft); color:var(--ochre-ink);
+  border:1px solid var(--rule);
+  display:grid; place-items:center; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;
+}
+ol.steps li p{margin:0; color:var(--ink-2)}
+ol.steps li p:first-child{color:var(--ink)}
+
+ul.plain{margin:0 0 18px; padding-left:20px; color:var(--ink-2)}
+ul.plain li{margin-bottom:6px}
+
+/* the exact words on screen */
+.ui{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.88em;
+  background:var(--ochre-soft); color:var(--ochre-ink); padding:1.5px 6px; border-radius:5px;
+  border:1px solid var(--rule); white-space:nowrap;
+}
+.path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.88em; color:var(--ink-3)}
+
+/* callouts */
+.note{
+  display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:start;
+  border-radius:12px; padding:12px 14px; margin:0 0 18px; font-size:14.5px; border:1px solid var(--rule);
+}
+.note b{font-weight:700}
+.note.tip{background:var(--green-soft); color:var(--ink)}
+.note.warn{background:var(--red-soft); color:var(--ink)}
+.note .mark{font-weight:800; font-size:12px; letter-spacing:.08em; text-transform:uppercase}
+.note.tip .mark{color:var(--green)}
+.note.warn .mark{color:var(--red)}
+
+/* tables */
+.wrap{overflow-x:auto; margin:0 0 18px; border:1px solid var(--rule); border-radius:12px; background:var(--card)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:420px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{font-size:11.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-3); font-weight:700}
+tbody tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600; color:var(--ink); white-space:nowrap}
+td{color:var(--ink-2)}
+td.num{font-variant-numeric:tabular-nums}
+
+/* faq */
+details{border-bottom:1px solid var(--rule); padding:14px 2px}
+details summary{cursor:pointer; font-weight:600; list-style:none; display:flex; gap:10px; align-items:baseline}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:"+"; color:var(--ochre); font-weight:800; width:12px; flex:none}
+details[open] summary::before{content:"\2013"}
+details summary:focus-visible{outline:2px solid var(--ochre); outline-offset:3px; border-radius:4px}
+details .body{padding:8px 0 2px 22px; color:var(--ink-2); font-size:15px}
+details .body p{margin:0 0 8px}
+
+/* screenshots */
+figure{margin:0 0 22px}
+figure img{
+  display:block; width:100%; height:auto; border-radius:12px;
+  border:1px solid var(--rule); box-shadow:var(--shadow); background:var(--card);
+}
+figure figcaption{
+  margin-top:8px; font-size:12.5px; color:var(--ink-3); display:flex; gap:7px; align-items:baseline;
+}
+figure figcaption b{
+  color:var(--ochre-ink); font-weight:700; white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+
+/* a business-type block inside the one chapter that holds them all */
+.trade{border-top:1px solid var(--rule); padding-top:26px; margin-top:30px}
+.trade:first-of-type{border-top:0; padding-top:0; margin-top:18px}
+.trade h3{margin-top:0; font-size:18px}
+.trade .sw-name{font-size:13px; color:var(--ink-3); font-style:italic; margin:-6px 0 12px}
+
+footer{
+  margin-top:56px; padding-top:20px; border-top:1px solid var(--rule);
+  font-size:13px; color:var(--ink-3); display:flex; flex-wrap:wrap; gap:8px 20px;
+}
+a{color:var(--ochre-ink)}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div class="brand">
+      <b>MauzoHalisi</b>
+      <span lang="en">User manual</span><span lang="sw">Mwongozo</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="toggle" role="group" aria-label="Language / Lugha">
+      <button id="btn-sw" aria-pressed="false">Kiswahili</button>
+      <button id="btn-en" aria-pressed="true">English</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+
+  <nav class="toc" aria-label="Contents">
+    <ol id="toc"></ol>
+  </nav>
+
+  <main>
+
+    <div class="hero">
+      <h1 lang="en">Running your shop with MauzoHalisi</h1>
+      <h1 lang="sw">Kuendesha duka lako na MauzoHalisi</h1>
+      <p class="lede" lang="en">Everything in this manual is a task you would actually do in a day of
+        trading, written in the order you would meet it. Find the thing you are trying to do, follow
+        the numbered steps, and the words in <span class="ui">this style</span> are exactly what you
+        will see on the screen.</p>
+      <p class="lede" lang="sw">Kila kitu katika mwongozo huu ni kazi halisi unayofanya siku ya
+        biashara, kimepangwa kwa mtiririko utakaokutana nao. Tafuta unachotaka kufanya, fuata hatua
+        zilizopangwa kwa namba, na maneno yaliyo katika <span class="ui">mtindo huu</span> ndiyo hasa
+        utakayoyaona kwenye skrini.</p>
+
+      <div class="who">
+        <div>
+          <b lang="en">Owner</b><b lang="sw">Mmiliki</b>
+          <p lang="en">Read all of it, especially setup, reports and subscription.</p>
+          <p lang="sw">Soma yote, hasa usanidi, ripoti na usajili.</p>
+        </div>
+        <div>
+          <b lang="en">Cashier</b><b lang="sw">Mhudumu wa Mauzo</b>
+          <p lang="en">Sections 5 and 6 are your whole day.</p>
+          <p lang="sw">Sehemu ya 5 na 6 ndiyo kazi yako ya siku nzima.</p>
+        </div>
+        <div>
+          <b lang="en">Stock staff</b><b lang="sw">Mtunza Hifadhi</b>
+          <p lang="en">Sections 4 and 7.</p>
+          <p lang="sw">Sehemu ya 4 na 7.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1 -->
+    <section id="s1">
+      <p class="kicker">01</p>
+      <h2 lang="en">Before you start</h2>
+      <h2 lang="sw">Kabla ya kuanza</h2>
+      <p lang="en">MauzoHalisi runs in a web browser. There is nothing to install, and the same
+        account works on a phone, a tablet and a computer at the same time.</p>
+      <p lang="sw">MauzoHalisi inafanya kazi ndani ya kivinjari (browser). Hakuna cha kusakinisha, na
+        akaunti moja inafanya kazi kwenye simu, tableti na kompyuta kwa wakati mmoja.</p>
+
+      <h3 lang="en">What you need</h3>
+      <h3 lang="sw">Unachohitaji</h3>
+      <ul class="plain">
+        <li lang="en">A phone number that can receive SMS. Your code, your password reset and your
+          reports all go to this number.</li>
+        <li lang="sw">Namba ya simu inayopokea SMS. Msimbo wako, kurudisha nenosiri na ripoti zako
+          vyote vinakuja kwenye namba hii.</li>
+        <li lang="en">An email address and a password of at least 8 characters.</li>
+        <li lang="sw">Anwani ya barua pepe na nenosiri lenye angalau herufi 8.</li>
+        <li lang="en">Internet. A weak connection is fine; the app is built for it.</li>
+        <li lang="sw">Intaneti. Mtandao hafifu unatosha; programu imejengwa kwa ajili hiyo.</li>
+      </ul>
+
+      <div class="note tip">
+        <span class="mark" lang="en">Tip</span><span class="mark" lang="sw">Dokezo</span>
+        <div>
+          <p lang="en" style="margin:0">Switch the whole app between English and Kiswahili from the
+            language control in the sidebar. This manual has the same switch at the top of the page.</p>
+          <p lang="sw" style="margin:0">Badilisha programu nzima kati ya Kiingereza na Kiswahili
+            kupitia kidhibiti cha lugha kwenye utepe wa pembeni. Mwongozo huu una kibadilishaji
+            hicho hicho juu ya ukurasa.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section id="s2">
+      <p class="kicker">02</p>
+      <h2 lang="en">Open your account</h2>
+      <h2 lang="sw">Fungua akaunti yako</h2>
+      <p lang="en">You get a free trial when you register. Confirming your phone number is required
+        before you can go any further, because that is how we reach you about payments and how you
+        get back in if you forget your password.</p>
+      <p lang="sw">Unapata majaribio ya bure unaposajili. Kuthibitisha namba ya simu ni lazima kabla
+        ya kuendelea, kwa sababu ndiyo njia tunayokufikia kuhusu malipo na ndiyo njia ya kurudi ndani
+        ukisahau nenosiri.</p>
+
+      <ol class="steps">
+        <li>
+          <p lang="en">Open the site and choose <span class="ui">Create one</span> under the sign-in form.</p>
+          <p lang="sw">Fungua tovuti kisha chagua <span class="ui">Create one</span> chini ya fomu ya kuingia.</p>
+        </li>
+        <li>
+          <p lang="en">Fill in <span class="ui">Business / Legal Name</span>, <span class="ui">Full Name</span>,
+            your email, your phone number and a password, then confirm the password.</p>
+          <p lang="sw">Jaza <span class="ui">Business / Legal Name</span>, <span class="ui">Full Name</span>,
+            barua pepe yako, namba ya simu na nenosiri, kisha thibitisha nenosiri.</p>
+        </li>
+        <li>
+          <p lang="en">A code arrives by SMS. Type it in and press <span class="ui">Verify</span>.</p>
+          <p lang="sw">Msimbo utafika kwa SMS. Uandike kisha bonyeza <span class="ui">Verify</span>.</p>
+        </li>
+        <li>
+          <p lang="en">The code did not arrive? Wait, then use <span class="ui">Send a new code</span>.
+            You can ask a few times only, so that the SMS is not wasted.</p>
+          <p lang="sw">Msimbo haukufika? Subiri, kisha tumia <span class="ui">Send a new code</span>.
+            Unaweza kuomba mara chache tu, ili SMS zisipotee bure.</p>
+        </li>
+        <li>
+          <p lang="en">Once verified you land on the setup wizard. Go to section 3.</p>
+          <p lang="sw">Ukishathibitisha utafika kwenye hatua za usanidi. Nenda sehemu ya 3.</p>
+        </li>
+      </ol>
+
+      <div class="note warn">
+        <span class="mark" lang="en">Careful</span><span class="mark" lang="sw">Tahadhari</span>
+        <div>
+          <p lang="en" style="margin:0">Use a number you keep. Changing it later means verifying the
+            new one again before reports and password resets follow you to it.</p>
+          <p lang="sw" style="margin:0">Tumia namba utakayoitunza. Ukibadilisha baadaye itabidi
+            uthibitishe mpya kabla ripoti na urejeshaji wa nenosiri havijahamia huko.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section id="s3">
+      <p class="kicker">03</p>
+      <h2 lang="en">Set up your shop</h2>
+      <h2 lang="sw">Sanidi duka lako</h2>
+      <p lang="en">The business type you choose here changes what the rest of the app shows you. A
+        pharmacy gets prescriptions, a restaurant gets a kitchen display, a guesthouse gets rooms.
+        Choose the one closest to what you actually sell.</p>
+      <p lang="sw">Aina ya biashara unayochagua hapa inabadilisha kila kitu programu inachokuonyesha.
+        Duka la dawa linapata maagizo ya daktari, mgahawa unapata onyesho la jikoni, nyumba ya wageni
+        inapata vyumba. Chagua inayolingana na unachouza kweli.</p>
+
+      <ol class="steps">
+        <li>
+          <p lang="en">Pick your business type, then your trading name, city and currency.</p>
+          <p lang="sw">Chagua aina ya biashara, kisha jina la biashara, mji na sarafu.</p>
+        </li>
+        <li>
+          <p lang="en">Open <span class="ui">Business Settings</span> and add your <span class="ui">TIN</span>
+            and <span class="ui">VRN</span> if you are registered for them. They print on receipts
+            and invoices.</p>
+          <p lang="sw">Fungua <span class="ui">Business Settings</span> kisha ongeza <span class="ui">TIN</span>
+            na <span class="ui">VRN</span> kama umesajiliwa. Hivi hupigwa chapa kwenye risiti na ankara.</p>
+        </li>
+        <li>
+          <p lang="en">In <span class="ui">Shop Settings</span>, upload your logo and set the shop
+            phone number. Reports go to this number when you have not set another one.</p>
+          <p lang="sw">Ndani ya <span class="ui">Shop Settings</span>, pakia nembo yako na weka namba
+            ya simu ya duka. Ripoti huenda kwenye namba hii usipoweka nyingine.</p>
+        </li>
+        <li>
+          <p lang="en">If you charge VAT, add the rate under <span class="ui">Tax Rules</span>.</p>
+          <p lang="sw">Kama unatoza VAT, ongeza kiwango chini ya <span class="ui">Tax Rules</span>.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- 4 -->
+    <section id="s4">
+      <p class="kicker">04</p>
+      <h2 lang="en">Put in your products and opening stock</h2>
+      <h2 lang="sw">Weka bidhaa zako na hisa ya kuanzia</h2>
+      <p lang="en">Nothing else works until this is done, because profit is selling price minus cost
+        price. If you leave the cost blank, the app can tell you your sales but not your profit.</p>
+      <p lang="sw">Hakuna kinachofanya kazi kabla ya hapa, kwa sababu faida ni bei ya kuuza ukitoa
+        bei ya kununua. Ukiacha gharama wazi, programu itakuambia mauzo yako lakini si faida yako.</p>
+
+      <ol class="steps">
+        <li>
+          <p lang="en">Go to <span class="ui">Products</span> <span class="path">(Inventory &rsaquo; Products)</span>
+            and press <span class="ui">Add Product</span>.</p>
+          <p lang="sw">Nenda <span class="ui">Products</span> <span class="path">(Hifadhi &rsaquo; Bidhaa)</span>
+            kisha bonyeza <span class="ui">Add Product</span>.</p>
+        </li>
+        <li>
+          <p lang="en">Fill in the <span class="ui">Name</span>, the <span class="ui">Selling Price</span>,
+            the <span class="ui">Cost Price</span> and the <span class="ui">Initial Stock</span>.</p>
+          <p lang="sw">Jaza <span class="ui">Name</span>, <span class="ui">Selling Price</span>,
+            <span class="ui">Cost Price</span> na <span class="ui">Initial Stock</span>.</p>
+        </li>
+        <li>
+          <p lang="en">Set a <span class="ui">Reorder Point</span>. When stock falls to it, the item
+            shows as <span class="ui">Low stock</span> and appears on your dashboard alert.</p>
+          <p lang="sw">Weka <span class="ui">Reorder Point</span>. Hisa ikifika hapo, bidhaa
+            itaonekana kama <span class="ui">Low stock</span> na itatokea kwenye tahadhari ya dashibodi.</p>
+        </li>
+        <li>
+          <p lang="en">Have many products already in a list? Use <span class="ui">Download Template</span>,
+            fill the file in, then <span class="ui">Import CSV</span>. It is far faster than typing
+            them one by one.</p>
+          <p lang="sw">Una bidhaa nyingi tayari kwenye orodha? Tumia <span class="ui">Download Template</span>,
+            jaza faili, kisha <span class="ui">Import CSV</span>. Ni haraka kuliko kuandika moja moja.</p>
+        </li>
+      </ol>
+
+      <figure>
+        <img src="shots/04-products.png" alt="" loading="lazy">
+        <figcaption>
+          <b>Fig 1</b>
+          <span lang="en">The products list. Selling price, cost price and stock sit side by side, which is how you spot a product that is making you nothing.</span><span lang="sw">Orodha ya bidhaa. Bei ya kuuza, bei ya kununua na hisa viko pamoja, ndiyo njia ya kugundua bidhaa isiyokuletea chochote.</span>
+        </figcaption>
+      </figure>
+
+      <div class="note tip">
+        <span class="mark" lang="en">Tip</span><span class="mark" lang="sw">Dokezo</span>
+        <div>
+          <p lang="en" style="margin:0">Put the barcode in the <span class="ui">SKU / Barcode</span>
+            field. A scanner at the till then finds the item instantly.</p>
+          <p lang="sw" style="margin:0">Weka baakodi kwenye sehemu ya <span class="ui">SKU / Barcode</span>.
+            Skana kwenye kaunta itapata bidhaa papo hapo.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section id="s5">
+      <p class="kicker">05</p>
+      <h2 lang="en">Make a sale</h2>
+      <h2 lang="sw">Fanya mauzo</h2>
+      <p lang="en">This is the screen your cashier lives on. Open <span class="ui">Point of Sale</span>
+        from the sidebar.</p>
+      <p lang="sw">Hii ndiyo skrini mhudumu wako anayoishi nayo. Fungua <span class="ui">Point of Sale</span>
+        kutoka utepe wa pembeni.</p>
+
+      <ol class="steps">
+        <li>
+          <p lang="en">Find the item: type in <span class="ui">Search products or scan barcode…</span>
+            or scan it. Click the product to put it in the cart.</p>
+          <p lang="sw">Tafuta bidhaa: andika kwenye <span class="ui">Search products or scan barcode…</span>
+            au skani. Bonyeza bidhaa ili iingie kwenye kikapu.</p>
+        </li>
+        <li>
+          <p lang="en">Change the <span class="ui">Qty</span> if the customer is taking more than one,
+            and put a percentage in <span class="ui">Disc %</span> if you are giving a discount.</p>
+          <p lang="sw">Badilisha <span class="ui">Qty</span> kama mteja anachukua zaidi ya kimoja, na
+            weka asilimia kwenye <span class="ui">Disc %</span> kama unatoa punguzo.</p>
+        </li>
+        <li>
+          <p lang="en">Attach a customer if you want the sale on their record: <span class="ui">Search customer…</span>,
+            or <span class="ui">New Customer</span>. Leave it as <span class="ui">Walk-in</span> otherwise.</p>
+          <p lang="sw">Ambatanisha mteja kama unataka mauzo yaingie kwenye rekodi yake:
+            <span class="ui">Search customer…</span>, au <span class="ui">New Customer</span>. La sivyo
+            acha kama <span class="ui">Walk-in</span>.</p>
+        </li>
+        <li>
+          <p lang="en">Choose how they are paying.</p>
+          <p lang="sw">Chagua namna anavyolipa.</p>
+        </li>
+        <li>
+          <p lang="en">Press <span class="ui">Charge</span>, then <span class="ui">Print Receipt</span>,
+            then <span class="ui">New Sale</span> for the next customer.</p>
+          <p lang="sw">Bonyeza <span class="ui">Charge</span>, kisha <span class="ui">Print Receipt</span>,
+            kisha <span class="ui">New Sale</span> kwa mteja anayefuata.</p>
+        </li>
+      </ol>
+
+      <figure>
+        <img src="shots/03-pos-midsale.png" alt="" loading="lazy">
+        <figcaption>
+          <b>Fig 2</b>
+          <span lang="en">A sale in progress. The cart on the right adds up as you go, and Charge at the bottom is the last thing you press.</span><span lang="sw">Mauzo yakiendelea. Kikapu upande wa kulia kinajumlisha unapoendelea, na Charge chini ndiyo cha mwisho kubonyeza.</span>
+        </figcaption>
+      </figure>
+
+      <h3 lang="en">The four ways to take payment</h3>
+      <h3 lang="sw">Njia nne za kupokea malipo</h3>
+      <div class="wrap">
+        <table>
+          <thead>
+            <tr>
+              <th lang="en">On screen</th><th lang="sw">Kwenye skrini</th>
+              <th lang="en">Use it when</th><th lang="sw">Itumie lini</th>
+              <th lang="en">What to fill</th><th lang="sw">Cha kujaza</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Cash</td>
+              <td lang="en">Notes and coins.</td><td lang="sw">Fedha taslimu.</td>
+              <td lang="en">Type <span class="ui">Cash Received</span>; the app works out the <span class="ui">Change</span>.</td>
+              <td lang="sw">Andika <span class="ui">Cash Received</span>; programu itahesabu <span class="ui">Change</span>.</td>
+            </tr>
+            <tr>
+              <td>Mobile</td>
+              <td lang="en">M-Pesa, Tigo Pesa, Airtel Money, Halopesa.</td>
+              <td lang="sw">M-Pesa, Tigo Pesa, Airtel Money, Halopesa.</td>
+              <td lang="en">Pick the <span class="ui">Provider</span> and paste the <span class="ui">M-Pesa / Airtel Ref</span>.</td>
+              <td lang="sw">Chagua <span class="ui">Provider</span> kisha weka <span class="ui">M-Pesa / Airtel Ref</span>.</td>
+            </tr>
+            <tr>
+              <td>Card</td>
+              <td lang="en">The customer paid on your card machine.</td>
+              <td lang="sw">Mteja amelipa kwa mashine ya kadi.</td>
+              <td lang="en">Nothing extra.</td><td lang="sw">Hakuna cha ziada.</td>
+            </tr>
+            <tr>
+              <td>Debit</td>
+              <td lang="en">They are taking the goods and paying later.</td>
+              <td lang="sw">Anachukua bidhaa na atalipa baadaye.</td>
+              <td lang="en">A customer is required. The amount appears under <span class="ui">Debts</span>.</td>
+              <td lang="sw">Mteja ni lazima. Kiasi kitaonekana chini ya <span class="ui">Debts</span>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note warn">
+        <span class="mark" lang="en">Careful</span><span class="mark" lang="sw">Tahadhari</span>
+        <div>
+          <p lang="en" style="margin:0">Never record a debt as cash to make the till balance. The
+            money is then missing from your records and your profit figure is wrong.</p>
+          <p lang="sw" style="margin:0">Usiandike deni kama fedha taslimu ili kuleta usawa wa kaunta.
+            Fedha itapotea kwenye kumbukumbu zako na faida yako itakuwa si sahihi.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section id="s6">
+      <p class="kicker">06</p>
+      <h2 lang="en">Debts, returns and mistakes</h2>
+      <h2 lang="sw">Madeni, marejesho na makosa</h2>
+
+      <h3 lang="en">Collecting a debt</h3>
+      <h3 lang="sw">Kukusanya deni</h3>
+      <ol class="steps">
+        <li>
+          <p lang="en">Open <span class="ui">Debts</span>. Every unpaid sale is listed with the
+            customer, the amount and the receipt number.</p>
+          <p lang="sw">Fungua <span class="ui">Debts</span>. Kila mauzo yasiyolipwa yameorodheshwa na
+            mteja, kiasi na namba ya risiti.</p>
+        </li>
+        <li>
+          <p lang="en">When they pay, press <span class="ui">Collect</span> on their row.</p>
+          <p lang="sw">Akilipa, bonyeza <span class="ui">Collect</span> kwenye mstari wake.</p>
+        </li>
+      </ol>
+
+      <h3 lang="en">Cancelling a sale that was wrong</h3>
+      <h3 lang="sw">Kufuta mauzo yaliyokosewa</h3>
+      <ol class="steps">
+        <li>
+          <p lang="en">Open <span class="ui">Return / Void</span> and put the receipt number in
+            <span class="ui">Search receipt number…</span>.</p>
+          <p lang="sw">Fungua <span class="ui">Return / Void</span> kisha weka namba ya risiti kwenye
+            <span class="ui">Search receipt number…</span>.</p>
+        </li>
+        <li>
+          <p lang="en">Write why in <span class="ui">Reason for void</span>, then press
+            <span class="ui">Confirm Void</span>. The stock goes back on the shelf automatically.</p>
+          <p lang="sw">Andika sababu kwenye <span class="ui">Reason for void</span>, kisha bonyeza
+            <span class="ui">Confirm Void</span>. Hisa itarudi rafuni yenyewe.</p>
+        </li>
+      </ol>
+
+      <figure>
+        <img src="shots/06-debts.png" alt="" loading="lazy">
+        <figcaption>
+          <b>Fig 3</b>
+          <span lang="en">Debts, grouped by customer. The red total at the top is money already out of your shop but not yet in your hand.</span><span lang="sw">Madeni, yamepangwa kwa mteja. Jumla nyekundu iliyo juu ni fedha iliyotoka dukani kwako lakini bado haijafika mkononi.</span>
+        </figcaption>
+      </figure>
+
+      <div class="note tip">
+        <span class="mark" lang="en">Why the reason matters</span>
+        <span class="mark" lang="sw">Kwa nini sababu ni muhimu</span>
+        <div>
+          <p lang="en" style="margin:0">Every void is kept with the name of the person who did it, on
+            the <span class="ui">Voided Sales</span> page. Reading that page once a week is the
+            simplest check an owner has against theft.</p>
+          <p lang="sw" style="margin:0">Kila ufutaji huhifadhiwa pamoja na jina la aliyefanya, kwenye
+            ukurasa wa <span class="ui">Voided Sales</span>. Kusoma ukurasa huo mara moja kwa wiki
+            ndiyo ukaguzi rahisi kabisa alionao mmiliki dhidi ya wizi.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section id="s7">
+      <p class="kicker">07</p>
+      <h2 lang="en">Keeping stock right</h2>
+      <h2 lang="sw">Kutunza hisa sawasawa</h2>
+      <p lang="en">Selling reduces stock on its own. You only touch stock by hand when goods arrive,
+        break, expire or go missing.</p>
+      <p lang="sw">Kuuza kunapunguza hisa kwenyewe. Unagusa hisa kwa mkono pale tu bidhaa zinapoingia,
+        kuvunjika, kuisha muda au kupotea.</p>
+
+      <ol class="steps">
+        <li>
+          <p lang="en">New delivery: on <span class="ui">Products</span>, use
+            <span class="ui">Adjust Stock</span>, choose <span class="ui">Add Stock</span>, type the
+            quantity and write the reason, for example the supplier and the invoice number.</p>
+          <p lang="sw">Mzigo mpya: kwenye <span class="ui">Products</span>, tumia
+            <span class="ui">Adjust Stock</span>, chagua <span class="ui">Add Stock</span>, andika
+            idadi na sababu, mfano muuzaji na namba ya ankara.</p>
+        </li>
+        <li>
+          <p lang="en">Damaged or expired: the same place, but <span class="ui">Remove Stock</span>.</p>
+          <p lang="sw">Imeharibika au imeisha muda: sehemu ile ile, lakini <span class="ui">Remove Stock</span>.</p>
+        </li>
+        <li>
+          <p lang="en">To see who changed what and when, open <span class="ui">Stock Movements</span>.
+            Every line carries the date, the type, the quantity and the user.</p>
+          <p lang="sw">Kuona nani alibadilisha nini na lini, fungua <span class="ui">Stock Movements</span>.
+            Kila mstari una tarehe, aina, idadi na mtumiaji.</p>
+        </li>
+      </ol>
+
+      <figure>
+        <img src="shots/05-inventory.png" alt="" loading="lazy">
+        <figcaption>
+          <b>Fig 4</b>
+          <span lang="en">The inventory overview. Low stock and out of stock are the two numbers to act on today.</span><span lang="sw">Muhtasari wa hifadhi. Hisa pungufu na hisa iliyoisha ndizo namba mbili za kushughulikia leo.</span>
+        </figcaption>
+      </figure>
+
+      <h3 lang="en">The numbers on the Inventory page</h3>
+      <h3 lang="sw">Namba zilizo kwenye ukurasa wa Hifadhi</h3>
+      <div class="wrap">
+        <table>
+          <thead><tr>
+            <th lang="en">Figure</th><th lang="sw">Kipimo</th>
+            <th lang="en">What it is telling you</th><th lang="sw">Kinachokuambia</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>Low Stock Items</td>
+              <td lang="en">Items at or under their reorder point. Order these today.</td>
+              <td lang="sw">Bidhaa zilizofika au kupungua chini ya kiwango cha kuagiza. Agiza leo.</td></tr>
+            <tr><td>Out of Stock</td>
+              <td lang="en">Items at zero. Every one of these is a customer you turned away.</td>
+              <td lang="sw">Bidhaa zilizoisha kabisa. Kila moja ni mteja uliyemrudisha mikono mitupu.</td></tr>
+            <tr><td>Inventory Value</td>
+              <td lang="en">The money sitting on your shelves, at cost price. Cash you cannot spend.</td>
+              <td lang="sw">Fedha iliyolala rafuni yako, kwa bei ya kununua. Fedha usiyoweza kuitumia.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section id="s8">
+      <p class="kicker">08</p>
+      <h2 lang="en">Record what you spend</h2>
+      <h2 lang="sw">Andika unachotumia</h2>
+      <p lang="en">Sales minus the cost of the goods is gross profit. Gross profit minus your
+        expenses is what you actually keep. If you do not enter rent, electricity, wages and
+        transport, every profit figure in the app will flatter you.</p>
+      <p lang="sw">Mauzo ukitoa gharama ya bidhaa ni faida ghafi. Faida ghafi ukitoa matumizi yako
+        ndiyo unachobaki nacho kweli. Usipoingiza kodi ya pango, umeme, mishahara na usafiri, kila
+        kipimo cha faida kwenye programu kitakudanganya.</p>
+
+      <ol class="steps">
+        <li>
+          <p lang="en">Open <span class="ui">Expenses</span> and add the amount, the category and
+            the date it was incurred.</p>
+          <p lang="sw">Fungua <span class="ui">Expenses</span> kisha ongeza kiasi, kundi na tarehe
+            iliyotumika.</p>
+        </li>
+        <li>
+          <p lang="en">Enter it on the day it happened, not the day you remember it. The calendar and
+            the reports read the date you type.</p>
+          <p lang="sw">Iingize siku iliyotokea, si siku unayoikumbuka. Kalenda na ripoti husoma
+            tarehe unayoandika.</p>
+        </li>
+      </ol>
+      <figure>
+        <img src="shots/07-expenses.png" alt="" loading="lazy">
+        <figcaption>
+          <b>Fig 5</b>
+          <span lang="en">Expenses. Rent, wages, electricity and transport all belong here, or your profit figure is only half the story.</span><span lang="sw">Matumizi. Kodi ya pango, mishahara, umeme na usafiri vyote ni vya hapa, la sivyo faida yako ni nusu ya ukweli.</span>
+        </figcaption>
+      </figure>
+
+    </section>
+
+    <!-- 9 -->
+    <section id="s9">
+      <p class="kicker">09</p>
+      <h2 lang="en">Reading your business</h2>
+      <h2 lang="sw">Kusoma biashara yako</h2>
+
+      <h3 lang="en">The dashboard</h3>
+      <h3 lang="sw">Dashibodi</h3>
+      <p lang="en">Today at a glance: sales, profit, receipts, what is running low. Open it first
+        each morning.</p>
+      <p lang="sw">Leo kwa mtazamo mmoja: mauzo, faida, risiti, kinachokaribia kuisha. Ifungue kwanza
+        kila asubuhi.</p>
+
+      <figure>
+        <img src="shots/01-dashboard.png" alt="" loading="lazy">
+        <figcaption>
+          <b>Fig 6</b>
+          <span lang="en">The dashboard. Today on the top row, the month underneath, and the calendar and the 14-day chart below that.</span><span lang="sw">Dashibodi. Leo kwenye safu ya juu, mwezi chini yake, na kalenda pamoja na chati ya siku 14 chini zaidi.</span>
+        </figcaption>
+      </figure>
+
+      <h3 lang="en">The sales calendar</h3>
+      <h3 lang="sw">Kalenda ya mauzo</h3>
+      <p lang="en">One square per day of the month, darker green for a stronger day. Hold your
+        finger on a square, or point at it with a mouse, and you get that day in full:
+        <span class="ui">Sales</span>, <span class="ui">Gross profit</span>,
+        <span class="ui">Expenses</span>, <span class="ui">Net profit</span>,
+        <span class="ui">Receipts</span>, <span class="ui">Average sale</span> and
+        <span class="ui">Margin</span>.</p>
+      <p lang="sw">Mraba mmoja kwa kila siku ya mwezi, kijani kizito kwa siku iliyofanya vizuri
+        zaidi. Shikilia kidole kwenye mraba, au elekeza kipanya, utapata siku nzima:
+        <span class="ui">Sales</span>, <span class="ui">Gross profit</span>,
+        <span class="ui">Expenses</span>, <span class="ui">Net profit</span>,
+        <span class="ui">Receipts</span>, <span class="ui">Average sale</span> na
+        <span class="ui">Margin</span>.</p>
+      <ul class="plain">
+        <li lang="en">A pale square is a quiet day. Two or three in the same weekday every week is
+          worth asking about.</li>
+        <li lang="sw">Mraba hafifu ni siku tulivu. Mbili au tatu katika siku ile ile ya juma kila
+          wiki inastahili kuulizwa.</li>
+        <li lang="en">A day can show a loss even with good sales, because a big expense such as rent
+          landed on it.</li>
+        <li lang="sw">Siku inaweza kuonyesha hasara hata ikiwa na mauzo mazuri, kwa sababu matumizi
+          makubwa kama kodi ya pango yameangukia siku hiyo.</li>
+      </ul>
+
+      <figure>
+        <img src="shots/02-calendar.png" alt="" loading="lazy">
+        <figcaption>
+          <b>Fig 7</b>
+          <span lang="en">A full month on the calendar. Darker is a stronger day, and the four totals at the top summarise the month.</span><span lang="sw">Mwezi mzima kwenye kalenda. Kizito zaidi ni siku iliyofanya vizuri, na jumla nne zilizo juu zinafupisha mwezi.</span>
+        </figcaption>
+      </figure>
+
+      <h3 lang="en">Reports by SMS</h3>
+      <h3 lang="sw">Ripoti kwa SMS</h3>
+      <p lang="en">The app can send your figures to your phone without you opening anything. Set
+        this up once, under <span class="ui">Business reports</span>.</p>
+      <p lang="sw">Programu inaweza kutuma takwimu zako kwenye simu bila wewe kufungua chochote.
+        Sanidi mara moja, chini ya <span class="ui">Business reports</span>.</p>
+      <ol class="steps">
+        <li>
+          <p lang="en">Turn on the periods you want. <span class="ui">Every week</span> and
+            <span class="ui">Every month</span> are on by default.</p>
+          <p lang="sw">Washa vipindi unavyotaka. <span class="ui">Every week</span> na
+            <span class="ui">Every month</span> vimewashwa tangu mwanzo.</p>
+        </li>
+        <li>
+          <p lang="en">Set <span class="ui">Send at</span> to an evening hour, once the day is done.</p>
+          <p lang="sw">Weka <span class="ui">Send at</span> saa za jioni, baada ya siku kuisha.</p>
+        </li>
+        <li>
+          <p lang="en">Press <span class="ui">Preview</span> to read the exact message before you
+            commit to it, then <span class="ui">Send me a test now</span> to confirm it arrives.</p>
+          <p lang="sw">Bonyeza <span class="ui">Preview</span> kusoma ujumbe halisi kabla hujakubali,
+            kisha <span class="ui">Send me a test now</span> kuthibitisha unafika.</p>
+        </li>
+      </ol>
+      <figure>
+        <img src="shots/10-report-schedule.png" alt="" loading="lazy">
+        <figcaption>
+          <b>Fig 8</b>
+          <span lang="en">Report settings, at the bottom of Shop Settings. Each switch shows what it costs in messages a year.</span><span lang="sw">Mipangilio ya ripoti, chini ya Mipangilio ya Duka. Kila kitufe kinaonyesha gharama yake kwa ujumbe wa mwaka.</span>
+        </figcaption>
+      </figure>
+
+      <div class="note tip">
+        <span class="mark" lang="en">Saving money</span><span class="mark" lang="sw">Kuokoa gharama</span>
+        <div>
+          <p lang="en" style="margin:0">Daily is 365 messages a year; weekly is 52 and tells you most
+            of the same story. If you install the app on your phone, the reports arrive as free
+            notifications instead of SMS. A period with no sales sends nothing at all.</p>
+          <p lang="sw" style="margin:0">Kila siku ni ujumbe 365 kwa mwaka; kila wiki ni 52 na
+            inakuambia karibu hadithi ile ile. Ukisakinisha programu kwenye simu yako, ripoti
+            zinafika kama arifa za bure badala ya SMS. Kipindi kisicho na mauzo hakitumi chochote.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section id="s10">
+      <p class="kicker">10</p>
+      <h2 lang="en">Your kind of business</h2>
+      <h2 lang="sw">Aina ya biashara yako</h2>
+      <p lang="en">Everything up to here is the same for every shop. This chapter is the part that
+        is not: the business type you chose in section 3 adds its own screen to the sidebar, and
+        only yours appears. Read the one that matches your shop and skip the rest.</p>
+      <p lang="sw">Kila kitu hadi hapa ni sawa kwa kila duka. Sura hii ndiyo tofauti: aina ya
+        biashara uliyochagua katika sehemu ya 3 inaongeza skrini yake kwenye utepe wa pembeni, na
+        yako pekee ndiyo inayoonekana. Soma inayolingana na duka lako, ruka zingine.</p>
+
+      <!-- pharmacy -->
+      <div class="trade">
+        <h3 lang="en">Pharmacy and chemist</h3>
+        <h3 lang="sw">Duka la dawa</h3>
+        <p class="sw-name" lang="en">In the sidebar: the usual Inventory, with batches and expiry dates behind each item.</p>
+        <p class="sw-name" lang="sw">Kwenye utepe: Hifadhi ya kawaida, yenye bachi na tarehe za mwisho nyuma ya kila bidhaa.</p>
+
+        <ul class="plain">
+          <li lang="en">Each delivery is received as its own <b>batch</b>, with its own expiry date,
+            so two lots of the same medicine stay separate. Sell the earlier expiry first.</li>
+          <li lang="sw">Kila mzigo unapokelewa kama <b>bachi</b> yake, na tarehe yake ya mwisho,
+            hivyo mizigo miwili ya dawa ile ile inabaki tofauti. Uza inayoisha kwanza.</li>
+          <li lang="en">A product can be marked <span class="ui">Requires Prescription</span>, which
+            keeps the controlled items separate from everything else you sell.</li>
+          <li lang="sw">Bidhaa inaweza kuwekewa alama ya <span class="ui">Requires Prescription</span>,
+            jambo linalotenganisha dawa zinazodhibitiwa na vitu vingine unavyouza.</li>
+          <li lang="en">The <span class="ui">Generic Name</span> field means a customer asking for
+            paracetamol finds your Panadol.</li>
+          <li lang="sw">Sehemu ya <span class="ui">Generic Name</span> inafanya mteja anayeuliza
+            paracetamol aipate Panadol yako.</li>
+        </ul>
+
+        <figure>
+          <img src="shots/12-pharmacy-products.png" alt="" loading="lazy">
+          <figcaption>
+            <b>Fig 11</b>
+            <span lang="en">A chemist's catalogue. Import Shipment receives a whole delivery as a batch rather than item by item.</span>
+            <span lang="sw">Orodha ya duka la dawa. Import Shipment hupokea mzigo mzima kama bachi badala ya bidhaa moja moja.</span>
+          </figcaption>
+        </figure>
+
+        <div class="note warn">
+          <span class="mark" lang="en">Expiry</span><span class="mark" lang="sw">Tarehe ya mwisho</span>
+          <div>
+            <p lang="en" style="margin:0">Check expiry dates weekly, not monthly. Stock that expires
+              on your shelf was bought with your money and cannot be sold or returned.</p>
+            <p lang="sw" style="margin:0">Kagua tarehe za mwisho kila wiki, si kila mwezi. Dawa
+              inayoisha muda rafuni yako ilinunuliwa kwa fedha yako na haiwezi kuuzwa wala kurudishwa.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- restaurant -->
+      <div class="trade">
+        <h3 lang="en">Restaurant, cafe and bar</h3>
+        <h3 lang="sw">Mgahawa, kahawa na baa</h3>
+        <p class="sw-name" lang="en">In the sidebar: <span class="ui">Kitchen Display</span>.</p>
+        <p class="sw-name" lang="sw">Kwenye utepe: <span class="ui">Kitchen Display</span>.</p>
+
+        <p lang="en">An order taken at the counter appears in the kitchen by itself. Nobody carries a
+          paper chit, and nothing is forgotten because it was never written down.</p>
+        <p lang="sw">Agizo lililochukuliwa kaunta linafika jikoni lenyewe. Hakuna anayebeba karatasi,
+          na hakuna kinachosahaulika kwa sababu hakikuandikwa.</p>
+
+        <ol class="steps">
+          <li>
+            <p lang="en">Take the order at <span class="ui">Point of Sale</span> as usual and put the
+              table number on it.</p>
+            <p lang="sw">Chukua agizo kwenye <span class="ui">Point of Sale</span> kama kawaida na
+              uweke namba ya meza.</p>
+          </li>
+          <li>
+            <p lang="en">The ticket appears on <span class="ui">Kitchen Display</span> as
+              <span class="ui">New Order</span>. The cook presses <span class="ui">Start</span> when
+              the pan goes on, so the counter can see it is being made.</p>
+            <p lang="sw">Tiketi inatokea kwenye <span class="ui">Kitchen Display</span> kama
+              <span class="ui">New Order</span>. Mpishi anabonyeza <span class="ui">Start</span>
+              anapoanza kupika, ili kaunta ione kinaandaliwa.</p>
+          </li>
+          <li>
+            <p lang="en">When the plate is up, <span class="ui">Mark Ready</span>. The waiter collects
+              it and the ticket leaves the screen.</p>
+            <p lang="sw">Chakula kikiwa tayari, <span class="ui">Mark Ready</span>. Mhudumu
+              anakichukua na tiketi inaondoka kwenye skrini.</p>
+          </li>
+        </ol>
+
+        <figure>
+          <img src="shots/13-kitchen-display.png" alt="" loading="lazy">
+          <figcaption>
+            <b>Fig 12</b>
+            <span lang="en">The kitchen screen. The minutes counter on each ticket is the one number that stops a table being forgotten.</span>
+            <span lang="sw">Skrini ya jikoni. Kihesabu cha dakika kwenye kila tiketi ndicho kipimo kinachozuia meza kusahaulika.</span>
+          </figcaption>
+        </figure>
+
+        <div class="note tip">
+          <span class="mark" lang="en">Tip</span><span class="mark" lang="sw">Dokezo</span>
+          <div>
+            <p lang="en" style="margin:0">Keep a cheap tablet on the kitchen wall showing this page.
+              It refreshes itself, so nobody has to touch it between orders.</p>
+            <p lang="sw" style="margin:0">Weka tableti ya bei rahisi ukutani jikoni ikionyesha ukurasa
+              huu. Hujisasisha yenyewe, hivyo hakuna anayehitaji kuugusa kati ya maagizo.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- guest house -->
+      <div class="trade">
+        <h3 lang="en">Guest house and hotel</h3>
+        <h3 lang="sw">Nyumba ya wageni na hoteli</h3>
+        <p class="sw-name" lang="en">In the sidebar: <span class="ui">Hotel Rooms</span>.</p>
+        <p class="sw-name" lang="sw">Kwenye utepe: <span class="ui">Hotel Rooms</span>.</p>
+
+        <p lang="en">Every room is a card, and its colour is its state. The four counters across the
+          top answer the only question a receptionist is ever asked on the phone: have you got a room.</p>
+        <p lang="sw">Kila chumba ni kadi, na rangi yake ndiyo hali yake. Vihesabu vinne vilivyo juu
+          vinajibu swali pekee mapokezi huulizwa kwa simu: una chumba?</p>
+
+        <ol class="steps">
+          <li>
+            <p lang="en">Add your rooms once, with <span class="ui">Add Room</span>: room number,
+              type and the rate per night.</p>
+            <p lang="sw">Ongeza vyumba vyako mara moja, kwa <span class="ui">Add Room</span>: namba
+              ya chumba, aina na bei kwa usiku.</p>
+          </li>
+          <li>
+            <p lang="en">A guest arriving now: <span class="ui">Check In Guest</span>. A guest
+              arriving later: <span class="ui">Reserve Room</span>, then
+              <span class="ui">Check In Now</span> when they walk in.</p>
+            <p lang="sw">Mgeni anayefika sasa: <span class="ui">Check In Guest</span>. Mgeni
+              atakayefika baadaye: <span class="ui">Reserve Room</span>, kisha
+              <span class="ui">Check In Now</span> anapoingia.</p>
+          </li>
+          <li>
+            <p lang="en">Food, drinks and laundry go onto the room under
+              <span class="ui">Guest Folios</span>, and are paid together at checkout.</p>
+            <p lang="sw">Chakula, vinywaji na kufua vinawekwa kwenye chumba chini ya
+              <span class="ui">Guest Folios</span>, na hulipwa pamoja wakati wa kuondoka.</p>
+          </li>
+          <li>
+            <p lang="en">A room being cleaned or repaired goes to
+              <span class="ui">Maintenance</span>, so nobody books it by mistake.</p>
+            <p lang="sw">Chumba kinachosafishwa au kurekebishwa kiwekwe
+              <span class="ui">Maintenance</span>, ili kisibukiwe kimakosa.</p>
+          </li>
+        </ol>
+
+        <figure>
+          <img src="shots/14-hotel-rooms.png" alt="" loading="lazy">
+          <figcaption>
+            <b>Fig 13</b>
+            <span lang="en">The room board. Green is free, yellow is occupied, blue is reserved with the guest's name on it.</span>
+            <span lang="sw">Ubao wa vyumba. Kijani ni wazi, njano kimekaliwa, bluu kimewekwa akiba na jina la mgeni.</span>
+          </figcaption>
+        </figure>
+      </div>
+
+      <!-- repair workshop -->
+      <div class="trade">
+        <h3 lang="en">Repair workshop</h3>
+        <h3 lang="sw">Karakana ya ukarabati</h3>
+        <p class="sw-name" lang="en">In the sidebar: <span class="ui">Work Orders</span>.</p>
+        <p class="sw-name" lang="sw">Kwenye utepe: <span class="ui">Work Orders</span>.</p>
+
+        <p lang="en">A repair is not a sale, because it takes days and the price is not known when the
+          customer hands the device over. A work order holds the job until it is.</p>
+        <p lang="sw">Ukarabati si mauzo, kwa sababu unachukua siku kadhaa na bei haijulikani mteja
+          anapokabidhi kifaa. Agizo la kazi linashikilia kazi hiyo hadi ijulikane.</p>
+
+        <ol class="steps">
+          <li>
+            <p lang="en">Press <span class="ui">New Work Order</span> and write the device, the fault
+              in the customer's own words, and the serial number.</p>
+            <p lang="sw">Bonyeza <span class="ui">New Work Order</span> kisha andika kifaa, tatizo
+              kwa maneno ya mteja mwenyewe, na namba ya kifaa.</p>
+          </li>
+          <li>
+            <p lang="en">Move it along as the work goes: <span class="ui">Open</span>,
+              <span class="ui">In Progress</span>, <span class="ui">Awaiting Parts</span>,
+              <span class="ui">Completed</span>. A customer phoning to ask is answered from this
+              list in one look.</p>
+            <p lang="sw">Isogeze kazi inavyoendelea: <span class="ui">Open</span>,
+              <span class="ui">In Progress</span>, <span class="ui">Awaiting Parts</span>,
+              <span class="ui">Completed</span>. Mteja anayepiga simu kuuliza anajibiwa kutoka
+              orodha hii kwa mtazamo mmoja.</p>
+          </li>
+          <li>
+            <p lang="en">Add the labour hours and the parts used. The total builds itself, so the
+              price you quote is the price the job actually cost.</p>
+            <p lang="sw">Ongeza masaa ya kazi na vipuri vilivyotumika. Jumla hujijenga yenyewe, hivyo
+              bei unayotoa ndiyo gharama halisi ya kazi.</p>
+          </li>
+        </ol>
+
+        <figure>
+          <img src="shots/15-work-orders.png" alt="" loading="lazy">
+          <figcaption>
+            <b>Fig 14</b>
+            <span lang="en">Jobs on the bench. The status chip on each row is what you read out when a customer phones.</span>
+            <span lang="sw">Kazi zilizopo. Alama ya hali kwenye kila mstari ndiyo unayoisoma mteja anapopiga simu.</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section id="s11">
+      <p class="kicker">11</p>
+      <h2 lang="en">Your staff</h2>
+      <h2 lang="sw">Wafanyakazi wako</h2>
+      <p lang="en">Give every person their own login. Shared logins destroy the only record you have
+        of who did what.</p>
+      <p lang="sw">Mpe kila mtu kuingia kwake mwenyewe. Kuingia kwa pamoja kunaharibu kumbukumbu pekee
+        uliyo nayo ya nani alifanya nini.</p>
+
+      <ol class="steps">
+        <li>
+          <p lang="en">Open <span class="ui">Users &amp; Staff</span> and press <span class="ui">Add User</span>.</p>
+          <p lang="sw">Fungua <span class="ui">Users &amp; Staff</span> kisha bonyeza <span class="ui">Add User</span>.</p>
+        </li>
+        <li>
+          <p lang="en">Enter the <span class="ui">Full Name</span>, the email, a
+            <span class="ui">Role</span>, and <span class="ui">Assign Shop</span> if you have more
+            than one branch.</p>
+          <p lang="sw">Ingiza <span class="ui">Full Name</span>, barua pepe, <span class="ui">Role</span>,
+            na <span class="ui">Assign Shop</span> kama una tawi zaidi ya moja.</p>
+        </li>
+        <li>
+          <p lang="en">Someone leaves? Use <span class="ui">Deactivate</span>, not
+            <span class="ui">Delete</span>, so their past sales stay in your records.</p>
+          <p lang="sw">Mtu ameondoka? Tumia <span class="ui">Deactivate</span>, si
+            <span class="ui">Delete</span>, ili mauzo yake ya nyuma yabaki kwenye kumbukumbu zako.</p>
+        </li>
+      </ol>
+
+      <figure>
+        <img src="shots/09-users.png" alt="" loading="lazy">
+        <figcaption>
+          <b>Fig 9</b>
+          <span lang="en">Users and staff. Every person gets their own login, so every sale and every void carries a name.</span><span lang="sw">Watumiaji na wafanyakazi. Kila mtu anapata kuingia kwake, hivyo kila mauzo na kila ufutaji una jina.</span>
+        </figcaption>
+      </figure>
+
+      <div class="wrap">
+        <table>
+          <thead><tr>
+            <th lang="en">Role</th><th lang="sw">Wadhifa</th>
+            <th lang="en">Can do</th><th lang="sw">Anaweza</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>Account Owner</td>
+              <td lang="en">Everything, including money, staff, settings and the subscription.</td>
+              <td lang="sw">Kila kitu, pamoja na fedha, wafanyakazi, mipangilio na usajili.</td></tr>
+            <tr><td>Cashier</td>
+              <td lang="en">Sell, take payment, collect debts, record expenses.</td>
+              <td lang="sw">Kuuza, kupokea malipo, kukusanya madeni, kuandika matumizi.</td></tr>
+            <tr><td>Inventory Staff</td>
+              <td lang="en">Products and stock. Not the till, not the reports.</td>
+              <td lang="sw">Bidhaa na hisa. Si kaunta, si ripoti.</td></tr>
+            <tr><td>Receptionist</td>
+              <td lang="en">Guesthouses only: rooms, check-in and check-out.</td>
+              <td lang="sw">Nyumba za wageni pekee: vyumba, kuingia na kutoka.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section id="s12">
+      <p class="kicker">12</p>
+      <h2 lang="en">Paying for your subscription</h2>
+      <h2 lang="sw">Kulipia usajili wako</h2>
+      <p lang="en">You pay from inside the app, by mobile money. There is no need to call anyone.</p>
+      <p lang="sw">Unalipa ukiwa ndani ya programu, kwa mtandao wa simu. Hakuna haja ya kumpigia mtu.</p>
+
+      <ol class="steps">
+        <li>
+          <p lang="en">Open <span class="ui">Subscription</span> and choose a plan and how many
+            <span class="ui">months</span>.</p>
+          <p lang="sw">Fungua <span class="ui">Subscription</span> kisha chagua mpango na idadi ya
+            <span class="ui">miezi</span>.</p>
+        </li>
+        <li>
+          <p lang="en">Type the <span class="ui">Mobile money number</span> you will approve the
+            payment on, then press <span class="ui">Pay</span>.</p>
+          <p lang="sw">Andika <span class="ui">Mobile money number</span> utakayothibitishia malipo,
+            kisha bonyeza <span class="ui">Pay</span>.</p>
+        </li>
+        <li>
+          <p lang="en">A prompt arrives on that phone. Enter your PIN. On the screen you will see
+            <span class="ui">Waiting for your PIN</span>.</p>
+          <p lang="sw">Ombi litafika kwenye simu hiyo. Ingiza PIN yako. Kwenye skrini utaona
+            <span class="ui">Waiting for your PIN</span>.</p>
+        </li>
+        <li>
+          <p lang="en">When it goes through you see a green tick, <span class="ui">Payment complete</span>,
+            and the app takes you to your dashboard by itself.</p>
+          <p lang="sw">Ikipita utaona alama ya kijani, <span class="ui">Payment complete</span>, na
+            programu itakupeleka kwenye dashibodi yenyewe.</p>
+        </li>
+      </ol>
+
+      <figure>
+        <img src="shots/11-subscription.png" alt="" loading="lazy">
+        <figcaption>
+          <b>Fig 10</b>
+          <span lang="en">The subscription page. Pick the plan and the number of months, type the number you will approve on, and pay.</span><span lang="sw">Ukurasa wa usajili. Chagua mpango na idadi ya miezi, andika namba utakayothibitishia, kisha lipa.</span>
+        </figcaption>
+      </figure>
+
+      <div class="note warn">
+        <span class="mark" lang="en">If it fails</span><span class="mark" lang="sw">Ikishindikana</span>
+        <div>
+          <p lang="en" style="margin:0">A red X tells you why: not enough balance, cancelled on the
+            phone, the prompt timed out, or the PIN was refused. Fix that one thing and press try
+            again. No money leaves your account on a failed attempt.</p>
+          <p lang="sw" style="margin:0">Alama nyekundu ya X itakueleza sababu: salio halitoshi,
+            imeghairiwa kwenye simu, muda wa ombi umeisha, au PIN imekataliwa. Rekebisha hilo moja
+            kisha bonyeza jaribu tena. Hakuna fedha inayotoka kwenye akaunti yako jaribio
+            likishindikana.</p>
+        </div>
+      </div>
+
+      <p lang="en">If your subscription ends, your data is safe and waiting. Sign in, pay on the page
+        you land on, and you are straight back into your shop.</p>
+      <p lang="sw">Usajili wako ukiisha, taarifa zako ziko salama zikisubiri. Ingia, lipa kwenye
+        ukurasa utakaofikia, na utarudi dukani kwako papo hapo.</p>
+    </section>
+
+    <!-- 13 -->
+    <section id="s13">
+      <p class="kicker">13</p>
+      <h2 lang="en">When something goes wrong</h2>
+      <h2 lang="sw">Kitu kikienda vibaya</h2>
+
+      <details>
+        <summary>
+          <span lang="en">The SMS code never arrived</span>
+          <span lang="sw">Msimbo wa SMS haukufika</span>
+        </summary>
+        <div class="body">
+          <p lang="en">Check the number you typed, including the leading digits. Wait a minute, since
+            the network sometimes delays. Then use <span class="ui">Send a new code</span>. There is
+            a limit on how many you can request, so if you hit it, wait and try later.</p>
+          <p lang="sw">Angalia namba uliyoandika, pamoja na tarakimu za mwanzo. Subiri dakika moja,
+            kwani mtandao wakati mwingine huchelewesha. Kisha tumia <span class="ui">Send a new code</span>.
+            Kuna kikomo cha mara unazoweza kuomba, hivyo ukifika kikomo, subiri ujaribu baadaye.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>
+          <span lang="en">I forgot my password</span>
+          <span lang="sw">Nimesahau nenosiri langu</span>
+        </summary>
+        <div class="body">
+          <p lang="en">On the sign-in page choose <span class="ui">Forgot password?</span>, enter your
+            phone number, press <span class="ui">Send code</span>, then type the code and choose a new
+            password of at least 8 characters.</p>
+          <p lang="sw">Kwenye ukurasa wa kuingia chagua <span class="ui">Forgot password?</span>,
+            ingiza namba yako ya simu, bonyeza <span class="ui">Send code</span>, kisha andika msimbo
+            na chagua nenosiri jipya lenye angalau herufi 8.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>
+          <span lang="en">A staff member forgot theirs</span>
+          <span lang="sw">Mfanyakazi amesahau lake</span>
+        </summary>
+        <div class="body">
+          <p lang="en">The owner does not need support for this. Open <span class="ui">Users &amp; Staff</span>,
+            find the person, press <span class="ui">Reset Password</span> and set a new one.</p>
+          <p lang="sw">Mmiliki hahitaji msaada kwa hili. Fungua <span class="ui">Users &amp; Staff</span>,
+            mtafute mtu husika, bonyeza <span class="ui">Reset Password</span> kisha weka jipya.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>
+          <span lang="en">A product will not add to the cart</span>
+          <span lang="sw">Bidhaa haiingii kwenye kikapu</span>
+        </summary>
+        <div class="body">
+          <p lang="en">It is almost always <span class="ui">Out of stock</span>. Receive the stock
+            under <span class="ui">Adjust Stock</span> first. If the product is marked
+            <span class="ui">Inactive</span>, press <span class="ui">Activate</span> on the products
+            page.</p>
+          <p lang="sw">Mara nyingi ni <span class="ui">Out of stock</span>. Pokea hisa chini ya
+            <span class="ui">Adjust Stock</span> kwanza. Kama bidhaa imewekwa
+            <span class="ui">Inactive</span>, bonyeza <span class="ui">Activate</span> kwenye ukurasa
+            wa bidhaa.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>
+          <span lang="en">My profit looks wrong</span>
+          <span lang="sw">Faida yangu inaonekana si sahihi</span>
+        </summary>
+        <div class="body">
+          <p lang="en">Two causes, in this order. First, products with no <span class="ui">Cost Price</span>:
+            the app counts the whole selling price as profit. Second, expenses that were never
+            entered. Fix the costs, enter the expenses, and the figure will settle.</p>
+          <p lang="sw">Sababu mbili, kwa mpangilio huu. Kwanza, bidhaa zisizo na
+            <span class="ui">Cost Price</span>: programu huhesabu bei yote ya kuuza kama faida. Pili,
+            matumizi ambayo hayakuingizwa kamwe. Rekebisha gharama, ingiza matumizi, na kipimo
+            kitatulia.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>
+          <span lang="en">The receipt will not print</span>
+          <span lang="sw">Risiti haichapishwi</span>
+        </summary>
+        <div class="body">
+          <p lang="en">The receipt opens as a normal print window, so the printer must already be
+            working for the phone or computer you are using. Test it by printing any other page. The
+            sale is already saved either way, and you can print it again later from
+            <span class="ui">Transactions</span>.</p>
+          <p lang="sw">Risiti hufunguka kama dirisha la kawaida la kuchapisha, hivyo printa lazima
+            iwe tayari inafanya kazi kwenye simu au kompyuta unayotumia. Jaribu kwa kuchapisha ukurasa
+            mwingine wowote. Mauzo yameshahifadhiwa vyovyote vile, na unaweza kuchapisha tena baadaye
+            kutoka <span class="ui">Transactions</span>.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>
+          <span lang="en">It says my account is pending or expired</span>
+          <span lang="sw">Inasema akaunti yangu inasubiri au imeisha muda</span>
+        </summary>
+        <div class="body">
+          <p lang="en">Expired means the subscription ran out: pay on that same page and you are back
+            in, as in section 12. Pending means the account is still being reviewed; the page checks
+            itself every 30 seconds and will move you on by itself.</p>
+          <p lang="sw">Imeisha muda maana yake usajili umekwisha: lipa kwenye ukurasa huo huo na
+            utarudi ndani, kama ilivyo sehemu ya 12. Inasubiri maana yake akaunti bado inapitiwa;
+            ukurasa hujikagua kila sekunde 30 na utakusogeza wenyewe.</p>
+        </div>
+      </details>
+    </section>
+
+    <footer>
+      <span lang="en">MauzoHalisi user manual</span><span lang="sw">Mwongozo wa mtumiaji wa MauzoHalisi</span>
+      <span>&middot;</span>
+      <span lang="en">Keep this link; it updates as the app does.</span>
+      <span lang="sw">Hifadhi kiungo hiki; hubadilika programu inapobadilika.</span>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+// ---- language ----
+const btnEn = document.getElementById('btn-en');
+const btnSw = document.getElementById('btn-sw');
+function setLang(l){
+  document.documentElement.setAttribute('data-lang', l);
+  document.documentElement.setAttribute('lang', l);
+  btnEn.setAttribute('aria-pressed', String(l === 'en'));
+  btnSw.setAttribute('aria-pressed', String(l === 'sw'));
+  buildToc();
+  try { localStorage.setItem('mh-manual-lang', l); } catch (e) {}
+}
+btnEn.addEventListener('click', () => setLang('en'));
+btnSw.addEventListener('click', () => setLang('sw'));
+
+// ---- contents, built from the headings actually on the page ----
+const toc = document.getElementById('toc');
+function buildToc(){
+  const lang = document.documentElement.getAttribute('data-lang');
+  toc.innerHTML = '';
+  document.querySelectorAll('section[id]').forEach(sec => {
+    const h = sec.querySelector('h2[lang="' + lang + '"]');
+    const n = sec.querySelector('.kicker');
+    if (!h) return;
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = '#' + sec.id;
+    a.innerHTML = '<em>' + (n ? n.textContent : '') + '</em><span></span>';
+    a.lastChild.textContent = h.textContent;
+    li.appendChild(a);
+    toc.appendChild(li);
+  });
+  markCurrent();
+}
+
+// ---- which section you are in ----
+let links = [];
+function markCurrent(){
+  links = Array.from(toc.querySelectorAll('a'));
+}
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    const id = e.target.id;
+    links.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + id));
+  });
+}, { rootMargin: '-80px 0px -70% 0px' });
+document.querySelectorAll('section[id]').forEach(s => io.observe(s));
+
+let saved = null;
+try { saved = localStorage.getItem('mh-manual-lang'); } catch (e) {}
+setLang(saved === 'sw' ? 'sw' : 'en');
+</script>
+
+</body>
+</html>

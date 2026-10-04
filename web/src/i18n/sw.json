@@ -118,7 +118,8 @@
     "passwordUpdated": "Nenosiri limesasishwa!",
     "pwMinLength": "Nenosiri jipya lazima liwe na herufi 8 au zaidi",
     "pwNoMatch": "Maneno ya siri hayafanani",
-    "pwFailed": "Imeshindwa kusasisha nenosiri"
+    "pwFailed": "Imeshindwa kusasisha nenosiri",
+    "manual": "Mwongozo wa mtumiaji"
   },
   "auth": {
     "signIn": "Ingia",

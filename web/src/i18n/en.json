@@ -118,7 +118,8 @@
     "passwordUpdated": "Password updated successfully!",
     "pwMinLength": "New password must be at least 8 characters",
     "pwNoMatch": "Passwords do not match",
-    "pwFailed": "Failed to update password"
+    "pwFailed": "Failed to update password",
+    "manual": "User manual"
   },
   "auth": {
     "signIn": "Sign In",

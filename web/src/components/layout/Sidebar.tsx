@@ -6,7 +6,7 @@ import {
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
-  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ReceiptText, Globe, Inbox, FileText, HandCoins, CreditCard, CalendarDays } from 'lucide-react';
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ReceiptText, Globe, Inbox, FileText, HandCoins, CreditCard, CalendarDays, BookOpen } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
@@ -484,6 +484,17 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
             <span>{currentLang === 'en' ? 'English' : 'Kiswahili'}</span>
             <span className="ml-auto text-[10px] font-bold text-stone-400 uppercase">{currentLang === 'en' ? 'SW' : 'EN'}</span>
           </button>
+
+          {/* The manual. A new tab, because someone opening it is usually stuck
+              in the middle of something and should not lose their place. */}
+          <a
+            href="/manual/"
+            target="_blank"
+            rel="noopener"
+            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors"
+          >
+            <BookOpen size={14} /> {t('sidebar.manual')}
+          </a>
 
           <button onClick={openChangePw}
             className="flex items-center gap-2 w-full px-3 py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors"

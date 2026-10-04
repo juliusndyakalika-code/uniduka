@@ -50,6 +50,13 @@ export default defineConfig({
         // Kept out of line so the precache and caching rules stay generated.
         importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // The user manual is several megabytes of screenshots. Precaching it
+        // would put all of that on every phone that installs the app, for a
+        // page most people open once, so it is fetched when asked for instead.
+        globIgnores: ['**/manual/**'],
+        // And it is a real page on disk, not an app route: without this the
+        // service worker answers /manual/ with the app shell.
+        navigateFallbackDenylist: [/^\/manual\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api-production-00d0\.up\.railway\.app\/api\//,
