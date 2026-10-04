@@ -1,0 +1,8 @@
+{
+  "name": "mauzohalisi-manual-shots",
+  "private": true,
+  "type": "module",
+  "description": "Captures the user manual's screenshots from the running app.",
+  "scripts": { "shoot": "node shoot.mjs" },
+  "devDependencies": { "playwright-core": "^1.48.0" }
+}

@@ -48,13 +48,29 @@ export async function listOrders(req: AuthRequest, res: Response) {
   return R.ok(res, orders.map(forDisplay));
 }
 
+/** The only states a ticket may be moved to. */
+const STATUSES = ['PENDING', 'PREPARING', 'READY', 'SERVED'] as const;
+
 export async function updateOrderStatus(req: AuthRequest, res: Response) {
   // The screen says IN_PROGRESS; the column says PREPARING. Same state.
   const status = req.body.status === 'IN_PROGRESS' ? 'PREPARING' : req.body.status;
-  const order = await prisma.kdsOrder.update({
-    where: { id: req.params.id },
-    data: { status, ...(status === 'READY' && { readyAt: new Date() }), ...(status === 'SERVED' && { servedAt: new Date() }) },
+  if (!STATUSES.includes(status)) return R.badRequest(res, 'Unknown status');
+
+  // Scoped by shop as well as id. The id alone is a cuid belonging to some
+  // tenant, and without the shop in the predicate any authenticated user
+  // could move another business's tickets. updateMany rather than update so a
+  // miss is a zero count instead of a thrown record-not-found.
+  const { count } = await prisma.kdsOrder.updateMany({
+    where: { id: req.params.id, shopId: shop(req) },
+    data: {
+      status,
+      ...(status === 'READY' && { readyAt: new Date() }),
+      ...(status === 'SERVED' && { servedAt: new Date() }),
+    },
   });
-  io.to(`shop:${shop(req)}`).emit('kds_update', order);
+  if (!count) return R.notFound(res, 'Order not found');
+
+  const order = await prisma.kdsOrder.findUniqueOrThrow({ where: { id: req.params.id } });
+  io.to(`shop:${shop(req)}`).emit('kds_update', forDisplay(order));
   return R.ok(res, forDisplay(order));
 }

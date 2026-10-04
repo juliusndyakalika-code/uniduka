@@ -23,7 +23,7 @@ btnSw.addEventListener('click', () => setLang('sw'));
 const toc = document.getElementById('toc');
 function buildToc(){
   const lang = document.documentElement.getAttribute('data-lang');
-  toc.innerHTML = '';
+  toc.replaceChildren();
   document.querySelectorAll('section[id]').forEach(sec => {
     const h = sec.querySelector('h2[lang="' + lang + '"]');
     const n = sec.querySelector('.kicker');
@@ -31,8 +31,14 @@ function buildToc(){
     const li = document.createElement('li');
     const a = document.createElement('a');
     a.href = '#' + sec.id;
-    a.innerHTML = '<em>' + (n ? n.textContent : '') + '</em><span></span>';
-    a.lastChild.textContent = h.textContent;
+    // Built as nodes, not markup. This page shares an origin with the app,
+    // so an HTML sink here would be an HTML sink on the app's origin; there
+    // is no reason to have one when there is nothing to interpolate.
+    const num = document.createElement('em');
+    num.textContent = n ? n.textContent : '';
+    const label = document.createElement('span');
+    label.textContent = h.textContent;
+    a.append(num, label);
     li.appendChild(a);
     toc.appendChild(li);
   });

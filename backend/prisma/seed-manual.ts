@@ -18,9 +18,31 @@ const EMAIL = 'neema@mauzohalisi.co.tz';
 const PASSWORD = 'Neema@2026';
 
 const pick = <T>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
+
+/**
+ * A phone number that cannot belong to anybody.
+ *
+ * These numbers are photographed and published in the manual next to invented
+ * debts and invented guests. A plausible Tanzanian number would eventually be
+ * a real subscriber's, listed publicly as owing money they do not owe, so the
+ * seed only ever issues from a block that is obviously a placeholder.
+ */
+// Starts above the fixed shop numbers (…0001 to …0005) so the two blocks
+// cannot collide on the unique phone column.
+let phoneSeq = 100;
+const fakePhone = () => `+25575400${String(++phoneSeq).padStart(4, '0')}`;
 const between = (lo: number, hi: number) => lo + Math.floor(Math.random() * (hi - lo + 1));
 
 async function main() {
+  // This seed creates an account whose password is written in this file, with
+  // a live subscription. That is fine on a laptop and a handed-over account on
+  // a real deployment, so it refuses to run anywhere that is not local.
+  const url = process.env.DATABASE_URL ?? '';
+  const local = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(url);
+  if (!local || process.env.NODE_ENV === 'production') {
+    throw new Error(`Refusing to seed: DATABASE_URL is not local (${url.replace(/:[^:@]*@/, ':***@')})`);
+  }
+
   // Start clean so repeated runs do not stack duplicate months onto the charts.
   const old = await prisma.ownerAccount.findUnique({ where: { email: EMAIL } });
   if (old) {
@@ -44,7 +66,7 @@ async function main() {
     data: {
       legalName: 'Neema Trading Co. Ltd',
       email: EMAIL,
-      phone: '+255754112233',
+      phone: '+255754000001',
       subscriptionPlan: SubscriptionPlan.GROWTH,
       subscriptionActive: true,
       subscriptionExpiresAt: new Date(Date.now() + 64 * 86_400_000),
@@ -56,7 +78,7 @@ async function main() {
       ownerAccountId: account.id,
       fullName: 'Neema Mwakalinga',
       email: EMAIL,
-      phone: '+255754112233',
+      phone: '+255754000001',
       phoneVerified: true,
       passwordHash,
       role: UserRole.ACCOUNT_OWNER,
@@ -79,15 +101,15 @@ async function main() {
   });
 
   const duka = await makeShop('Duka la Neema', BusinessType.RETAIL_STORE,
-    InventoryModel.SKU_VARIANT, PricingMode.FIXED, TaxMode.STANDARD_VAT, '+255754112233');
+    InventoryModel.SKU_VARIANT, PricingMode.FIXED, TaxMode.STANDARD_VAT, '+255754000001');
   const chemist = await makeShop('Afya Chemist', BusinessType.PHARMACY_CHEMIST,
-    InventoryModel.BATCH_LOT, PricingMode.FIXED, TaxMode.EXEMPT_HEALTH, '+255754112244');
+    InventoryModel.BATCH_LOT, PricingMode.FIXED, TaxMode.EXEMPT_HEALTH, '+255754000002');
   const mgahawa = await makeShop('Mgahawa wa Kijani', BusinessType.RESTAURANT,
-    InventoryModel.RECIPE_INGREDIENT, PricingMode.MENU_BASED, TaxMode.FAB_SERVICE_RATE, '+255754112255');
+    InventoryModel.RECIPE_INGREDIENT, PricingMode.MENU_BASED, TaxMode.FAB_SERVICE_RATE, '+255754000003');
   const nyumba = await makeShop('Baobab Guest House', BusinessType.HOTEL_GUESTHOUSE,
-    InventoryModel.AMENITY, PricingMode.BED_AND_BOARD, TaxMode.HOSPITALITY_RATE, '+255754112266');
+    InventoryModel.AMENITY, PricingMode.BED_AND_BOARD, TaxMode.HOSPITALITY_RATE, '+255754000004');
   const fundi = await makeShop('Fundi Simu Workshop', BusinessType.REPAIR_WORKSHOP,
-    InventoryModel.ASSET_SERIAL, PricingMode.TIME_BASED, TaxMode.SERVICE_RATE, '+255754112277');
+    InventoryModel.ASSET_SERIAL, PricingMode.TIME_BASED, TaxMode.SERVICE_RATE, '+255754000005');
 
   const shops = [duka, chemist, mgahawa, nyumba, fundi];
   for (const s of shops) {
@@ -113,7 +135,7 @@ async function main() {
       data: {
         ownerAccountId: account.id, fullName: s.fullName, email: s.email,
         passwordHash, role: s.role, phoneVerified: true,
-        phone: '+2557' + between(10000000, 89999999),
+        phone: fakePhone(),
       },
     });
     await prisma.userShopAccess.create({ data: { userId: u.id, shopId: s.shop.id, role: s.role } });
@@ -171,7 +193,7 @@ async function main() {
   for (const n of customerNames) {
     customers.push(await prisma.customer.create({
       data: {
-        shopId: duka.id, fullName: n, phone: '+2557' + between(10000000, 89999999),
+        shopId: duka.id, fullName: n, phone: fakePhone(),
         consentMarketing: true,
       },
     }));
@@ -352,7 +374,7 @@ async function main() {
         data: {
           roomId: room.id,
           guestName: pick(['Daniel Komba', 'Sophia Mrema', 'John Lyimo', 'Halima Ally']),
-          guestPhone: '+2557' + between(10000000, 89999999),
+          guestPhone: fakePhone(),
           checkInDate: new Date(Date.now() - between(0, 2) * 86_400_000),
           nights: between(1, 4),
         },
@@ -383,7 +405,7 @@ async function main() {
   await prisma.reportPreference.create({
     data: {
       shopId: duka.id, daily: false, weekly: true, monthly: true,
-      sendHour: 20, phone: '+255754112233', enabled: true,
+      sendHour: 20, phone: '+255754000001', enabled: true,
     },
   });
 
