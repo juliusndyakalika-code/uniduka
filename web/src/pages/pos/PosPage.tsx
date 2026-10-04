@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -180,6 +181,27 @@ export default function PosPage() {
       return [...prev, { product, qty: 1, discountPct: 0, overridePrice: null, priceInput: null }];
     });
   }, []);
+
+  // ── Arriving from search with a product in hand ───────────────────────────
+  // The palette's "Add to sale" sends the till a product id. Fetching it here
+  // rather than passing the whole object keeps the link shareable and means a
+  // stale price cannot ride in from another screen.
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    const id = params.get('add');
+    if (!id) return;
+    let cancelled = false;
+    api.get(`/inventory/products/${id}`)
+      .then(r => { if (!cancelled) addToCart(r.data.data as Product); })
+      .catch(() => { /* deleted between searching and arriving */ })
+      .finally(() => {
+        if (cancelled) return;
+        const next = new URLSearchParams(params);
+        next.delete('add');
+        setParams(next, { replace: true });
+      });
+    return () => { cancelled = true; };
+  }, [params, addToCart, setParams]);
 
   // ── Barcode scanner handler ───────────────────────────────────────────────
   const handleScan = useCallback(async (barcode: string) => {

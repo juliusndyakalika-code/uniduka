@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import CommandPalette from '../search/CommandPalette';
 import Topbar from './Topbar';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -92,6 +93,7 @@ export default function Layout() {
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#E8EBF0' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} sessionSecs={footerSecs} />
+      <CommandPalette />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">

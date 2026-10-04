@@ -33,6 +33,16 @@ export function useBarcodeScanner(
     }
 
     function onKeyDown(e: KeyboardEvent) {
+      // A dialog on top owns the keyboard. Without this, typing a search term
+      // into the command palette over the till is buffered as a scan and
+      // looks the product up as if it were a barcode. Scans while the till's
+      // own search is focused are still wanted, which is why this tests for a
+      // modal rather than for an input.
+      if (document.querySelector('[role="dialog"]')) {
+        buffer.current = '';
+        return;
+      }
+
       const now = Date.now();
       const gap = now - lastAt.current;
       lastAt.current = now;

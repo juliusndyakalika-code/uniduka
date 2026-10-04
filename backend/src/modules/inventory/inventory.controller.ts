@@ -130,7 +130,11 @@ export async function getProduct(req: AuthRequest, res: Response) {
     include: { inventory: true, taxRule: true, recipeLines: true },
   });
   if (!product) return R.notFound(res);
-  return R.ok(res, product);
+  // Normalised like the list and the barcode lookup. Returning the raw row
+  // here meant this one endpoint alone omitted sellingPrice and stock, so a
+  // caller that fetched a single product got a priceless, stockless object
+  // and only found out when a total came back NaN.
+  return R.ok(res, normaliseProduct(product, product.inventory));
 }
 
 function extractProductFields(body: Record<string, unknown>) {

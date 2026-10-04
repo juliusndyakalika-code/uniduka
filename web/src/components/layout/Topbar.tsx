@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Bell, X, Package, Clock } from 'lucide-react';
+import { Menu, Bell, X, Package, Clock, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { enablePush, pushSupported, permission as pushPermission } from '../../utils/push';
@@ -32,7 +33,11 @@ const SEVERITY: Record<string, { bar: string; icon: string; hover: string }> = {
 
 interface Props { onMenuClick: () => void; }
 
+/** Shown on the button, so the hint matches the key that actually works. */
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+
 export default function Topbar({ onMenuClick }: Props) {
+  const { t } = useTranslation();
   const { shopId } = useAuthStore();
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(getReadIds);
@@ -83,7 +88,21 @@ export default function Topbar({ onMenuClick }: Props) {
         <Menu size={20} />
       </button>
 
-      <div className="flex-1" />
+      {/* The palette's own control. A shortcut nobody is told about is a
+          shortcut nobody uses, so the key is printed on the button. */}
+      <button
+        onClick={() => window.dispatchEvent(new Event('mh:open-search'))}
+        className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-stone-400 transition-colors hover:text-stone-600 sm:max-w-sm"
+        style={{ boxShadow: 'inset 2px 2px 5px #c5cad3, inset -2px -2px 5px #ffffff' }}
+      >
+        <Search size={15} className="shrink-0" />
+        <span className="truncate">{t('search.openSearch')}</span>
+        <kbd className="ml-auto hidden shrink-0 rounded-md border border-stone-300/70 px-1.5 py-0.5 text-[10px] sm:block">
+          {isMac ? '⌘K' : 'Ctrl K'}
+        </kbd>
+      </button>
+
+      <div className="flex-1 sm:flex-none" />
 
       {/* Bell + dropdown */}
       <div className="relative" ref={panelRef}>
