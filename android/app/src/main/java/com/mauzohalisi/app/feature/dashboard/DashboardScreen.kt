@@ -8,7 +8,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,19 +41,44 @@ private data class Stat(
     val sub: String?, val bg: Color, val fg: Color,
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(app: AppContainer, onOpenPos: () -> Unit, onSignOut: () -> Unit) {
     var shopName by remember { mutableStateOf<String?>(null) }
     var data by remember { mutableStateOf<DashboardStats?>(null) }
     var loading by remember { mutableStateOf(true) }
+    var refreshing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
+    // One fetch, called from three places: the first composition, a pull, and
+    // coming back to the app. Figures on a till go stale by the minute, and a
+    // screen that can only be loaded once is a screen that lies all afternoon.
+    suspend fun fetch() {
         shopName = app.session.shopName.first()
         val res = runCatching { app.api.dashboard() }.getOrNull()
-        if (res?.isSuccessful == true) data = res.body()?.data
-        else error = "Could not load today's figures."
+        if (res?.isSuccessful == true) {
+            data = res.body()?.data
+            error = null
+        } else if (data == null) {
+            error = "Could not load today's figures."
+        } else {
+            // Keep the last good figures on screen rather than blanking them
+            // because one refresh failed; say so instead.
+            error = "Could not refresh. Showing the last figures."
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        fetch()
         loading = false
+    }
+
+    // Back from the POS, or back from the home screen: the numbers that were
+    // right when the phone went in a pocket are not right now.
+    LifecycleResumeEffect(Unit) {
+        val job = scope.launch { if (!loading) fetch() }
+        onPauseOrDispose { job.cancel() }
     }
 
     val d = data
@@ -96,10 +124,21 @@ fun DashboardScreen(app: AppContainer, onOpenPos: () -> Unit, onSignOut: () -> U
             return@Scaffold
         }
 
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = {
+                scope.launch {
+                    refreshing = true
+                    fetch()
+                    refreshing = false
+                }
+            },
+            modifier = Modifier.fillMaxSize().padding(pad),
+        ) {
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.fillMaxSize().padding(pad),
+            modifier = Modifier.fillMaxSize(),
         ) {
             item {
                 PageHeader(
@@ -176,6 +215,7 @@ fun DashboardScreen(app: AppContainer, onOpenPos: () -> Unit, onSignOut: () -> U
                     }
                 }
             }
+        }
         }
     }
 }

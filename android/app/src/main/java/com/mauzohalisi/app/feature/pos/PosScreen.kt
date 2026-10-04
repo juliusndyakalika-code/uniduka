@@ -14,7 +14,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +41,15 @@ private fun qtyLabel(q: Double) = if (q % 1.0 == 0.0) q.toInt().toString() else 
 fun PosScreen(vm: PosViewModel, onBack: () -> Unit) {
     val s by vm.state.collectAsStateWithLifecycle()
     var showCart by remember { mutableStateOf(false) }
+    var refreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    // Coming back to the app after it has been away: reload, for the same
+    // reason the pull exists.
+    LifecycleResumeEffect(Unit) {
+        val job = scope.launch { if (!s.loading) vm.load() }
+        onPauseOrDispose { job.cancel() }
+    }
 
     s.lastReceipt?.let { receipt ->
         AlertDialog(
@@ -141,13 +153,27 @@ fun PosScreen(vm: PosViewModel, onBack: () -> Unit) {
                          color = Muted)
                 }
 
-                else -> LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 150.dp),
-                    contentPadding = PaddingValues(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                // Pull to refresh. Prices and stock change behind the till
+                // all day, from another device or from the web, and a list
+                // loaded once when the app opened is wrong by lunchtime.
+                else -> PullToRefreshBox(
+                    isRefreshing = refreshing,
+                    onRefresh = {
+                        scope.launch {
+                            refreshing = true
+                            vm.load()
+                            refreshing = false
+                        }
+                    },
                 ) {
-                    items(s.visible, key = { it.id }) { p -> ProductTile(p) { vm.add(p) } }
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 150.dp),
+                        contentPadding = PaddingValues(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(s.visible, key = { it.id }) { p -> ProductTile(p) { vm.add(p) } }
+                    }
                 }
             }
         }
