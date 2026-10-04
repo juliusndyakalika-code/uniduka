@@ -98,6 +98,20 @@ await shot('10-report-schedule');
 
 await go('/billing', '11-subscription');
 
+// The subscription page renders its disabled state when SPLASHPAY_* is
+// missing from backend/.env, and a screenshot of that tells the reader to
+// contact support when the manual has just told them to pay in the app.
+// It has happened once; it fails the run now rather than shipping quietly.
+{
+  const body = await page.locator('body').innerText();
+  if (/not switched on/i.test(body)) {
+    log('  ! REFUSING: payments are off, so 11-subscription shows the disabled page.');
+    log('    Put the SPLASHPAY_* placeholders in backend/.env and run again (see README).');
+    await browser.close();
+    process.exit(1);
+  }
+}
+
 // ── the other business types ───────────────────────────────────────────────
 async function switchTo(shopName) {
   log('switch to', shopName);

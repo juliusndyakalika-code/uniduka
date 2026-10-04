@@ -100,12 +100,9 @@ export default function BillingPage() {
 
       {info && <PlanCard info={info} />}
 
-      {info && !info.paymentsEnabled && (
-        <div className="card p-4 mb-5 flex items-start gap-2">
-          <AlertTriangle size={15} className="text-amber-600 mt-0.5 shrink-0" />
-          <p className="text-sm text-stone-600">{t('billing.notConfigured')}</p>
-        </div>
-      )}
+      {/* "Payment is not switched on" is PayForPlan's to say: it owns the
+          payment flow and renders that message in place of its form. Saying
+          it here as well printed the same warning twice. */}
 
       {result && (
         <div className="card p-5 mb-5">
