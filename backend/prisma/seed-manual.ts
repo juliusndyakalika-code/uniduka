@@ -401,6 +401,26 @@ async function main() {
     });
   }
 
+  // ── Online orders, so the dashboard's "Needs you" panel has a row ────────
+  await prisma.shop.update({
+    where: { id: duka.id },
+    data: { storefrontEnabled: true, slug: 'duka-la-neema' },
+  });
+  const waiting: [string, number][] = [
+    ['Asha Mwinyi', 12], ['John Mushi', 34], ['Neema Paul', 51],
+  ];
+  for (const [buyerName, minutesAgo] of waiting) {
+    await prisma.order.create({
+      data: {
+        shopId: duka.id, orderNo: 'WEB-' + between(100, 999) + '-' + minutesAgo,
+        status: 'PENDING', buyerName, buyerPhone: fakePhone(), phoneVerified: true,
+        subtotal: 12_000 + minutesAgo * 100, total: 12_000 + minutesAgo * 100,
+        expiresAt: new Date(Date.now() + 86_400_000),
+        createdAt: new Date(Date.now() - minutesAgo * 60_000),
+      },
+    });
+  }
+
   // ── Reports, so the schedule page shows a configured state ────────────────
   await prisma.reportPreference.create({
     data: {
