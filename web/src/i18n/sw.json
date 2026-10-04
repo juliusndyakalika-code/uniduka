@@ -988,7 +988,21 @@
     "quoteCredit": "Siku {{days}} zilizobaki kwenye {{plan}} zina thamani ya {{credit}}, nazo zinaongezwa kwenye malipo haya.",
     "quoteResult": "Hii inakupa siku {{days}} kwenye {{plan}}.",
     "talkToUs": "Ongea nasi",
-    "orEmailUs": "au tutumie barua pepe"
+    "orEmailUs": "au tutumie barua pepe",
+    "statusActive": "Inatumika",
+    "statusDays": "Zimebaki siku {{count}}",
+    "statusDays_one": "Imebaki siku 1",
+    "statusSoon": "Inaisha baada ya siku {{count}}",
+    "statusSoon_one": "Inaisha kesho",
+    "statusEnded": "Imeisha",
+    "trialChip": "Majaribio",
+    "trialActive": "Majaribio ya bure",
+    "trialDays": "Majaribio: zimebaki siku {{count}}",
+    "trialDays_one": "Majaribio: imebaki siku 1",
+    "trialSoon": "Majaribio yanaisha baada ya siku {{count}}",
+    "trialSoon_one": "Majaribio yanaisha kesho",
+    "trialEnded": "Majaribio yameisha",
+    "trialEndsOn": "Majaribio yanaisha"
   },
   "calendar": {
     "title": "Kalenda ya mauzo",

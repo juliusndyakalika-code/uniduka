@@ -216,6 +216,20 @@
     box-shadow: inset 4px 4px 9px #c5cad3, inset -4px -4px 9px #ffffff;
   }
 
+  /* ── A plan close to expiry ───────────────────────────────────────────────── */
+  /* Slow enough to read as a pulse rather than a flicker, and only ever on
+     the one state that wants acting on. */
+  @keyframes mh-heartbeat {
+    0%, 70%, 100% { transform: scale(1);    opacity: 1; }
+    35%           { transform: scale(1.35); opacity: .75; }
+  }
+  .mh-heartbeat {
+    animation: mh-heartbeat 1.8s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mh-heartbeat { animation: none; }
+  }
+
   /* ── Page header ──────────────────────────────────────────────────────────── */
   .page-header {
     @apply flex flex-wrap items-center justify-between gap-3 mb-6;

@@ -988,7 +988,21 @@
     "quoteCredit": "Your {{days}} remaining days on {{plan}} are worth {{credit}}, which is added to this payment.",
     "quoteResult": "That gives you {{days}} days on {{plan}}.",
     "talkToUs": "Talk to us",
-    "orEmailUs": "or email us"
+    "orEmailUs": "or email us",
+    "statusActive": "Active",
+    "statusDays": "{{count}} days left",
+    "statusDays_one": "1 day left",
+    "statusSoon": "Renews in {{count}} days",
+    "statusSoon_one": "Renews tomorrow",
+    "statusEnded": "Ended",
+    "trialChip": "Trial",
+    "trialActive": "Free trial",
+    "trialDays": "Trial: {{count}} days left",
+    "trialDays_one": "Trial: 1 day left",
+    "trialSoon": "Trial ends in {{count}} days",
+    "trialSoon_one": "Trial ends tomorrow",
+    "trialEnded": "Trial ended",
+    "trialEndsOn": "Trial ends"
   },
   "calendar": {
     "title": "Sales calendar",
