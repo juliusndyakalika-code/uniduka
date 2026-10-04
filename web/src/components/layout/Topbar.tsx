@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Menu, Bell, X, Package, Clock, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { QuickSaleButton } from '../pos/QuickSale';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { enablePush, pushSupported, permission as pushPermission } from '../../utils/push';
@@ -103,6 +104,8 @@ export default function Topbar({ onMenuClick }: Props) {
       </button>
 
       <div className="flex-1 sm:flex-none" />
+
+      <QuickSaleButton />
 
       {/* Bell + dropdown */}
       <div className="relative" ref={panelRef}>

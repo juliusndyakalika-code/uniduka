@@ -19,6 +19,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.mauzohalisi.app.R
 import com.mauzohalisi.app.core.AppContainer
 import com.mauzohalisi.app.core.net.DashboardStats
 import com.mauzohalisi.app.ui.components.NeuCard
@@ -75,7 +77,14 @@ fun DashboardScreen(app: AppContainer, onOpenPos: () -> Unit, onSignOut: () -> U
             ExtendedFloatingActionButton(
                 onClick = onOpenPos,
                 containerColor = Ochre, contentColor = Color.White,
-                text = { Text("SELL", fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp) },
+                // Named the same thing it is named on the web, and taken from
+                // resources so a Swahili phone reads "Mauzo mapya".
+                text = {
+                    Text(
+                        stringResource(R.string.new_sale).uppercase(),
+                        fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp,
+                    )
+                },
                 icon = { Icon(Icons.Filled.ShoppingCart, contentDescription = null) },
             )
         },
@@ -98,7 +107,7 @@ fun DashboardScreen(app: AppContainer, onOpenPos: () -> Unit, onSignOut: () -> U
                     subtitle = shopName,
                     trailing = {
                         TextButton(onClick = onSignOut) {
-                            Text("Sign out", color = Ochre, fontSize = 13.sp)
+                            Text(stringResource(R.string.sign_out), color = Ochre, fontSize = 13.sp)
                         }
                     },
                 )

@@ -270,7 +270,8 @@
     "browseProd": "Browse Products",
     "loyaltyPoints": "{{pts}} pts",
     "noProducts": "No products found",
-    "paymentMethod": "Payment Method"
+    "paymentMethod": "Payment Method",
+    "newSaleQuick": "New sale"
   },
   "products": {
     "title": "Products",

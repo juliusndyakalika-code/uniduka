@@ -270,7 +270,8 @@
     "browseProd": "Tazama Bidhaa",
     "loyaltyPoints": "Pointi {{pts}}",
     "noProducts": "Hakuna bidhaa zilizopatikana",
-    "paymentMethod": "Njia ya Malipo"
+    "paymentMethod": "Njia ya Malipo",
+    "newSaleQuick": "Mauzo mapya"
   },
   "products": {
     "title": "Bidhaa",
