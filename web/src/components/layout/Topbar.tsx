@@ -88,11 +88,20 @@ export default function Topbar({ onMenuClick }: Props) {
   }
 
   return (
-    // Three tracks rather than a row of flexing children: the search stays on
-    // the middle of the screen whatever the breadcrumb says and however many
-    // controls sit on the right, which a flex row cannot promise.
-    <header className="h-14 grid grid-cols-[1fr_minmax(0,26rem)_1fr] items-center gap-3 px-4 flex-shrink-0" style={{ background: '#E8EBF0', borderBottom: '1px solid rgba(163,177,198,0.25)', boxShadow: '0 3px 12px rgba(197,202,211,0.5)' }}>
-      <div className="flex min-w-0 items-center gap-2">
+    // Three tracks from lg up, so the search stays on the middle of the
+    // content whatever the breadcrumb says and however many controls sit on
+    // the right, which a flex row cannot promise. Only from lg: below that
+    // the two sides are too unequal for the middle track to land on the
+    // centre anyway, and a search box pretending to be centred while sitting
+    // 64px to the left looks like a mistake rather than a layout.
+    //
+    // A plain flex row below that, because on a phone there is not enough
+    // width to centre anything: the side tracks were collapsing under their
+    // own content and the menu button ended up underneath the search box.
+    // The side tracks also carry a max-content floor now, so they cannot
+    // collapse like that again at any width.
+    <header className="h-14 flex items-center gap-3 px-4 flex-shrink-0 lg:grid lg:grid-cols-[minmax(max-content,1fr)_minmax(0,26rem)_minmax(max-content,1fr)]" style={{ background: '#E8EBF0', borderBottom: '1px solid rgba(163,177,198,0.25)', boxShadow: '0 3px 12px rgba(197,202,211,0.5)' }}>
+      <div className="flex min-w-0 shrink-0 items-center gap-2">
         <button onClick={onMenuClick} className="lg:hidden p-1.5 text-stone-500 hover:text-stone-900">
           <Menu size={20} />
         </button>
@@ -116,7 +125,7 @@ export default function Topbar({ onMenuClick }: Props) {
           shortcut nobody uses, so the key is printed on the button. */}
       <button
         onClick={() => window.dispatchEvent(new Event('mh:open-search'))}
-        className="flex w-full min-w-0 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-stone-400 transition-colors hover:text-stone-600"
+        className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-stone-400 transition-colors hover:text-stone-600"
         style={{ boxShadow: 'inset 2px 2px 5px #c5cad3, inset -2px -2px 5px #ffffff' }}
       >
         <Search size={15} className="shrink-0" />
@@ -126,7 +135,7 @@ export default function Topbar({ onMenuClick }: Props) {
         </kbd>
       </button>
 
-      <div className="flex min-w-0 items-center justify-end gap-3">
+      <div className="flex min-w-0 shrink-0 items-center justify-end gap-3">
       <QuickSaleButton />
 
       {/* Bell + dropdown */}
