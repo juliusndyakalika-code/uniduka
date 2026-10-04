@@ -61,6 +61,52 @@ header{
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .toggle button[aria-pressed="true"]{color:#1A1309}}
 :root[data-theme="dark"] .toggle button[aria-pressed="true"]{color:#1A1309}
 .toggle button:focus-visible{outline:2px solid var(--ochre); outline-offset:-2px}
+.toggle .short{display:none}
+
+/* The contents button. Only where the sidebar cannot be. */
+.menu{
+  display:none; align-items:center; gap:7px; flex:none;
+  font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+  padding:7px 11px 7px 9px; border:1px solid var(--rule); border-radius:999px;
+  background:var(--card); color:var(--ink-2);
+}
+.menu:focus-visible{outline:2px solid var(--ochre); outline-offset:2px}
+.menu[aria-expanded="true"]{background:var(--ochre-soft); color:var(--ochre-ink); border-color:var(--ochre-soft)}
+
+.menu-panel{
+  position:fixed; left:0; right:0; top:var(--bar-h,56px); bottom:0; z-index:29;
+  background:var(--paper); overflow-y:auto; overscroll-behavior:contain;
+  padding:10px 16px 48px; -webkit-overflow-scrolling:touch;
+}
+.menu-panel[hidden]{display:none}
+.menu-panel ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+.menu-panel a{
+  display:grid; grid-template-columns:26px 1fr; gap:10px; align-items:baseline;
+  padding:13px 10px; border-radius:9px; text-decoration:none; color:var(--ink);
+  font-size:15.5px; border-bottom:1px solid var(--rule);
+}
+.menu-panel li:last-child a{border-bottom:0}
+.menu-panel a em{font-style:normal; color:var(--ink-3); font-size:12px; font-variant-numeric:tabular-nums}
+.menu-panel a.on{background:var(--ochre-soft); color:var(--ochre-ink); font-weight:600}
+.menu-panel a.on em{color:var(--ochre-ink)}
+
+/* Narrow: the subtitle goes, the language words shorten, the contents
+   button appears. At 320px every one of these is needed to fit the bar. */
+@media (max-width:959px){
+  .menu{display:inline-flex}
+}
+@media (max-width:560px){
+  .brand span{display:none}
+  .toggle .long{display:none}
+  .toggle .short{display:inline}
+  .toggle button{padding:7px 12px}
+  .bar{gap:9px; padding:10px 14px}
+}
+@media (max-width:399px){
+  .menu span{display:none}
+  .menu{padding:8px 10px}
+}
+body.menu-open{overflow:hidden}
 
 /* ---------- shell ---------- */
 .shell{max-width:1120px; margin:0 auto; padding:0 16px 80px; display:grid; gap:40px}
@@ -129,6 +175,12 @@ ul.plain li{margin-bottom:6px}
   background:var(--ochre-soft); color:var(--ochre-ink); padding:1.5px 6px; border-radius:5px;
   border:1px solid var(--rule); white-space:nowrap;
 }
+/* A button name is nicer unbroken, but not at the cost of the page. The
+   longest of these ("Search products or scan barcode…") is wider than a small
+   phone on its own, and nowrap made the whole document scroll sideways. */
+@media (max-width:620px){
+  .ui{white-space:normal; overflow-wrap:anywhere}
+}
 .path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.88em; color:var(--ink-3)}
 
 /* callouts */
@@ -195,15 +247,32 @@ a{color:var(--ochre-ink)}
 
 <header>
   <div class="bar">
+    <button class="menu" id="menu-btn" aria-expanded="false" aria-controls="menu-panel">
+      <svg width="15" height="15" viewBox="0 0 15 15" aria-hidden="true" fill="none"
+           stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <path d="M1.5 3.5h12M1.5 7.5h12M1.5 11.5h12"/>
+      </svg>
+      <span lang="en">Contents</span><span lang="sw">Yaliyomo</span>
+    </button>
+
     <div class="brand">
       <b>MauzoHalisi</b>
       <span lang="en">User manual</span><span lang="sw">Mwongozo</span>
     </div>
     <div class="spacer"></div>
     <div class="toggle" role="group" aria-label="Language / Lugha">
-      <button id="btn-sw" aria-pressed="false">Kiswahili</button>
-      <button id="btn-en" aria-pressed="true">English</button>
+      <button id="btn-sw" aria-pressed="false">
+        <span class="long">Kiswahili</span><span class="short">SW</span>
+      </button>
+      <button id="btn-en" aria-pressed="true">
+        <span class="long">English</span><span class="short">EN</span>
+      </button>
     </div>
+  </div>
+
+  <!-- The contents, for screens too narrow to carry the sidebar. -->
+  <div class="menu-panel" id="menu-panel" hidden>
+    <ol id="toc-mobile"></ol>
   </div>
 </header>
 
