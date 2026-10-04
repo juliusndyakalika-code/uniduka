@@ -155,9 +155,9 @@
     "pendingAutoCheck": "Ukurasa huu hukagua kila sekunde 30. Utaelekezwa mara akaunti yako itakapowashwa.",
     "forgotPassword": "Umesahau nenosiri?",
     "forgotPasswordTitle": "Weka nenosiri jipya",
-    "forgotPasswordHelp": "Weka namba yako ya simu na tutakutumia msimbo.",
+    "forgotPasswordHelp": "Weka unachotumia kuingia na namba ya simu iliyo kwenye akaunti. Tutatuma msimbo kwenye simu hiyo.",
     "enterCodeHelp": "Weka msimbo tuliokutumia, kisha chagua nenosiri jipya.",
-    "codeSentIfRegistered": "Kama namba hiyo ina akaunti, msimbo unakuja.",
+    "codeSentIfRegistered": "Kama taarifa hizo zinalingana na akaunti, msimbo unakuja.",
     "sendCode": "Tuma msimbo",
     "resendCode": "Tuma msimbo mwingine",
     "resendFailed": "Imeshindikana kutuma msimbo. Jaribu tena baadaye kidogo.",
@@ -184,7 +184,9 @@
     "dataSafe": "Taarifa zako ziko salama na zitarudishwa utakapolipia.",
     "verifyPhoneHelp": "Tumetuma msimbo kwenye simu yako. Kuthibitisha kunatuwezesha kukufikia kuhusu malipo, usajili wako, na kurejesha nenosiri.",
     "phoneRequiredHint": "Ni lazima uthibitishe namba yako ya simu ili kuendelea.",
-    "codeResent": "Msimbo mpya unakuja."
+    "codeResent": "Msimbo mpya unakuja.",
+    "resetUsername": "Barua pepe au simu unayotumia kuingia",
+    "resetPhoneHint": "Lazima iwe namba iliyohifadhiwa kwenye akaunti hiyo."
   },
   "dashboard": {
     "title": "Dashibodi",

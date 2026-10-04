@@ -155,9 +155,9 @@
     "pendingAutoCheck": "This page checks automatically every 30 seconds. You'll be redirected as soon as your account is activated.",
     "forgotPassword": "Forgot password?",
     "forgotPasswordTitle": "Reset your password",
-    "forgotPasswordHelp": "Enter your phone number and we will send you a code.",
+    "forgotPasswordHelp": "Enter the details you sign in with and the phone number on the account. We will send a code to that phone.",
     "enterCodeHelp": "Enter the code we sent you, then choose a new password.",
-    "codeSentIfRegistered": "If that number has an account, a code is on its way.",
+    "codeSentIfRegistered": "If those details match an account, a code is on its way.",
     "sendCode": "Send code",
     "resendCode": "Send a new code",
     "resendFailed": "Could not send a new code. Please try again shortly.",
@@ -184,7 +184,9 @@
     "dataSafe": "Your data is safe and will be restored when you renew.",
     "verifyPhoneHelp": "We sent a code to your phone. Confirming it lets us reach you about payments, your subscription, and resetting your password.",
     "phoneRequiredHint": "Confirming your phone number is required to continue.",
-    "codeResent": "A new code is on its way."
+    "codeResent": "A new code is on its way.",
+    "resetUsername": "Email or phone you sign in with",
+    "resetPhoneHint": "Must be the number saved on that account."
   },
   "dashboard": {
     "title": "Dashboard",

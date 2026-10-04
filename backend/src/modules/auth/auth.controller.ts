@@ -398,47 +398,92 @@ export async function verifyPhoneOtp(req: AuthRequest, res: Response) {
 }
 
 // POST /api/v1/auth/password/forgot — start a reset with a code by SMS
-export async function forgotPassword(req: Request, res: Response) {
-  const { phone } = req.body ?? {};
-  if (!phone) return R.badRequest(res, 'Enter your phone number');
+/**
+ * Find the one account a reset may target.
+ *
+ * Both the username and the phone must be given, and both must point at the
+ * same account. Knowing somebody's phone number is easy — it is on their shop
+ * sign — so on its own it was enough to start a reset and put a live code on
+ * their handset. Requiring the username as well means an attacker needs two
+ * facts, and the owner is not pestered by codes they did not ask for.
+ *
+ * Returns null for every kind of miss, because the caller must not be able to
+ * tell them apart.
+ */
+async function accountForReset(username: string, phone: string) {
+  const variants = phoneVariants(phone);
+  const id = String(username).trim();
 
-  // The same answer is returned whether or not the number is registered.
+  // Resolved from the username alone. An OR across both fields would let a
+  // wrong username through whenever the phone happened to match, which is
+  // the whole requirement undone: the phone is the thing an attacker already
+  // knows. The username identifies the account; the phone must then agree.
+  const idVariants = phoneVariants(id);
+  const user = await prisma.user.findFirst({
+    where: {
+      isActive: true,
+      OR: [{ email: { equals: id, mode: 'insensitive' } }, ...idVariants.map(p => ({ phone: p }))],
+    },
+    select: { id: true, email: true, phone: true },
+  });
+  if (!user) return { user: null, why: 'no account for that username' };
+  if (!user.phone) return { user: null, why: 'account has no phone number on file' };
+  if (!variants.includes(user.phone)) return { user: null, why: 'phone does not match that username' };
+  return { user, why: '' };
+}
+
+export async function forgotPassword(req: Request, res: Response) {
+  const { username, phone } = req.body ?? {};
+  if (!phone) return R.badRequest(res, 'Enter your phone number');
+  if (!username) return R.badRequest(res, 'Enter the email or phone you sign in with');
+
+  // The same answer is returned whether or not the pair matches an account.
   // Anything else turns this endpoint into a way to ask which phone numbers
   // hold accounts, which is worth more to an attacker than the reset itself.
   const generic = () => R.ok(res, {
     sent: true,
-    message: 'If that number has an account, a code is on its way.',
+    message: 'If those details match an account, a code is on its way.',
     expiresInMinutes: OTP_TTL_MINUTES,
   });
 
-  const user = await prisma.user.findFirst({
-    where:  { phone: { in: phoneVariants(phone) }, isActive: true },
-    select: { id: true, phone: true },
-  });
-  if (!user?.phone || !smsReady) return generic();
+  const { user, why } = await accountForReset(username, phone);
+  if (!user?.phone) {
+    // Logged, not returned. "No code arrived" is otherwise indistinguishable
+    // from "we never sent one", and support cannot tell the owner which.
+    logger.info(`Password reset not sent: ${why}`);
+    return generic();
+  }
+  if (!smsReady) {
+    logger.error('Password reset not sent: SMS is not configured');
+    return generic();
+  }
 
   // Throttled on the number given, not on the account found, so the cap still
   // applies to numbers that have no account.
   const gate = await gateSend(phone, 'reset');
   if (!gate.allowed) return throttled(res, gate);
 
-  await sendOtp(user.phone);
+  // The result matters. Discarding it made a gateway rejection look exactly
+  // like a delivered code, which is the state this flow was stuck in.
+  const sent = await sendOtp(user.phone);
+  if (!sent) logger.error(`Password reset SMS rejected by the gateway for user ${user.id}`);
+  else logger.info(`Password reset code sent to user ${user.id}`);
+
   return generic();
 }
 
-// POST /api/v1/auth/password/reset — code plus new password, in one step
 export async function resetPassword(req: Request, res: Response) {
-  const { phone, code, password } = req.body ?? {};
+  const { username, phone, code, password } = req.body ?? {};
   if (!phone || !code || !password) return R.badRequest(res, 'Phone, code and new password are all required');
+  if (!username) return R.badRequest(res, 'Enter the email or phone you sign in with');
   if (String(password).length < 8) return R.badRequest(res, 'Password must be at least 8 characters');
 
   const gate = await gateCheck(phone, 'reset');
   if (!gate.allowed) return throttled(res, gate);
 
-  const user = await prisma.user.findFirst({
-    where:  { phone: { in: phoneVariants(phone) }, isActive: true },
-    select: { id: true, phone: true },
-  });
+  // The same pairing as the step that sent the code. Checking it only on the
+  // way out would let a code issued for one account be spent on another.
+  const { user } = await accountForReset(username, phone);
 
   // A wrong code and an unknown number give the same refusal, for the same
   // reason the step before it does. The code is still checked when the account

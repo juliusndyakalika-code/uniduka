@@ -25,6 +25,7 @@ export default function ForgotPasswordPage() {
 
   const [step, setStep]         = useState<Step>('phone');
   const [phone, setPhone]       = useState('');
+  const [username, setUsername] = useState('');
   const [code, setCode]         = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd]   = useState(false);
@@ -41,7 +42,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true); setError(''); setNotice('');
     try {
-      const res = await plain.post('/auth/password/forgot', { phone });
+      const res = await plain.post('/auth/password/forgot', { username, phone });
       // The reply is the same whether or not that number has an account, so
       // this screen cannot be used to find out who is registered. Moving to the
       // code step regardless is part of that: stopping here for an unknown
@@ -59,7 +60,7 @@ export default function ForgotPasswordPage() {
     if (password.length < 8) { setError(t('auth.passwordTooShort')); return; }
     setLoading(true); setError('');
     try {
-      await plain.post('/auth/password/reset', { phone, code, password });
+      await plain.post('/auth/password/reset', { username, phone, code, password });
       // No session comes back from a reset by design, so the only way on is to
       // sign in with the password they just chose.
       navigate('/login', { replace: true, state: { passwordReset: true } });
@@ -98,15 +99,29 @@ export default function ForgotPasswordPage() {
 
           {step === 'phone' ? (
             <form onSubmit={requestCode} className="space-y-4">
+              {/* Both, and they have to belong to the same account. A phone
+                  number is public enough to be on a shop sign; on its own it
+                  was all anyone needed to put a live code on the owner's
+                  handset. */}
+              <div>
+                <label htmlFor="username" className="label">{t('auth.resetUsername')}</label>
+                <input
+                  id="username" autoComplete="username" autoFocus
+                  className="input" placeholder={t('auth.emailPlaceholder')}
+                  value={username} onChange={(e) => setUsername(e.target.value)} required
+                />
+              </div>
               <div>
                 <label htmlFor="phone" className="label">{t('auth.phoneNumber')}</label>
                 <input
-                  id="phone" type="tel" inputMode="tel" autoComplete="tel" autoFocus
+                  id="phone" type="tel" inputMode="tel" autoComplete="tel"
                   className="input" placeholder="0712 345 678"
                   value={phone} onChange={(e) => setPhone(e.target.value)} required
                 />
+                <p className="mt-1 text-[11px] text-stone-400">{t('auth.resetPhoneHint')}</p>
               </div>
-              <button type="submit" className="btn-primary w-full" disabled={loading || !phone.trim()}>
+              <button type="submit" className="btn-primary w-full"
+                      disabled={loading || !phone.trim() || !username.trim()}>
                 {loading ? <Loader2 size={18} className="animate-spin" /> : t('auth.sendCode')}
               </button>
             </form>
