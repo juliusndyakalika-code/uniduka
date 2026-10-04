@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -6,12 +6,34 @@ import {
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
-  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ReceiptText, Globe, Inbox, FileText, HandCoins, CreditCard, CalendarDays, BookOpen } from 'lucide-react';
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ReceiptText, Globe, Inbox, FileText, HandCoins, CreditCard, CalendarDays, BookOpen, PanelLeftClose } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
 import i18n from '../../i18n';
 import { LogoMark } from '../ui/Logo';
+
+/**
+ * Whether the sidebar is showing as an icon rail.
+ *
+ * Passed by context rather than as a prop because every NavItem in the tree
+ * needs it and there are fifty of them. `expand` lets a collapsed group open
+ * the rail instead of trying to render a submenu four icons wide.
+ */
+const Rail = createContext<{ rail: boolean; expand: () => void }>({ rail: false, expand: () => {} });
+
+/** True on screens where the sidebar sits in the layout rather than over it. */
+function useIsDesktop() {
+  const [is, setIs] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const on = (e: MediaQueryListEvent) => setIs(e.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return is;
+}
 
 const BUSINESS_ICONS: Record<string, React.ReactNode> = {
   RETAIL_STORE:        <ShoppingBag size={14} />,
@@ -29,17 +51,27 @@ const BUSINESS_ICONS: Record<string, React.ReactNode> = {
 
 interface NavItemProps { to: string; icon: React.ReactNode; label: string; end?: boolean; badge?: number; }
 function NavItem({ to, icon, label, end, badge }: NavItemProps) {
+  const { rail } = useContext(Rail);
   return (
     <NavLink to={to} end={end}
-      className={({ isActive }) => isActive ? 'nav-item-active' : 'nav-item'}
+      // The label is the tooltip on the rail, so an unfamiliar icon is one
+      // hover from naming itself rather than a guess.
+      title={rail ? label : undefined}
+      aria-label={rail ? label : undefined}
+      className={({ isActive }) =>
+        `${isActive ? 'nav-item-active' : 'nav-item'}${rail ? ' relative justify-center px-0' : ''}`}
     >
       {icon}
-      <span>{label}</span>
-      {!!badge && badge > 0 && (
+      {!rail && <span>{label}</span>}
+      {!!badge && badge > 0 && (rail ? (
+        // No room for a figure, but losing the signal entirely would hide
+        // work waiting behind a collapsed menu.
+        <span className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-amber-500" />
+      ) : (
         <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold grid place-items-center">
           {badge > 99 ? '99+' : badge}
         </span>
-      )}
+      ))}
     </NavLink>
   );
 }
@@ -61,6 +93,26 @@ function NavGroup({ icon, label, prefix, badge, children }: {
   // into a group opens it and a collapsed group does not hide where you are.
   const [manuallyOpen, setManuallyOpen] = useState<boolean | null>(null);
   const open = manuallyOpen ?? isGroupActive;
+  const { rail, expand } = useContext(Rail);
+
+  // A submenu cannot live in a 72px rail, so the group becomes a single icon
+  // that opens the rail with itself expanded: one click, and you are looking
+  // at the same list you would have seen.
+  if (rail) {
+    return (
+      <button
+        title={label}
+        aria-label={label}
+        onClick={() => { expand(); setManuallyOpen(true); }}
+        className={`nav-item relative w-full justify-center px-0 ${isGroupActive ? 'text-stone-900 font-semibold' : ''}`}
+      >
+        {icon}
+        {!!badge && badge > 0 && (
+          <span className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-amber-500" />
+        )}
+      </button>
+    );
+  }
 
   return (
     <div>
@@ -110,6 +162,19 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
   const [pwDone, setPwDone]                 = useState(false);
   const [pwSaving, setPwSaving]             = useState(false);
   const [currentLang, setCurrentLang]       = useState(i18n.language);
+
+  // Collapsed is the owner's standing choice, so it outlives the session.
+  // It only means anything on a desktop: on a phone the sidebar is a drawer
+  // that is either over the page or not there at all.
+  const isDesktop = useIsDesktop();
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('mh-sidebar-collapsed') === '1'; } catch { return false; }
+  });
+  const rail = collapsed && isDesktop;
+  const setCollapsedPersist = (v: boolean) => {
+    setCollapsed(v);
+    try { localStorage.setItem('mh-sidebar-collapsed', v ? '1' : '0'); } catch { /* private window */ }
+  };
 
   useEffect(() => { onClose(); }, [location.pathname]);
   const [switching, setSwitching] = useState(false);
@@ -176,7 +241,7 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
   }
 
   return (
-    <>
+    <Rail.Provider value={{ rail, expand: () => setCollapsedPersist(false) }}>
       {open && (
         <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={onClose} />
       )}
@@ -185,26 +250,57 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
         style={{ background: '#E8EBF0', boxShadow: '4px 0 20px #c5cad3, -2px 0 10px #ffffff' }}
         className={`
         fixed top-0 left-0 bottom-0 z-40 w-64 flex flex-col overflow-hidden
-        transition-transform duration-200
+        transition-[transform,width] duration-200
+        ${rail ? 'lg:w-[72px]' : 'lg:w-64'}
         ${open ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:z-auto
       `}>
         {/* Logo */}
-        <div className="flex items-center justify-between h-14 px-4 flex-shrink-0" style={{ borderBottom: '1px solid rgba(163,177,198,0.3)' }}>
+        <div className={`flex items-center h-14 flex-shrink-0 ${rail ? 'justify-center px-0' : 'justify-between px-4'}`}
+             style={{ borderBottom: '1px solid rgba(163,177,198,0.3)' }}>
           <div className="flex items-center gap-2.5">
             <LogoMark size={26} />
-            <span className="text-base font-bold tracking-tight text-stone-900">
-              Mauzo<span className="text-primary-600">Halisi</span>
-            </span>
+            {!rail && (
+              <span className="text-base font-bold tracking-tight text-stone-900">
+                Mauzo<span className="text-primary-600">Halisi</span>
+              </span>
+            )}
           </div>
-          <button onClick={onClose} className="lg:hidden p-1 text-stone-400 hover:text-stone-700">
-            <X size={18} />
-          </button>
+          {!rail && (
+            <button onClick={onClose} className="lg:hidden p-1 text-stone-400 hover:text-stone-700">
+              <X size={18} />
+            </button>
+          )}
         </div>
 
+        {/* Collapse. Desktop only, because on a phone the sidebar already
+            closes by tapping away from it. */}
+        <button
+          onClick={() => setCollapsedPersist(!collapsed)}
+          title={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
+          aria-label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
+          className={`hidden lg:flex items-center gap-2 flex-shrink-0 text-[11px] text-stone-400
+            hover:text-stone-700 transition-colors ${rail ? 'justify-center px-0 py-2' : 'px-5 py-2'}`}
+        >
+          <PanelLeftClose size={14} className={`transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} />
+          {!rail && <span>{t('sidebar.collapse')}</span>}
+        </button>
+
         {/* Shop display */}
-        <div className="px-3 py-3 flex-shrink-0 relative" style={{ borderBottom: '1px solid rgba(163,177,198,0.2)' }}>
-          {isOwner ? (
+        <div className={`flex-shrink-0 relative ${rail ? 'px-0 py-2' : 'px-3 py-3'}`} style={{ borderBottom: '1px solid rgba(163,177,198,0.2)' }}>
+          {rail ? (
+            // The shop matters too much to drop, but its name will not fit.
+            // The icon names the trade and the tooltip names the shop; the
+            // picker needs the labels, so choosing opens the rail first.
+            <button
+              onClick={() => isOwner ? (setCollapsedPersist(false), setShopPickerOpen(true)) : undefined}
+              title={currentShop?.tradingName || t('common.noShopAssigned')}
+              aria-label={currentShop?.tradingName || t('common.noShopAssigned')}
+              className="nav-item w-full justify-center px-0 text-primary-600"
+            >
+              {currentShop ? BUSINESS_ICONS[currentShop.businessType] ?? <Store size={16} /> : <Store size={16} />}
+            </button>
+          ) : isOwner ? (
             <>
               <button
                 onClick={() => setShopPickerOpen(o => !o)}
@@ -425,6 +521,9 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
             ? t(onTrial ? 'common.trialExpired' : 'common.planExpired')
             : t(onTrial ? 'common.trialRemaining' : 'common.planRemaining',
                 { days, plan: account.plan });
+          // Nothing legible fits in 72px, and an unreadable badge is worse
+          // than none: the same warning is a row in "Needs you" anyway.
+          if (rail) return null;
           return (
             <Link to="/billing" className={`mx-3 mb-2 px-3 py-2 rounded-lg text-[10px] leading-tight flex-shrink-0 block hover:opacity-80 transition-opacity ${
               // Red from the moment the reminders start, which is seven days
@@ -449,18 +548,22 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
         })()}
 
         {/* User footer */}
-        <div className="border-t border-stone-200 px-3 py-3 flex-shrink-0">
-          <NavLink to="/account" className="flex items-center gap-2.5 px-3 py-2 mb-1 rounded-lg hover:bg-stone-100 transition-colors group">
+        <div className={`border-t border-stone-200 py-3 flex-shrink-0 ${rail ? 'px-2' : 'px-3'}`}>
+          <NavLink to="/account"
+            title={rail ? user?.fullName ?? '' : undefined}
+            className={`flex items-center gap-2.5 py-2 mb-1 rounded-lg hover:bg-stone-100 transition-colors group ${rail ? 'justify-center px-0' : 'px-3'}`}>
             <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center shrink-0">
               {user?.fullName?.charAt(0).toUpperCase() ?? '?'}
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-stone-900 truncate group-hover:text-primary-700">{user?.fullName}</p>
-              <p className="text-[10px] uppercase tracking-widest text-stone-400">
-                {isOwner ? `${account?.plan} · ` : ''}{role.replace(/_/g, ' ')}
-              </p>
-            </div>
-            {sessionSecs !== undefined && (
+            {!rail && (
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-stone-900 truncate group-hover:text-primary-700">{user?.fullName}</p>
+                <p className="text-[10px] uppercase tracking-widest text-stone-400">
+                  {isOwner ? `${account?.plan} · ` : ''}{role.replace(/_/g, ' ')}
+                </p>
+              </div>
+            )}
+            {!rail && sessionSecs !== undefined && (
               <span
                 className="text-[10px] tabular-nums shrink-0 font-mono transition-colors duration-300"
                 style={{
@@ -477,12 +580,14 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
           {/* Language toggle */}
           <button
             onClick={toggleLang}
-            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors"
+            className={`flex items-center gap-2 w-full py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors ${rail ? 'justify-center px-0' : 'px-3'}`}
             title={t('lang.switch')}
           >
             <Languages size={14} />
-            <span>{currentLang === 'en' ? 'English' : 'Kiswahili'}</span>
-            <span className="ml-auto text-[10px] font-bold text-stone-400 uppercase">{currentLang === 'en' ? 'SW' : 'EN'}</span>
+            {!rail && <>
+              <span>{currentLang === 'en' ? 'English' : 'Kiswahili'}</span>
+              <span className="ml-auto text-[10px] font-bold text-stone-400 uppercase">{currentLang === 'en' ? 'SW' : 'EN'}</span>
+            </>}
           </button>
 
           {/* The manual. A new tab, because someone opening it is usually stuck
@@ -491,20 +596,23 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
             href="/manual/"
             target="_blank"
             rel="noopener"
-            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors"
+            title={rail ? t('sidebar.manual') : undefined}
+            className={`flex items-center gap-2 w-full py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors ${rail ? 'justify-center px-0' : 'px-3'}`}
           >
-            <BookOpen size={14} /> {t('sidebar.manual')}
+            <BookOpen size={14} /> {!rail && t('sidebar.manual')}
           </a>
 
           <button onClick={openChangePw}
-            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors"
+            title={rail ? t('sidebar.changePassword') : undefined}
+            className={`flex items-center gap-2 w-full py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors ${rail ? 'justify-center px-0' : 'px-3'}`}
           >
-            <KeyRound size={14} /> {t('sidebar.changePassword')}
+            <KeyRound size={14} /> {!rail && t('sidebar.changePassword')}
           </button>
           <button onClick={handleLogout}
-            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-500 hover:bg-red-50 rounded-sm transition-colors"
+            title={rail ? t('sidebar.signOut') : undefined}
+            className={`flex items-center gap-2 w-full py-2 text-xs text-red-500 hover:bg-red-50 rounded-sm transition-colors ${rail ? 'justify-center px-0' : 'px-3'}`}
           >
-            <LogOut size={14} /> {t('sidebar.signOut')}
+            <LogOut size={14} /> {!rail && t('sidebar.signOut')}
           </button>
         </div>
       </aside>
@@ -578,6 +686,6 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
           </div>
         </div>
       )}
-    </>
+    </Rail.Provider>
   );
 }

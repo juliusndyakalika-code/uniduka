@@ -119,7 +119,9 @@
     "pwMinLength": "Nenosiri jipya lazima liwe na herufi 8 au zaidi",
     "pwNoMatch": "Maneno ya siri hayafanani",
     "pwFailed": "Imeshindwa kusasisha nenosiri",
-    "manual": "Mwongozo wa mtumiaji"
+    "manual": "Mwongozo wa mtumiaji",
+    "collapse": "Kunja menyu",
+    "expand": "Panua menyu"
   },
   "auth": {
     "signIn": "Ingia",
