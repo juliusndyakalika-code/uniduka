@@ -30,10 +30,13 @@
 html{scroll-behavior:smooth; scroll-padding-top:84px}
 body{
   margin:0; background:var(--paper); color:var(--ink);
-  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  /* One typewriter face throughout, as asked. Courier New is not installed
+     on Android, so the stack falls through to whatever monospace the phone
+     has, which is the closest thing available there. */
+  font-family:"Courier New", Courier, monospace;
   font-size:16px; line-height:1.6; -webkit-text-size-adjust:100%;
 }
-h1,h2,h3{font-family:"Iowan Old Style",Georgia,"Times New Roman",serif; text-wrap:balance; margin:0}
+h1,h2,h3{font-family:"Courier New", Courier, monospace; text-wrap:balance; margin:0}
 
 /* Language switching: hide the half you are not reading. */
 html[data-lang="en"] [lang="sw"]{display:none !important}
@@ -49,7 +52,7 @@ header{
   display:flex; align-items:center; gap:12px;
 }
 .brand{display:flex; align-items:baseline; gap:8px; min-width:0}
-.brand b{font-family:"Iowan Old Style",Georgia,serif; font-size:18px; letter-spacing:-.01em}
+.brand b{font-family:"Courier New", Courier, monospace; font-size:17px; letter-spacing:-.01em}
 .brand span{font-size:11px; text-transform:uppercase; letter-spacing:.14em; color:var(--ink-3)}
 .spacer{flex:1}
 .toggle{display:flex; border:1px solid var(--rule); border-radius:999px; overflow:hidden; background:var(--card)}
@@ -171,7 +174,7 @@ ul.plain li{margin-bottom:6px}
 
 /* the exact words on screen */
 .ui{
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.88em;
+  font-family:inherit; font-size:.95em; font-weight:700;
   background:var(--ochre-soft); color:var(--ochre-ink); padding:1.5px 6px; border-radius:5px;
   border:1px solid var(--rule); white-space:nowrap;
 }
@@ -181,7 +184,7 @@ ul.plain li{margin-bottom:6px}
 @media (max-width:620px){
   .ui{white-space:normal; overflow-wrap:anywhere}
 }
-.path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.88em; color:var(--ink-3)}
+.path{font-family:inherit; font-size:.9em; color:var(--ink-3)}
 
 /* callouts */
 .note{
