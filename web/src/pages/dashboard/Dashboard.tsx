@@ -5,6 +5,7 @@ import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Store, CreditCa
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import SalesCalendar from '../../components/reports/SalesCalendar';
+import NeedsYou from '../../components/dashboard/NeedsYou';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { printReceipt as doPrint } from '../../utils/printReceipt';
@@ -206,6 +207,12 @@ export default function Dashboard() {
             to="/inventory" />
         )}
       </div>
+
+      {/* What to do, directly under how things are going. The cards above
+          report; this asks for a decision, and it is the reason most owners
+          open the app at all. It renders nothing on a day with nothing to
+          do, so it never becomes furniture. */}
+      <NeedsYou />
 
       {/* The month's shape beside the fortnight's, both sitting under the
           figures they describe. Half the row each: a third of it left the

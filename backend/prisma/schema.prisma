@@ -364,6 +364,7 @@ model Shop {
   loans               Loan[]
   reportPreference    ReportPreference?
   reportDeliveries    ReportDelivery[]
+  debtReminders       DebtReminder[]
 
   @@map("shops")
 }
@@ -910,6 +911,7 @@ model Customer {
   consignmentSales ConsignmentSale[]
   orders           Order[]
   invoices         Invoice[]
+  debtReminders    DebtReminder[]
 
   @@map("customers")
 }
@@ -1817,6 +1819,26 @@ model RefreshToken {
 // carried by us: one SMS per shop per day is 365 a year each, and most of them
 // would report a day that the owner already watched happen. A shop with a row
 // here has chosen; a shop without one gets the default.
+// One SMS reminder sent to one customer about money they owe.
+//
+// Reminders cost money and annoy people, so the record exists to stop the
+// same customer being chased twice in a week, however many times an owner
+// presses the button.
+model DebtReminder {
+  id         String   @id @default(cuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  amount Float
+  phone  String
+  sentAt DateTime @default(now())
+
+  @@index([shopId, customerId, sentAt])
+  @@map("debt_reminders")
+}
+
 model ReportPreference {
   id     String @id @default(cuid())
   shopId String @unique
