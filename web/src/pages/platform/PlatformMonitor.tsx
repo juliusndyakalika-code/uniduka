@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   Activity, Database, Server, Clock, Users, ShoppingCart,
-  Package, Store, RefreshCw, CheckCircle2, AlertTriangle, Zap,
-} from 'lucide-react';
+  Package, Store, RefreshCw, CheckCircle2, AlertTriangle, Zap, MessageSquare } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../api/client';
 
@@ -13,6 +12,7 @@ interface OnlineUser {
 }
 interface MonitorData {
   health:      { api: string; db: string; dbLatency: number };
+  sms?:        { configured: boolean; balance: number | null; low: boolean };
   system:      { uptime: number; memUsed: number; memTotal: number; rss: number };
   activity:    { txLast24h: number; txLastHour: number; loginsLast24h: number; activeUsers: number; totalTx: number; activeShops: number; activeProducts: number };
   onlineUsers: OnlineUser[];
@@ -123,6 +123,31 @@ export default function PlatformMonitor() {
               <Database size={14} className="text-stone-500" />
               <span className="text-sm text-stone-700 font-medium">Database</span>
               <StatusBadge status={data?.health.db ?? 'unknown'} latency={data?.health.dbLatency} />
+            </div>
+
+            {/* An empty gateway is silent: every refused code looks to the
+                person waiting like one that has not arrived yet. It belongs
+                on the health row beside the database, not in a log file. */}
+            <div className="flex items-center gap-2">
+              <MessageSquare size={14} className="text-stone-500" />
+              <span className="text-sm font-medium text-stone-700">SMS credit</span>
+              {!data?.sms?.configured ? (
+                <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-500">
+                  not configured
+                </span>
+              ) : data.sms.balance === null ? (
+                <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-500">
+                  unavailable
+                </span>
+              ) : (
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${
+                  data.sms.balance <= 0 ? 'bg-red-100 text-red-800'
+                  : data.sms.low ? 'bg-amber-100 text-amber-900'
+                  : 'bg-emerald-100 text-emerald-900'}`}>
+                  {data.sms.balance.toLocaleString('en-US')}
+                  {data.sms.balance <= 0 ? ' · empty, codes will fail' : data.sms.low ? ' · low' : ''}
+                </span>
+              )}
             </div>
           </div>
         )}

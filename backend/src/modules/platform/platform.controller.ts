@@ -4,6 +4,7 @@ import { prisma } from '../../core/prisma';
 import { AuthRequest } from '../../types';
 import * as R from '../../utils/response';
 import { SubscriptionPlan, UserRole } from '@prisma/client';
+import { balance as smsBalance, smsReady } from '../../core/sms';
 
 // GET /api/v1/platform/metrics
 export async function getMetrics(_req: Request, res: Response) {
@@ -294,6 +295,11 @@ export async function updateUser(req: Request, res: Response) {
 }
 
 // GET /api/v1/platform/monitor — system health + activity metrics
+/** Never lets a slow or unreachable gateway hold up the whole page. */
+async function smsBalanceOrNull(): Promise<number | null> {
+  try { return await smsBalance(); } catch { return null; }
+}
+
 export async function getMonitor(_req: Request, res: Response) {
   const t0 = Date.now();
   await prisma.$queryRaw`SELECT 1`;
@@ -342,8 +348,21 @@ export async function getMonitor(_req: Request, res: Response) {
     hourlyMap[h].revenue += tx.total;
   }
 
+  // The SMS balance belongs on this page. A gateway that has run out does
+  // not fail loudly: every OTP it refuses still looks to the person waiting
+  // like a code that has not arrived yet, and the only trace is one warn
+  // line in the logs. A password reset went unexplained for days that way.
+  const smsBalance = await smsBalanceOrNull();
+
   return R.ok(res, {
     health:  { api: 'ok', db: dbLatency < 500 ? 'ok' : 'slow', dbLatency },
+    sms: {
+      configured: smsReady,
+      balance: smsBalance,
+      // Roughly a day of reminders and codes for a few hundred shops. Low
+      // enough to act on before anybody is locked out of their account.
+      low: smsBalance !== null && smsBalance < 200,
+    },
     system:  { uptime, memUsed: Math.round(mem.heapUsed / 1024 / 1024), memTotal: Math.round(mem.heapTotal / 1024 / 1024), rss: Math.round(mem.rss / 1024 / 1024) },
     activity: { txLast24h, txLastHour, loginsLast24h, activeUsers, totalTx, activeShops, activeProducts },
     onlineUsers,
