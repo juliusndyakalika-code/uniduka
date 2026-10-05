@@ -122,16 +122,32 @@ export async function sendSms(to: string | null | undefined, content: string): P
 /**
  * Ask Textify to generate and deliver a 6-digit code.
  *
- * Deliberately sent without a sender_name. An unbranded OTP goes out on their
- * free system sender, and these are account-security messages rather than
- * marketing: paying per code to brand a password reset buys nothing, and a
- * send that fails because the sender name is still pending review would lock
- * people out of their own accounts.
+ * Sent on our own sender when we have one, and only then on their free
+ * system sender.
+ *
+ * It used to be the other way round: no sender_name at all, on the reasoning
+ * that an account-security message gains nothing from branding and that a
+ * sender still in review would lock people out. The reasoning was sound and
+ * the result was not. The free route runs on a shared pool that is not our
+ * balance, and when that pool empties the carrier refuses every code with
+ * "No More Credits" while our own balance sits untouched. Password resets
+ * and new signups stopped working with 69 messages in hand.
+ *
+ * So: our sender first, because that is the one we have paid for, and the
+ * free route as the fallback if that attempt fails. One retry, so a sender
+ * name that is still pending review cannot lock anybody out either — which
+ * was the original worry, now handled rather than avoided.
  */
 export async function sendOtp(to: string): Promise<boolean> {
   if (!smsReady) return false;
   const phone_number = toRecipient(to);
   if (!phone_number) return false;
+
+  if (SENDER) {
+    const res = await call('/otps', { phone_number, brand_name: BRAND, sender_name: SENDER });
+    if (res?.success === true) return true;
+    logger.warn(`OTP on sender "${SENDER}" failed; retrying on the free system sender`);
+  }
 
   const res = await call('/otps', { phone_number, brand_name: BRAND });
   return res?.success === true;
