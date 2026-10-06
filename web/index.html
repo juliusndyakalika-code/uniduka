@@ -15,6 +15,10 @@
          env(safe-area-inset-*) report real values. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#B0682C" />
+    <!-- Lets the browser paint its own canvas dark on a dark phone before any
+         script has run. Without it a dark-mode owner gets a white flash on
+         every load, the moment before the app sets its theme. -->
+    <meta name="color-scheme" content="light dark" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

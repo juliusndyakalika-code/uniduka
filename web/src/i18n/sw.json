@@ -1090,5 +1090,12 @@
     "doIt": "fanya",
     "bilingual": "Inafanya kazi kwa Kiingereza na Kiswahili",
     "openSearch": "Tafuta"
+  },
+  "theme": {
+    "switch": "Badilisha mandhari",
+    "label": "Mandhari",
+    "light": "Mwanga",
+    "dark": "Giza",
+    "system": "Fuata simu"
   }
 }

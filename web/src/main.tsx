@@ -4,8 +4,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 import './i18n';
 import { initRipple } from './utils/ripple';
+import { initTheme } from './lib/theme';
 import App from './App';
 
+// Before anything renders, so a dark-mode user never sees a light frame.
+initTheme();
 initRipple();
 
 const queryClient = new QueryClient({

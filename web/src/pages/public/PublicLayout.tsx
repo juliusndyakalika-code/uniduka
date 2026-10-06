@@ -12,8 +12,8 @@ import { BRAND } from '../../components/ui/Logo';
 import { SUPPORT } from '../../config';
 
 export const neu = {
-  card:  { background: '#E8EBF0', boxShadow: '8px 8px 20px #c5cad3, -8px -8px 20px #ffffff', borderRadius: '1rem' },
-  inset: { background: '#E8EBF0', boxShadow: 'inset 4px 4px 10px #c5cad3, inset -4px -4px 10px #ffffff', borderRadius: '0.75rem' },
+  card:  { background: 'rgb(var(--ground))', boxShadow: '8px 8px 20px rgb(var(--neu-dark)), -8px -8px 20px rgb(var(--neu-light))', borderRadius: '1rem' },
+  inset: { background: 'rgb(var(--ground))', boxShadow: 'inset 4px 4px 10px rgb(var(--neu-dark)), inset -4px -4px 10px rgb(var(--neu-light))', borderRadius: '0.75rem' },
 };
 
 /**
@@ -43,8 +43,8 @@ export default function PublicLayout({ title, intro, updated, children }: Props)
   useEffect(() => { window.scrollTo(0, 0); }, [title]);
 
   return (
-    <div className="min-h-screen" style={{ background: '#E8EBF0' }}>
-      <header className="sticky top-0 z-20 backdrop-blur-sm" style={{ background: '#E8EBF0EE' }}>
+    <div className="min-h-screen" style={{ background: 'rgb(var(--ground))' }}>
+      <header className="sticky top-0 z-20 backdrop-blur-sm" style={{ background: 'rgb(var(--ground) / 0.93)' }}>
         <div className="max-w-3xl mx-auto px-5 sm:px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
             <LogoMark size={26} />

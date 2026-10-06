@@ -503,7 +503,7 @@ export default function InvoiceDetailPage() {
             <div className="flex gap-2 pt-1">
               <button className="btn-secondary flex-1 text-xs" onClick={() => setWaPrompt(false)}>Cancel</button>
               <button
-                className="flex-1 text-xs py-2 rounded-lg bg-[#25D366] text-white font-semibold disabled:opacity-40"
+                className="flex-1 text-xs py-2 rounded-lg bg-[#25D366] text-snow font-semibold disabled:opacity-40"
                 disabled={!waNumber(waNumberInput)}
                 onClick={sendToTypedNumber}
               >

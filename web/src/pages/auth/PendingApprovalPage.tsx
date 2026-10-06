@@ -49,7 +49,7 @@ export default function PendingApprovalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F5F0] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[rgb(var(--paper))] flex items-center justify-center px-4">
       <div className="w-full max-w-md text-center">
         {/* Logo */}
         <div className="inline-flex items-center gap-2.5 mb-8">

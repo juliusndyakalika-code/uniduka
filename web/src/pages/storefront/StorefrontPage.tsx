@@ -200,7 +200,7 @@ export default function StorefrontPage() {
           {waHref && (
             <>
               <a href={waHref} target="_blank" rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#25D366] text-white text-sm font-bold active:bg-[#1da851]">
+                className="inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#25D366] text-snow text-sm font-bold active:bg-[#1da851]">
                 <MessageCircle size={16} /> Send to {placed.shopName}
               </a>
               <p className="text-[11px] text-stone-400 mt-2">

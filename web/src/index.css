@@ -1,3 +1,5 @@
+@import './theme.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -26,12 +28,12 @@
 }
 
 /* ── Neumorphic palette ─────────────────────────────────────────────────────── */
-/* bg: #E8EBF0  |  shadow-dark: #c5cad3  |  shadow-light: #ffffff             */
+/* bg: --ground  |  shadow-dark: --neu-dark  |  shadow-light: --neu-light (theme.css) */
 
 @layer base {
   body {
     @apply text-stone-900 antialiased;
-    background: #E8EBF0;
+    background: rgb(var(--ground));
   }
   h1, h2, h3 {
     @apply tracking-tight;
@@ -42,24 +44,24 @@
   /* ── Buttons ──────────────────────────────────────────────────────────────── */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-xs font-semibold tracking-widest text-white uppercase active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all;
-    background: linear-gradient(145deg, #434343, #1a1a1a);
-    box-shadow: 4px 4px 10px #c5cad3, -2px -2px 8px #ffffff;
+    background: linear-gradient(145deg, rgb(var(--ink-from)), rgb(var(--ink-to)));
+    box-shadow: 4px 4px 10px rgb(var(--neu-dark)), -2px -2px 8px rgb(var(--neu-light));
   }
   .btn-primary:hover {
-    box-shadow: 6px 6px 14px #c5cad3, -3px -3px 10px #ffffff;
+    box-shadow: 6px 6px 14px rgb(var(--neu-dark)), -3px -3px 10px rgb(var(--neu-light));
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-xs font-semibold tracking-widest text-stone-700 uppercase active:scale-[0.98] focus:outline-none disabled:opacity-40 transition-all;
-    background: #E8EBF0;
+    background: rgb(var(--ground));
     border: none;
-    box-shadow: 4px 4px 10px #c5cad3, -4px -4px 10px #ffffff;
+    box-shadow: 4px 4px 10px rgb(var(--neu-dark)), -4px -4px 10px rgb(var(--neu-light));
   }
   .btn-secondary:hover {
-    box-shadow: 6px 6px 14px #c5cad3, -4px -4px 12px #ffffff;
-    color: #1c1917;
+    box-shadow: 6px 6px 14px rgb(var(--neu-dark)), -4px -4px 12px rgb(var(--neu-light));
+    color: rgb(var(--c-stone-900));
   }
   .btn-secondary:active {
-    box-shadow: inset 3px 3px 7px #c5cad3, inset -3px -3px 7px #ffffff;
+    box-shadow: inset 3px 3px 7px rgb(var(--neu-dark)), inset -3px -3px 7px rgb(var(--neu-light));
   }
   .btn-duka {
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-duka-600 px-6 py-2.5 text-xs font-semibold tracking-widest text-white uppercase shadow-md hover:bg-duka-700 hover:shadow-lg active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-duka-600 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all;
@@ -67,10 +69,10 @@
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-xs font-semibold tracking-widest text-white uppercase active:scale-[0.98] disabled:opacity-40 transition-all;
     background: linear-gradient(145deg, #e53e3e, #c53030);
-    box-shadow: 4px 4px 10px #c5cad3, -2px -2px 8px #ffffff;
+    box-shadow: 4px 4px 10px rgb(var(--neu-dark)), -2px -2px 8px rgb(var(--neu-light));
   }
   .btn-danger:hover {
-    box-shadow: 6px 6px 14px #c5cad3, -3px -3px 10px #ffffff;
+    box-shadow: 6px 6px 14px rgb(var(--neu-dark)), -3px -3px 10px rgb(var(--neu-light));
   }
 
   /* ── Form elements ────────────────────────────────────────────────────────── */
@@ -79,18 +81,18 @@
   }
   .input-box {
     @apply block w-full rounded-xl px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:outline-none disabled:opacity-50 transition-all;
-    background: #E8EBF0;
+    background: rgb(var(--ground));
     border: none;
-    box-shadow: inset 4px 4px 8px #c5cad3, inset -4px -4px 8px #ffffff;
+    box-shadow: inset 4px 4px 8px rgb(var(--neu-dark)), inset -4px -4px 8px rgb(var(--neu-light));
   }
   .input-box:focus {
-    box-shadow: inset 5px 5px 10px #c5cad3, inset -5px -5px 10px #ffffff, 0 0 0 3px rgba(80,80,80,0.08);
+    box-shadow: inset 5px 5px 10px rgb(var(--neu-dark)), inset -5px -5px 10px rgb(var(--neu-light)), 0 0 0 3px rgb(var(--c-stone-500) / 0.12);
   }
   .select {
     @apply block w-full rounded-xl px-3 py-2 text-sm text-stone-900 focus:outline-none transition-all;
-    background: #E8EBF0;
+    background: rgb(var(--ground));
     border: none;
-    box-shadow: inset 4px 4px 8px #c5cad3, inset -4px -4px 8px #ffffff;
+    box-shadow: inset 4px 4px 8px rgb(var(--neu-dark)), inset -4px -4px 8px rgb(var(--neu-light));
   }
   .label {
     @apply block text-xs font-semibold tracking-widest text-stone-500 mb-2 uppercase;
@@ -105,18 +107,18 @@
        would fall behind the background and vanish. */
     isolation: isolate;
     overflow: hidden;
-    background: #E8EBF0;
+    background: rgb(var(--ground));
     border: none;
-    box-shadow: 8px 8px 20px #c5cad3, -8px -8px 20px #ffffff;
+    box-shadow: 8px 8px 20px rgb(var(--neu-dark)), -8px -8px 20px rgb(var(--neu-light));
   }
   .card-hover {
     @apply rounded-2xl cursor-pointer;
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    background: #E8EBF0;
+    background: rgb(var(--ground));
     border: none;
-    box-shadow: 8px 8px 20px #c5cad3, -8px -8px 20px #ffffff;
+    box-shadow: 8px 8px 20px rgb(var(--neu-dark)), -8px -8px 20px rgb(var(--neu-light));
     transition: box-shadow 0.3s ease, transform 0.2s ease;
   }
 
@@ -143,8 +145,8 @@
     width: 88px;
     height: 88px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.28);
-    box-shadow: 4px 4px 10px #c5cad3, -4px -4px 10px #ffffff;
+    background: rgb(var(--neu-light) / 0.28);
+    box-shadow: 4px 4px 10px rgb(var(--neu-dark)), -4px -4px 10px rgb(var(--neu-light));
     pointer-events: none;
     z-index: -1;
   }
@@ -158,8 +160,8 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.38);
-    box-shadow: 2px 2px 6px #c5cad3, -2px -2px 6px #ffffff;
+    background: rgb(var(--neu-light) / 0.38);
+    box-shadow: 2px 2px 6px rgb(var(--neu-dark)), -2px -2px 6px rgb(var(--neu-light));
     pointer-events: none;
     z-index: -1;
   }
@@ -170,7 +172,7 @@
      search results on the POS ended up underneath the cart's placeholder text.
      The drops sit at z-index -1 instead, which needs nothing from the content. */
   .card-hover:hover {
-    box-shadow: inset 4px 4px 10px #c5cad3, inset -4px -4px 10px #ffffff;
+    box-shadow: inset 4px 4px 10px rgb(var(--neu-dark)), inset -4px -4px 10px rgb(var(--neu-light));
     transform: scale(0.995);
   }
 
@@ -208,12 +210,12 @@
     @apply flex items-center gap-3 px-3 py-2.5 text-sm text-stone-600 rounded-xl transition-all cursor-pointer;
   }
   .nav-item:hover {
-    color: #1c1917;
-    box-shadow: inset 3px 3px 7px #c5cad3, inset -3px -3px 7px #ffffff;
+    color: rgb(var(--c-stone-900));
+    box-shadow: inset 3px 3px 7px rgb(var(--neu-dark)), inset -3px -3px 7px rgb(var(--neu-light));
   }
   .nav-item-active {
     @apply flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-stone-900 rounded-xl;
-    box-shadow: inset 4px 4px 9px #c5cad3, inset -4px -4px 9px #ffffff;
+    box-shadow: inset 4px 4px 9px rgb(var(--neu-dark)), inset -4px -4px 9px rgb(var(--neu-light));
   }
 
   /* ── App shell ────────────────────────────────────────────────────────────── */
@@ -257,27 +259,27 @@
   /* ── Table ────────────────────────────────────────────────────────────────── */
   .table-wrapper {
     @apply overflow-x-auto rounded-2xl;
-    background: #E8EBF0;
+    background: rgb(var(--ground));
     border: none;
-    box-shadow: 8px 8px 20px #c5cad3, -8px -8px 20px #ffffff;
+    box-shadow: 8px 8px 20px rgb(var(--neu-dark)), -8px -8px 20px rgb(var(--neu-light));
   }
   .table {
     @apply w-full text-sm text-left;
   }
   .table th {
     @apply px-4 py-3 text-xs font-semibold uppercase tracking-widest text-stone-500 whitespace-nowrap;
-    background: rgba(163, 177, 198, 0.18);
-    border-bottom: 1px solid rgba(163, 177, 198, 0.3);
+    background: rgb(var(--line) / 0.18);
+    border-bottom: 1px solid rgb(var(--line) / 0.3);
   }
   .table td {
     @apply px-4 py-3 text-stone-700;
-    border-bottom: 1px solid rgba(163, 177, 198, 0.12);
+    border-bottom: 1px solid rgb(var(--line) / 0.12);
   }
   .table tr:last-child td {
     border-bottom: none;
   }
   .table tr:hover td {
-    background: rgba(255, 255, 255, 0.45);
+    background: rgb(var(--neu-light) / 0.45);
   }
 
   /* ── Stat card ─ neumorphic + water-drop decorations ─────────────────────── */
@@ -286,9 +288,9 @@
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    background: #E8EBF0;
+    background: rgb(var(--ground));
     border: none;
-    box-shadow: 8px 8px 20px #c5cad3, -8px -8px 20px #ffffff;
+    box-shadow: 8px 8px 20px rgb(var(--neu-dark)), -8px -8px 20px rgb(var(--neu-light));
   }
 
   .stat-value {

@@ -20,7 +20,7 @@ export default function PlatformLayout() {
   function handleLogout() { logout(); navigate('/login'); }
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#E8EBF0' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'rgb(var(--ground))' }}>
       {/* Sidebar */}
       <aside className="w-60 flex flex-col shrink-0" style={{ borderRight: '1px solid rgba(163,177,198,0.3)' }}>
         {/* Brand */}

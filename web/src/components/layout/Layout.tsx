@@ -92,7 +92,7 @@ export default function Layout() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="app-shell flex overflow-hidden" style={{ background: '#E8EBF0' }}>
+    <div className="app-shell flex overflow-hidden" style={{ background: 'rgb(var(--ground))' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} sessionSecs={footerSecs} />
       <CommandPalette />
       <QuickSaleFab />

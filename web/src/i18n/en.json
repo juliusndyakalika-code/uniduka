@@ -1090,5 +1090,12 @@
     "doIt": "do it",
     "bilingual": "Works in English and Kiswahili",
     "openSearch": "Search"
+  },
+  "theme": {
+    "switch": "Switch theme",
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "Match phone"
   }
 }

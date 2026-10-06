@@ -244,10 +244,10 @@ export default function PayForPlan({ onPaid, compact }: {
         {buyable.map(p => (
           <button key={p.plan} onClick={() => setPlan(p.plan)} type="button"
             className={`text-left rounded-xl p-3 transition-all ${plan === p.plan ? 'ring-2 ring-stone-900' : ''}`}
-            style={{ background: '#E8EBF0',
+            style={{ background: 'rgb(var(--ground))',
                      boxShadow: plan === p.plan
-                       ? 'inset 4px 4px 9px #c5cad3, inset -4px -4px 9px #ffffff'
-                       : '4px 4px 10px #c5cad3, -4px -4px 10px #ffffff' }}>
+                       ? 'inset 4px 4px 9px rgb(var(--neu-dark)), inset -4px -4px 9px rgb(var(--neu-light))'
+                       : '4px 4px 10px rgb(var(--neu-dark)), -4px -4px 10px rgb(var(--neu-light))' }}>
             <p className="text-sm font-bold text-stone-900">{p.plan}</p>
             <p className="text-xs text-stone-500 mt-0.5">{money(p.monthlyPrice ?? 0)} {t('billing.perMonth')}</p>
           </button>
@@ -259,10 +259,10 @@ export default function PayForPlan({ onPaid, compact }: {
         {MONTH_CHOICES.map(m => (
           <button key={m} onClick={() => setMonths(m)} type="button"
             className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${months === m ? 'text-stone-900' : 'text-stone-500'}`}
-            style={{ background: '#E8EBF0',
+            style={{ background: 'rgb(var(--ground))',
                      boxShadow: months === m
-                       ? 'inset 3px 3px 7px #c5cad3, inset -3px -3px 7px #ffffff'
-                       : '3px 3px 8px #c5cad3, -3px -3px 8px #ffffff' }}>
+                       ? 'inset 3px 3px 7px rgb(var(--neu-dark)), inset -3px -3px 7px rgb(var(--neu-light))'
+                       : '3px 3px 8px rgb(var(--neu-dark)), -3px -3px 8px rgb(var(--neu-light))' }}>
             {t('billing.months', { count: m })}
           </button>
         ))}

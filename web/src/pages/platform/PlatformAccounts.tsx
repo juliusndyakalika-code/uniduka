@@ -180,7 +180,7 @@ export default function PlatformAccounts() {
                     <select
                       value={a.subscriptionPlan}
                       onChange={e => changePlan({ id: a.id, plan: e.target.value })}
-                      className="text-xs border border-stone-200 rounded px-2 py-1 bg-[#E8EBF0] focus:outline-none"
+                      className="text-xs border border-stone-200 rounded px-2 py-1 bg-[rgb(var(--ground))] focus:outline-none"
                     >
                       {PLANS.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>

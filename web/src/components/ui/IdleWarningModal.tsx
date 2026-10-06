@@ -59,7 +59,7 @@ export default function IdleWarningModal({ secondsLeft, onStay, fadingOut }: Pro
             <div className="relative w-16 h-16">
               <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
                 {/* Track */}
-                <circle cx="32" cy="32" r={radius} fill="none" stroke="#e7e5e4" strokeWidth="5" />
+                <circle cx="32" cy="32" r={radius} fill="none" stroke="rgb(var(--c-stone-200))" strokeWidth="5" />
                 {/* Progress */}
                 <circle
                   cx="32" cy="32" r={radius}

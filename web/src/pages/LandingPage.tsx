@@ -22,8 +22,8 @@ function useScrollY() {
 }
 
 const neu = {
-  card:  { background: '#E8EBF0', boxShadow: '8px 8px 20px #c5cad3, -8px -8px 20px #ffffff', borderRadius: '1rem' },
-  inset: { background: '#E8EBF0', boxShadow: 'inset 4px 4px 10px #c5cad3, inset -4px -4px 10px #ffffff', borderRadius: '0.75rem' },
+  card:  { background: 'rgb(var(--ground))', boxShadow: '8px 8px 20px rgb(var(--neu-dark)), -8px -8px 20px rgb(var(--neu-light))', borderRadius: '1rem' },
+  inset: { background: 'rgb(var(--ground))', boxShadow: 'inset 4px 4px 10px rgb(var(--neu-dark)), inset -4px -4px 10px rgb(var(--neu-light))', borderRadius: '0.75rem' },
 };
 
 // These arrays carry only what does not change between languages — the icon, the
@@ -91,7 +91,7 @@ function DashboardMockup() {
       <div className="absolute inset-0 scale-95 translate-y-4 rounded-2xl blur-2xl" style={{ background: '#a6662420' }} />
       <div className="relative rounded-2xl overflow-hidden" style={{ ...neu.card, padding: 0 }}>
 
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200/60" style={{ background: '#E8EBF0' }}>
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200/60" style={{ background: 'rgb(var(--ground))' }}>
           <div className="flex items-center gap-2">
             <LogoMark size={26} />
             <span className="text-xs font-bold text-stone-800">MauzoHalisi</span>
@@ -102,11 +102,11 @@ function DashboardMockup() {
           </div>
         </div>
 
-        <div className="flex" style={{ background: '#E8EBF0' }}>
+        <div className="flex" style={{ background: 'rgb(var(--ground))' }}>
           <div className="w-28 shrink-0 p-3 space-y-1 border-r border-stone-200/60 hidden sm:block">
             {['dashboard', 'pos', 'inventory', 'customers', 'reports'].map((k, i) => (
               <div key={k} className="px-2 py-1.5 rounded-lg text-[9px] font-medium"
-                style={i === 0 ? { ...neu.inset, color: '#1c1917', fontWeight: 700 } : { color: '#78716c' }}>
+                style={i === 0 ? { ...neu.inset, color: 'rgb(var(--c-stone-900))', fontWeight: 700 } : { color: 'rgb(var(--c-stone-500))' }}>
                 {m(k)}
               </div>
             ))}
@@ -163,7 +163,7 @@ function PosMockup() {
       <div className="absolute inset-0 scale-95 translate-y-4 rounded-2xl blur-2xl" style={{ background: '#a6662420' }} />
       <div className="relative rounded-2xl overflow-hidden" style={{ ...neu.card, padding: 0 }}>
 
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200/60" style={{ background: '#E8EBF0' }}>
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200/60" style={{ background: 'rgb(var(--ground))' }}>
           <span className="text-[10px] font-bold uppercase tracking-widest text-stone-600">{m('pointOfSale')}</span>
           <div className="flex items-center gap-2">
             <span className="text-[9px] text-emerald-600 font-semibold flex items-center gap-1">
@@ -173,7 +173,7 @@ function PosMockup() {
           </div>
         </div>
 
-        <div className="flex h-60" style={{ background: '#E8EBF0' }}>
+        <div className="flex h-60" style={{ background: 'rgb(var(--ground))' }}>
           <div className="flex-1 p-3 grid grid-cols-3 gap-2 content-start">
             {[
               { name: m('n1'), price: '45,000', qty: `184 ${m('uEa')}`,  highlight: true  },
@@ -204,13 +204,13 @@ function PosMockup() {
                 <div key={i} className="p-1.5 rounded-lg" style={neu.card}>
                   <p className="text-[8px] font-medium text-stone-800 leading-tight">{item.name}</p>
                   <div className="flex items-center justify-between mt-1">
-                    <span className="text-[7px] px-1 rounded" style={{ background: '#e7e5e4', color: '#57534e' }}>x{item.qty}</span>
+                    <span className="text-[7px] px-1 rounded" style={{ background: 'rgb(var(--c-stone-200))', color: 'rgb(var(--c-stone-600))' }}>x{item.qty}</span>
                     <span className="text-[9px] font-bold text-stone-900 tabular-nums">{item.total}/=</span>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="px-3 py-2 rounded-b-2xl text-white" style={{ background: 'linear-gradient(145deg,#434343,#1a1a1a)' }}>
+            <div className="px-3 py-2 rounded-b-2xl text-white" style={{ background: 'linear-gradient(145deg, rgb(var(--ink-from)), rgb(var(--ink-to)))' }}>
               <div className="flex justify-between text-[8px] mb-1.5">
                 <span className="opacity-70 uppercase">{m('total')}</span>
                 <span className="font-bold">54,600/=</span>
@@ -251,7 +251,7 @@ function ProductsMockup() {
           ].map(({ k, value, warn }) => (
             <div key={k} className="p-2 rounded-xl" style={neu.card}>
               <p className="text-[7px] uppercase tracking-wider text-stone-400">{m(k)}</p>
-              <p className="text-[10px] font-bold mt-0.5" style={{ color: warn ? '#b91c1c' : '#1c1917' }}>{value}</p>
+              <p className="text-[10px] font-bold mt-0.5" style={{ color: warn ? 'rgb(var(--c-red-700))' : 'rgb(var(--c-stone-900))' }}>{value}</p>
             </div>
           ))}
         </div>
@@ -332,11 +332,11 @@ export default function LandingPage() {
   ] as const;
 
   return (
-    <div className="min-h-screen text-stone-900 overflow-x-hidden" style={{ background: '#E8EBF0' }}>
+    <div className="min-h-screen text-stone-900 overflow-x-hidden" style={{ background: 'rgb(var(--ground))' }}>
 
       {/* Navbar */}
       <header className="fixed top-0 inset-x-0 z-50 transition-all duration-300"
-        style={scrollY > 20 ? { ...neu.card, borderRadius: 0, borderBottom: '1px solid #d6d3d1' } : { background: 'transparent' }}>
+        style={scrollY > 20 ? { ...neu.card, borderRadius: 0, borderBottom: '1px solid rgb(var(--c-stone-300))' } : { background: 'transparent' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Logo />
           <nav className="hidden md:flex items-center gap-8">
@@ -358,7 +358,7 @@ export default function LandingPage() {
           </div>
         </div>
         {mobileOpen && (
-          <div className="md:hidden px-4 py-5 space-y-4 border-t border-stone-200" style={{ background: '#E8EBF0' }}>
+          <div className="md:hidden px-4 py-5 space-y-4 border-t border-stone-200" style={{ background: 'rgb(var(--ground))' }}>
             {NAV.map(([k, href]) => (
               <a key={k} href={href} onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-stone-700 py-1">{t(`landing.nav.${k}`)}</a>
             ))}
@@ -540,7 +540,7 @@ export default function LandingPage() {
             {['1', '2', '3'].map(n => (
               <div key={n} className="p-6 rounded-2xl" style={neu.card}>
                 <div className="w-12 h-12 rounded-xl text-white text-sm font-bold flex items-center justify-center mb-5"
-                  style={{ background: 'linear-gradient(145deg,#434343,#1a1a1a)', boxShadow: '4px 4px 10px #c5cad3, -2px -2px 8px #ffffff' }}>
+                  style={{ background: 'linear-gradient(145deg, rgb(var(--ink-from)), rgb(var(--ink-to)))', boxShadow: '4px 4px 10px rgb(var(--neu-dark)), -2px -2px 8px rgb(var(--neu-light))' }}>
                   {`0${n}`}
                 </div>
                 <h3 className="text-base font-bold text-stone-900 mb-2">{t(`landing.steps.s${n}T`)}</h3>
@@ -625,13 +625,13 @@ export default function LandingPage() {
             {PLANS.map(({ k, price, period, highlight }) => (
               <div key={k} className={`relative rounded-2xl p-6 flex flex-col ${highlight ? 'scale-105' : ''}`}
                 style={highlight
-                  ? { background: 'linear-gradient(145deg,#434343,#1a1a1a)', boxShadow: '8px 8px 20px #c5cad3, -8px -8px 20px #ffffff', borderRadius: '1rem' }
+                  ? { background: 'linear-gradient(145deg, rgb(var(--ink-from)), rgb(var(--ink-to)))', boxShadow: '8px 8px 20px rgb(var(--neu-dark)), -8px -8px 20px rgb(var(--neu-light))', borderRadius: '1rem' }
                   : neu.card}>
                 {highlight && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="inline-flex items-center gap-1 text-white text-[10px] font-bold px-3 py-1 rounded-full"
+                    <span className="inline-flex items-center gap-1 text-snow text-[10px] font-bold px-3 py-1 rounded-full"
                       style={{ background: '#a66624' }}>
-                      <Star size={10} className="fill-white" /> {t('landing.pricing.popular')}
+                      <Star size={10} className="fill-snow" /> {t('landing.pricing.popular')}
                     </span>
                   </div>
                 )}
@@ -658,7 +658,7 @@ export default function LandingPage() {
                   className="block text-center text-xs font-bold uppercase tracking-widest py-2.5 rounded-xl transition-colors"
                   style={highlight
                     ? { background: '#a66624', color: 'white' }
-                    : { background: '#E8EBF0', color: '#1c1917', boxShadow: '4px 4px 8px #c5cad3, -4px -4px 8px #ffffff' }}>
+                    : { background: 'rgb(var(--ground))', color: 'rgb(var(--c-stone-900))', boxShadow: '4px 4px 8px rgb(var(--neu-dark)), -4px -4px 8px rgb(var(--neu-light))' }}>
                   {t(k === 'enterprise' ? 'landing.pricing.ctaEnterprise' : 'landing.pricing.cta')}
                 </Link>
               </div>
@@ -689,7 +689,7 @@ export default function LandingPage() {
                 <div className="space-y-3">
                   {[1, 2, 3, 4].map(n => t(`landing.install.h${n}`)).map((text, i) => (
                     <div key={i} className="flex items-start gap-3">
-                      <span className="w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0"
+                      <span className="w-6 h-6 rounded-full text-snow text-xs font-bold flex items-center justify-center shrink-0"
                         style={{ background: '#a66624' }}>{i + 1}</span>
                       <p className="text-sm text-stone-600">{text}</p>
                     </div>
@@ -700,10 +700,10 @@ export default function LandingPage() {
 
             <div className="mt-12 lg:mt-0 flex justify-center">
               <div className="w-52 h-[26rem] rounded-3xl flex flex-col overflow-hidden" style={{ ...neu.card, padding: 0 }}>
-                <div className="h-6 flex items-center justify-center border-b border-stone-200/60" style={{ background: '#E8EBF0' }}>
-                  <div className="w-16 h-1.5 rounded-full" style={{ background: '#c5cad3' }} />
+                <div className="h-6 flex items-center justify-center border-b border-stone-200/60" style={{ background: 'rgb(var(--ground))' }}>
+                  <div className="w-16 h-1.5 rounded-full" style={{ background: 'rgb(var(--neu-dark))' }} />
                 </div>
-                <div className="flex-1 p-3 space-y-2" style={{ background: '#E8EBF0' }}>
+                <div className="flex-1 p-3 space-y-2" style={{ background: 'rgb(var(--ground))' }}>
                   <div className="p-3 rounded-xl" style={neu.card}>
                     <p className="text-[9px] uppercase tracking-widest text-stone-400">{t('landing.mock.salesToday')}</p>
                     <p className="text-xl font-bold mt-0.5 text-stone-900">485,200<span className="text-xs font-normal text-stone-400 ml-1">TZS</span></p>

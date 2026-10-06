@@ -100,7 +100,7 @@ export default function Topbar({ onMenuClick }: Props) {
     // own content and the menu button ended up underneath the search box.
     // The side tracks also carry a max-content floor now, so they cannot
     // collapse like that again at any width.
-    <header className="h-14 flex items-center gap-3 px-4 flex-shrink-0 lg:grid lg:grid-cols-[minmax(max-content,1fr)_minmax(0,26rem)_minmax(max-content,1fr)]" style={{ background: '#E8EBF0', borderBottom: '1px solid rgba(163,177,198,0.25)', boxShadow: '0 3px 12px rgba(197,202,211,0.5)' }}>
+    <header className="h-14 flex items-center gap-3 px-4 flex-shrink-0 lg:grid lg:grid-cols-[minmax(max-content,1fr)_minmax(0,26rem)_minmax(max-content,1fr)]" style={{ background: 'rgb(var(--ground))', borderBottom: '1px solid rgba(163,177,198,0.25)', boxShadow: '0 3px 12px rgba(197,202,211,0.5)' }}>
       <div className="flex min-w-0 shrink-0 items-center gap-2">
         <button onClick={onMenuClick} className="lg:hidden p-1.5 text-stone-500 hover:text-stone-900">
           <Menu size={20} />
@@ -126,7 +126,7 @@ export default function Topbar({ onMenuClick }: Props) {
       <button
         onClick={() => window.dispatchEvent(new Event('mh:open-search'))}
         className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-stone-400 transition-colors hover:text-stone-600"
-        style={{ boxShadow: 'inset 2px 2px 5px #c5cad3, inset -2px -2px 5px #ffffff' }}
+        style={{ boxShadow: 'inset 2px 2px 5px rgb(var(--neu-dark)), inset -2px -2px 5px rgb(var(--neu-light))' }}
       >
         <Search size={15} className="shrink-0" />
         <span className="truncate">{t('search.openSearch')}</span>

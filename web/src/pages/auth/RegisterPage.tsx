@@ -38,7 +38,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F5F0] flex items-center justify-center px-4 py-8 relative">
+    <div className="min-h-screen bg-[rgb(var(--paper))] flex items-center justify-center px-4 py-8 relative">
       <div className="absolute top-4 right-4">
         <LanguageToggle />
       </div>
