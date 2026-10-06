@@ -593,7 +593,14 @@ export default function PosPage() {
         )}
 
         {/* Product grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 overflow-y-auto flex-1 pb-2 content-start">
+        {/* auto-rows-max: every row is as tall as its tile, and the grid
+            scrolls. Without it the rows were auto, and because .card is
+            overflow-hidden a tile's minimum height is zero, so the grid
+            squeezed all of them to fit its own height instead of
+            overflowing. On a phone that was 71px a tile, enough for one
+            line of a name and nothing else: two-line names lost their price
+            and every tile lost its stock. With the keyboard up, 29px. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 auto-rows-max gap-2.5 overflow-y-auto flex-1 min-h-0 pb-2 content-start">
           {products.map(p => {
             const inCart = cart.find(i => i.product.id === p.id);
             const outOfStock = p.stock <= 0;
