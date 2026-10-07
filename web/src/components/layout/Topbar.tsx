@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { QuickSaleButton } from '../pos/QuickSale';
+import ThemeMenu from './ThemeMenu';
 import { breadcrumbFor } from '../../lib/pages';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -135,8 +136,10 @@ export default function Topbar({ onMenuClick }: Props) {
         </kbd>
       </button>
 
-      <div className="flex min-w-0 shrink-0 items-center justify-end gap-3">
+      {/* Tighter on a phone, where every pixel of the row is the search box's. */}
+      <div className="flex min-w-0 shrink-0 items-center justify-end gap-1 sm:gap-3">
       <QuickSaleButton />
+      <ThemeMenu />
 
       {/* Bell + dropdown */}
       <div className="relative" ref={panelRef}>

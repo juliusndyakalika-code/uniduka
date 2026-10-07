@@ -6,13 +6,12 @@ import {
   BarChart2, TrendingUp, Settings, LogOut, Store, ChevronDown, Plus,
   Layers, Star, Wrench, Utensils, Wine, Scissors, Stethoscope,
   Hotel as HotelIcon, ShoppingBag, Building2, X, Check, Loader2, Clock, Trash2, Handshake,
-  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ReceiptText, Globe, Inbox, FileText, HandCoins, CreditCard, CalendarDays, BookOpen, PanelLeftClose, Sun, Moon, MonitorSmartphone } from 'lucide-react';
+  ArrowUpDown, ClipboardList, ChefHat, Percent, BedDouble, KeyRound, Languages, Wallet, Truck, ReceiptText, Globe, Inbox, FileText, HandCoins, CreditCard, CalendarDays, BookOpen, PanelLeftClose } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/client';
 import i18n from '../../i18n';
 import { LogoMark } from '../ui/Logo';
-import { getTheme, setTheme, nextTheme, type ThemeChoice } from '../../lib/theme';
 
 /**
  * Whether the sidebar is showing as an icon rail.
@@ -163,12 +162,6 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
   const [pwDone, setPwDone]                 = useState(false);
   const [pwSaving, setPwSaving]             = useState(false);
   const [currentLang, setCurrentLang]       = useState(i18n.language);
-  const [theme, setThemeState]              = useState<ThemeChoice>(getTheme);
-  useEffect(() => {
-    const on = (e: Event) => setThemeState((e as CustomEvent<ThemeChoice>).detail);
-    window.addEventListener('mh:theme', on);
-    return () => window.removeEventListener('mh:theme', on);
-  }, []);
 
   // Collapsed is the owner's standing choice, so it outlives the session.
   // It only means anything on a desktop: on a phone the sidebar is a drawer
@@ -594,22 +587,6 @@ export default function Sidebar({ open, onClose, sessionSecs }: Props) {
             {!rail && <>
               <span>{currentLang === 'en' ? 'English' : 'Kiswahili'}</span>
               <span className="ml-auto text-[10px] font-bold text-stone-400 uppercase">{currentLang === 'en' ? 'SW' : 'EN'}</span>
-            </>}
-          </button>
-
-          {/* Theme. One button that steps light, dark, follow the phone; the
-              label says which is on, so nobody has to guess what a click
-              will do next. */}
-          <button
-            onClick={() => setTheme(nextTheme(theme))}
-            title={rail ? t(`theme.${theme}`) : t('theme.switch')}
-            aria-label={t('theme.switch')}
-            className={`flex items-center gap-2 w-full py-2 text-xs text-stone-500 hover:bg-stone-100 rounded-sm transition-colors ${rail ? 'justify-center px-0' : 'px-3'}`}
-          >
-            {theme === 'dark' ? <Moon size={14} /> : theme === 'light' ? <Sun size={14} /> : <MonitorSmartphone size={14} />}
-            {!rail && <>
-              <span>{t(`theme.${theme}`)}</span>
-              <span className="ml-auto text-[10px] font-bold text-stone-400 uppercase">{t('theme.label')}</span>
             </>}
           </button>
 

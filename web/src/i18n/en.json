@@ -1096,6 +1096,6 @@
     "label": "Theme",
     "light": "Light",
     "dark": "Dark",
-    "system": "Match phone"
+    "system": "Match device"
   }
 }

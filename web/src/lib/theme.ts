@@ -5,8 +5,8 @@
  * palette variable in theme.css takes its dark value. Nothing else needs to
  * know which theme is showing, which is the point of doing it this way.
  *
- * "System" is the default and the best answer for most people: a phone that
- * goes dark at sunset takes the till with it, and nobody has to find a
+ * "System" is the default and the best answer for most people: a phone or
+ * computer that goes dark at sunset takes the till with it, and nobody has to find a
  * setting. The explicit choices exist for the person who wants the shop
  * screen to stay put whatever the phone is doing.
  */
@@ -61,9 +61,4 @@ export function initTheme() {
   media().addEventListener('change', () => {
     if (getTheme() === 'system') apply('system');
   });
-}
-
-/** Light, dark, system, light: the order a single button steps through. */
-export function nextTheme(choice: ThemeChoice): ThemeChoice {
-  return choice === 'system' ? 'light' : choice === 'light' ? 'dark' : 'system';
 }
