@@ -273,7 +273,7 @@ export async function webhook(req: Request, res: Response) {
     req.get('x-splashpay-timestamp') ?? undefined,
   );
   if (!ok) {
-    logger.warn('SplashPay webhook rejected: bad signature');
+    logger.error('SplashPay webhook rejected: bad signature');
     return res.status(401).json({ received: false });
   }
 

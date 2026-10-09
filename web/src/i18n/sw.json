@@ -1097,5 +1097,10 @@
     "light": "Mwanga",
     "dark": "Giza",
     "system": "Fuata kifaa"
+  },
+  "crash": {
+    "title": "Kuna hitilafu kwenye skrini hii",
+    "body": "Mauzo na hisa zako ziko salama. Tatizo limeripotiwa. Kupakia upya kwa kawaida hurekebisha.",
+    "reload": "Pakia upya"
   }
 }

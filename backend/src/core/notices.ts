@@ -64,7 +64,7 @@ export async function smsPaymentReceived(
     });
     if (msg) await sendSms(phone, msg.body);
   } catch (err) {
-    logger.warn(`Payment received SMS failed for ${accountId}: ${(err as Error).message}`);
+    logger.error(`Payment received SMS failed for ${accountId}: ${(err as Error).message}`);
   }
 }
 
@@ -83,7 +83,7 @@ export async function smsPaymentFailed(
     const msg = await compose('payment_failed', 'SMS', { amount: money(args.amount) });
     if (msg) await sendSms(phone, msg.body);
   } catch (err) {
-    logger.warn(`Payment failed SMS failed for ${accountId}: ${(err as Error).message}`);
+    logger.error(`Payment failed SMS failed for ${accountId}: ${(err as Error).message}`);
   }
 }
 

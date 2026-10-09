@@ -68,7 +68,7 @@ export async function pushToShop(shopId: string, msg: PushMessage): Promise<void
     } catch (err) {
       const status = (err as { statusCode?: number }).statusCode;
       if (status === 404 || status === 410) dead.push(sub.endpoint);
-      else logger.warn(`push failed for ${sub.endpoint.slice(0, 40)}: ${(err as Error).message}`);
+      else logger.error(`push failed for ${sub.endpoint.slice(0, 40)}: ${(err as Error).message}`);
     }
   }));
 

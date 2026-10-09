@@ -1894,3 +1894,36 @@ model ReportDelivery {
   @@index([sentAt])
   @@map("report_deliveries")
 }
+
+// One kind of error, however many times it happened.
+//
+// Grouped by fingerprint, the message with its volatile parts (ids, numbers)
+// stripped, so a failure that repeats five hundred times is one row with a
+// count of 500 rather than five hundred rows. That keeps the table small and
+// keeps the list readable: what an operator needs is "what is breaking, how
+// often, since when", not every occurrence.
+model ErrorLog {
+  id          String   @id @default(cuid())
+  fingerprint String   @unique
+  // The most recent occurrence's text, with phone numbers, emails and tokens
+  // masked before it is stored.
+  message     String
+  stack       String?
+  count       Int      @default(1)
+  firstAt     DateTime @default(now())
+  lastAt      DateTime @default(now())
+
+  @@index([lastAt])
+  @@map("error_logs")
+}
+
+// Platform-wide settings an operator changes from the admin portal, rather
+// than by redeploying with a new environment variable.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("app_settings")
+}

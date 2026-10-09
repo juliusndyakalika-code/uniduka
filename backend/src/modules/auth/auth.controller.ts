@@ -75,7 +75,7 @@ export async function register(req: Request, res: Response, next: NextFunction) 
     if (phone) {
       void gateSend(phone, 'verify')
         .then((gate) => (gate.allowed ? sendOtp(phone) : false))
-        .catch((err) => logger.warn(`Registration phone code failed: ${(err as Error).message}`));
+        .catch((err) => logger.error(`Registration phone code failed: ${(err as Error).message}`));
     }
 
     const accessToken = signAccess({ sub: user.id, accountId: account.id, role: user.role });

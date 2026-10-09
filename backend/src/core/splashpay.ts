@@ -101,7 +101,7 @@ export async function initiateMobileMoney(args: InitiateArgs): Promise<InitiateR
     const d = (body.data ?? {}) as Record<string, string>;
     return { ok: true, providerReference: d.provider_reference, provider: d.provider, status: d.status };
   } catch (err) {
-    logger.warn(`SplashPay initiate failed: ${(err as Error).message}`);
+    logger.error(`SplashPay initiate failed: ${(err as Error).message}`);
     return { ok: false, code: 'NETWORK', message: 'Could not reach the payment service. Try again.' };
   }
 }
@@ -160,7 +160,7 @@ export async function cancelPayment(reference: string): Promise<{
     if (res.ok && body?.status === 'success') return { cancelled: true, tooLate: false, code };
     return { cancelled: false, tooLate: code === 'PAYMENT_NOT_CANCELLABLE', code };
   } catch (err) {
-    logger.warn(`SplashPay cancel failed for ${reference}: ${(err as Error).message}`);
+    logger.error(`SplashPay cancel failed for ${reference}: ${(err as Error).message}`);
     return { cancelled: false, tooLate: false };
   }
 }

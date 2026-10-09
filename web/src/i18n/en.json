@@ -1097,5 +1097,10 @@
     "light": "Light",
     "dark": "Dark",
     "system": "Match device"
+  },
+  "crash": {
+    "title": "Something went wrong on this screen",
+    "body": "Your sales and stock are safe. The problem has been reported. Reloading usually fixes it.",
+    "reload": "Reload"
   }
 }

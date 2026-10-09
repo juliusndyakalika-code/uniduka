@@ -131,7 +131,7 @@ async function stored(): Promise<Map<string, Resolved>> {
       rows.set(`${r.key}:${r.channel}:${r.language}`, { subject: r.subject ?? undefined, body: r.body });
     }
   } catch (err) {
-    logger.warn(`Templates unreadable, using defaults: ${(err as Error).message}`);
+    logger.error(`Templates unreadable, using defaults: ${(err as Error).message}`);
   }
   cache = { at: Date.now(), rows };
   return rows;

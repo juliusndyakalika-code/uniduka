@@ -87,12 +87,18 @@ async function call(path: string, body: unknown, auth = true): Promise<TextifyRe
     if (!res.ok || parsed.success === false) {
       // The message is Textify's own and safe to log; the body is not echoed in
       // full because a failed /otps call carries the recipient's number.
-      logger.warn(`Textify ${path} failed: ${res.status} ${parsed.message ?? parsed.error ?? 'no detail'}`);
+      // An error, not a warning: a refused message is a customer who did not
+      // get their code or their reminder. Logged at warn this sat invisible
+      // in raw output while resets and the sender-name change both failed.
+      // /otps/verify is the exception, since a wrong code typed by a person
+      // is their mistake rather than ours.
+      const line = `Textify ${path} failed: ${res.status} ${parsed.message ?? parsed.error ?? 'no detail'}`;
+      if (path === '/otps/verify') logger.warn(line); else logger.error(line);
       return parsed.success === false ? parsed : null;
     }
     return parsed;
   } catch (err) {
-    logger.warn(`Textify ${path} unreachable: ${(err as Error).message}`);
+    logger.error(`Textify ${path} unreachable: ${(err as Error).message}`);
     return null;
   }
 }

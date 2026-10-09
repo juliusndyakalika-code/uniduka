@@ -5,10 +5,13 @@ import './index.css';
 import './i18n';
 import { initRipple } from './utils/ripple';
 import { initTheme } from './lib/theme';
+import { installErrorReporting } from './lib/reportError';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import App from './App';
 
 // Before anything renders, so a dark-mode user never sees a light frame.
 initTheme();
+installErrorReporting();
 initRipple();
 
 const queryClient = new QueryClient({
@@ -18,7 +21,9 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </QueryClientProvider>
   </StrictMode>
 );

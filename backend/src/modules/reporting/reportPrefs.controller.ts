@@ -174,7 +174,7 @@ export async function sendTestReport(req: AuthRequest, res: Response) {
   }).catch(() => { /* the record is for accounting, not for the send */ });
 
   if (!ok) {
-    logger.warn(`Test report failed for shop ${id}`);
+    logger.error(`Test report failed for shop ${id}`);
     return R.serverError(res, 'The gateway would not take the message. Check the sender name is approved and the account has balance.');
   }
 

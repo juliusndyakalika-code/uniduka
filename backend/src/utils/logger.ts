@@ -1,4 +1,5 @@
 import winston from 'winston';
+import { ErrorLogTransport } from '../core/errorLog';
 
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -15,5 +16,8 @@ export const logger = winston.createLogger({
   ),
   transports: [
     new winston.transports.Console(),
+    // Error-level lines also go to error_logs for the admin portal's error
+    // page. See core/errorLog for why it buffers and masks.
+    new ErrorLogTransport(),
   ],
 });

@@ -9,6 +9,8 @@ import {
   getTemplates, updateTemplate, resetTemplate, previewTemplate,
 } from './config.controller';
 
+import { listErrors, setRetention, dismissError } from './errors.controller';
+
 const router = Router();
 
 // Every platform route requires authentication + PLATFORM_ADMIN role
@@ -16,6 +18,11 @@ router.use(authenticate, authorize('PLATFORM_ADMIN'));
 
 router.get('/metrics',          getMetrics);
 router.get('/monitor',          getMonitor);
+
+// Errors, grouped and masked, and how long they are kept.
+router.get   ('/errors',            listErrors);
+router.patch ('/errors/retention',  setRetention);
+router.delete('/errors/:id',        dismissError);
 
 router.get('/accounts',         listAccounts);
 router.post('/accounts',        createAccount);

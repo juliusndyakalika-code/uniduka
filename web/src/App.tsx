@@ -79,6 +79,7 @@ const PlatformUsers        = lazy(() => import('./pages/platform/PlatformUsers')
 const PlatformMonitor      = lazy(() => import('./pages/platform/PlatformMonitor'));
 const PlatformPlans        = lazy(() => import('./pages/platform/PlatformPlans'));
 const PlatformTemplates    = lazy(() => import('./pages/platform/PlatformTemplates'));
+const PlatformErrors       = lazy(() => import('./pages/platform/PlatformErrors'));
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -129,6 +130,7 @@ export default function App() {
               <Route path="/platform/plans"        element={<PlatformPlans />} />
               <Route path="/platform/messages"     element={<PlatformTemplates />} />
               <Route path="/platform/monitor"      element={<PlatformMonitor />} />
+              <Route path="/platform/errors"       element={<PlatformErrors />} />
             </Route>
           </Route>
 

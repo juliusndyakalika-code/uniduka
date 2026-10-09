@@ -32,7 +32,9 @@ import loyaltyRoutes    from './modules/loyalty/loyalty.routes';
 import apptRoutes       from './modules/appointments/appointments.routes';
 import reportingRoutes  from './modules/reporting/reporting.routes';
 import usersRoutes      from './modules/users/users.routes';
+import { startErrorLogRetention, flushErrorLogs } from './core/errorLog';
 import searchRoutes from './modules/search/search.routes';
+import clientErrorRoutes from './modules/telemetry/clientErrors';
 import kdsRoutes        from './modules/kds/kds.routes';
 import webhookRoutes    from './modules/webhooks/webhooks.routes';
 import platformRoutes   from './modules/platform/platform.routes';
@@ -126,6 +128,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', { stream: { write: (m) => logger.http(m.trim()) } }));
 
 // ── Routes ────────────────────────────────────────────────────────────────────
+// Any response that ends in a 5xx is an error, whether or not the code that
+// produced it remembered to log. Most do, through the error handler below,
+// which marks the response so it is not recorded twice. The rest, a
+// controller returning R.serverError directly, would otherwise reach the
+// customer as a failure and leave no trace.
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    if (res.statusCode >= 500 && !res.locals.errorLogged) {
+      logger.error(`${req.method} ${req.originalUrl.split('?')[0]} returned ${res.statusCode}`);
+    }
+  });
+  next();
+});
+
 const v1 = '/api/v1';
 app.use(`${v1}/auth`,       asyncRoutes(authRoutes));
 app.use(`${v1}/tenant`,     asyncRoutes(tenantRoutes));
@@ -147,6 +163,8 @@ app.use(`${v1}/reporting`,    subscriptionGate, asyncRoutes(reportingRoutes));
 app.use(`${v1}/users`,        subscriptionGate, asyncRoutes(usersRoutes));
 app.use(`${v1}/kds`,          subscriptionGate, asyncRoutes(kdsRoutes));
 app.use(`${v1}/search`,       subscriptionGate, asyncRoutes(searchRoutes));
+// Not behind the subscription gate: an expired account's broken screen is still worth knowing about.
+app.use(`${v1}/client-errors`, asyncRoutes(clientErrorRoutes));
 app.use(`${v1}/webhooks`,     asyncRoutes(webhookRoutes));
 app.use(`${v1}/platform`,     asyncRoutes(platformRoutes));
 app.use(`${v1}/consignment`,  subscriptionGate, asyncRoutes(consignmentRoutes));
@@ -185,6 +203,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   }
 
   logger.error(`Unhandled error: ${err.stack || err.message}`);
+  res.locals.errorLogged = true;
   res.status(500).json({
     success: false,
     message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
@@ -201,8 +220,13 @@ installSocketAuth(io);
 const PORT = process.env.PORT || 3000;
 
 process.on('uncaughtException', (err) => {
-  console.error('Uncaught exception:', err);
-  process.exit(1);
+  // Through the logger, so a crash reaches the admin portal's error page, and
+  // flushed before exiting, because the error log buffers for ten seconds and
+  // a crash is the one error that must not be lost in that window. Capped at
+  // two seconds so a dead database cannot hold the process open.
+  logger.error(`Uncaught exception: ${err.stack || err.message}`);
+  void Promise.race([flushErrorLogs(), new Promise(r => setTimeout(r, 2000))])
+    .finally(() => process.exit(1));
 });
 process.on('unhandledRejection', (reason) => {
   // Deliberately does not exit. Handlers are wrapped by asyncRoutes, so a
@@ -219,6 +243,7 @@ process.on('unhandledRejection', (reason) => {
     logger.info(`MauzoHalisi API listening on :${PORT}`);
     startNoticeScheduler();
     startReportScheduler();
+    startErrorLogRetention();
   });
 })();
 

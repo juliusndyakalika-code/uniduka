@@ -118,7 +118,7 @@ async function sendOne(
       return;
     } catch (err) {
       // Falls through to SMS rather than losing the report.
-      logger.warn(`Report push failed for shop ${shop.id}, falling back to SMS: ${(err as Error).message}`);
+      logger.error(`Report push failed for shop ${shop.id}, falling back to SMS: ${(err as Error).message}`);
     }
   }
 

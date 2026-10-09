@@ -27,7 +27,7 @@ function store(prefix: string) {
       sendCommand: (...args: string[]) => redis.call(...(args as [string, ...string[]])) as Promise<never>,
     });
   } catch (err) {
-    logger.warn(`Rate limiter falling back to memory: ${(err as Error).message}`);
+    logger.error(`Rate limiter falling back to memory: ${(err as Error).message}`);
     return undefined;
   }
 }
@@ -60,6 +60,17 @@ function make(opts: Partial<Options> & { prefix: string; max: number; windowMs: 
     skipSuccessfulRequests: opts.skipSuccessfulRequests,
   });
 }
+
+/**
+ * Browser error reports. Keyed on the signed-in user, so one broken tab in a
+ * render loop cannot fill the error log, and a person gets enough reports
+ * through to show what went wrong.
+ */
+export const clientErrorLimiter = make({
+  prefix: 'rl:clienterr:', windowMs: 60_000, max: 20,
+  message: 'Too many error reports',
+  keyGenerator: (req) => (req as Request & { user?: { sub?: string } }).user?.sub ?? req.ip ?? 'anon',
+});
 
 /** The broad ceiling on everything, kept generous. */
 export const globalLimiter = make({
@@ -135,7 +146,7 @@ export async function recordLoginFailure(username: string): Promise<void> {
       void notifyLockout(username);
     }
   } catch (err) {
-    logger.warn(`Could not record login failure: ${(err as Error).message}`);
+    logger.error(`Could not record login failure: ${(err as Error).message}`);
   }
 }
 
@@ -173,6 +184,6 @@ async function notifyLockout(username: string): Promise<void> {
       'MauzoHalisi: too many failed sign-in attempts on your account. ' +
       'It is locked for 15 minutes. If this was not you, change your password.');
   } catch (err) {
-    logger.warn(`Lockout notice failed: ${(err as Error).message}`);
+    logger.error(`Lockout notice failed: ${(err as Error).message}`);
   }
 }

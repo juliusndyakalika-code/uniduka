@@ -1,10 +1,12 @@
 import { NavLink, useNavigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Building2, Store, Users, LogOut, ShieldCheck, Activity, CreditCard, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Building2, Store, Users, LogOut, ShieldCheck, Activity, CreditCard, MessageSquare, AlertOctagon } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 function NavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
   return (
-    <NavLink to={to}
+    // `end` on the overview only: /platform is a prefix of every admin page,
+    // so without it Overview stayed highlighted wherever you were.
+    <NavLink to={to} end={to === '/platform'}
       className={({ isActive }) => isActive ? 'nav-item-active' : 'nav-item'}
     >
       {icon}
@@ -41,6 +43,7 @@ export default function PlatformLayout() {
           <NavItem to="/platform/shops"    icon={<Store size={15} />}           label="All Shops" />
           <NavItem to="/platform/users"    icon={<Users size={15} />}           label="All Users" />
           <NavItem to="/platform/monitor"  icon={<Activity size={15} />}        label="Monitor" />
+          <NavItem to="/platform/errors"   icon={<AlertOctagon size={15} />}    label="Errors" />
           <NavItem to="/platform/plans"    icon={<CreditCard size={15} />}      label="Plans & Pricing" />
           <NavItem to="/platform/messages" icon={<MessageSquare size={15} />}   label="Customer Messages" />
         </nav>

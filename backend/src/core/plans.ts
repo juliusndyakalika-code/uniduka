@@ -181,7 +181,7 @@ export async function getPlans(): Promise<Record<PlanKey, PlanView>> {
   } catch (err) {
     // A database hiccup must not make every plan look unlimited, nor take down
     // the checks that depend on this. The compiled defaults stand in.
-    logger.warn(`Plan config unreadable, using compiled defaults: ${(err as Error).message}`);
+    logger.error(`Plan config unreadable, using compiled defaults: ${(err as Error).message}`);
   }
 
   cache = { at: Date.now(), plans };
