@@ -31,6 +31,23 @@ function lsSet(key: string, val: string) {
   try { localStorage.setItem(key, val); } catch {}
 }
 
+/**
+ * Requests where a 401 is an answer about the credentials, not about the
+ * session. For these "unauthorised" means "wrong password" or "wrong code",
+ * and there is no session to refresh.
+ *
+ * Without this list a failed sign-in went through the refresh path, the
+ * refresh failed too (there was no session yet), and the person typing a
+ * wrong password was told "Session expired. Please sign in again", the
+ * refresh endpoint's message instead of their own.
+ */
+const CREDENTIAL_ROUTES = [
+  '/auth/login', '/auth/refresh', '/auth/register',
+  '/auth/password/forgot', '/auth/password/reset', '/auth/2fa',
+];
+const isCredentialRoute = (url?: string) =>
+  !!url && CREDENTIAL_ROUTES.some(r => url === r || url.startsWith(r + '/') || url.endsWith(r));
+
 api.interceptors.response.use(
   (r) => r,
   async (err) => {
@@ -54,7 +71,7 @@ api.interceptors.response.use(
     }
 
     // ── Token expired — attempt silent refresh ────────────────────────────────
-    if (status === 401 && !original._retry) {
+    if (status === 401 && !original._retry && !isCredentialRoute(original.url)) {
       // No local check for a stored refresh token any more: it lives in an
       // httpOnly cookie that script cannot see. Whether one exists is the
       // server's answer to give, and a failed refresh is what tells us.
