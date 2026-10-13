@@ -13,6 +13,7 @@
     "db:seed": "ts-node --transpile-only prisma/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
     "@prisma/client": "^5.14.0",
     "@types/cookie-parser": "^1.4.10",
     "bcryptjs": "^2.4.3",
@@ -39,7 +40,8 @@
     "uuid": "^9.0.1",
     "web-push": "^3.6.7",
     "winston": "^3.13.0",
-    "xss": "^1.0.15"
+    "xss": "^1.0.15",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

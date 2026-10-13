@@ -8,7 +8,8 @@ import {
   listRecipes, getRecipe, createRecipe, updateRecipe,
   getExpiryAlerts,
 } from './inventory.controller';
-import { authenticate, requireShop } from '../../middleware/auth';
+import { authenticate, authorize, requireShop } from '../../middleware/auth';
+import { getForecast, draftReorder, scanStatus, scanInvoice, applyInvoice } from './smart.controller';
 
 const router = Router();
 router.use(authenticate, requireShop);
@@ -21,6 +22,14 @@ const upload = multer({
     else cb(new Error('Only CSV files are accepted'));
   },
 });
+
+// Forecast and invoice scanning
+const stockRoles = authorize('ACCOUNT_OWNER', 'INVENTORY_STAFF');
+router.get('/forecast',                 getForecast);
+router.post('/forecast/reorder',        stockRoles, draftReorder);
+router.get('/invoice-scan',             stockRoles, scanStatus);
+router.post('/invoice-scan',            stockRoles, scanInvoice);
+router.post('/invoice-scan/apply',      stockRoles, applyInvoice);
 
 // Dashboard
 router.get('/dashboard',              getInventoryDashboard);

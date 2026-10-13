@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/authStore';
 import CameraScanner from '../../components/CameraScanner';
 import { TablePagination } from '../../components/ui/DataTable';
 import { PageLoader } from '../../components/ui/Loader';
+import InvoiceScanModal from '../../components/inventory/InvoiceScanModal';
 
 interface Product {
   id: string; name: string; sku: string; barcode?: string;
@@ -356,6 +357,7 @@ export default function ProductsPage() {
   const [pageSize, setPageSize]   = useState(50);
   const [showForm, setShowForm]   = useState(false);
   const [showImport, setShowImport]           = useState(false);
+  const [showScan, setShowScan]               = useState(false);
   const [showShipmentImport, setShowShipmentImport] = useState(false);
   const [showImportHistory, setShowImportHistory] = useState(false);
   const [editing, setEditing]     = useState<Product | null>(null);
@@ -563,12 +565,16 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-4">
+      {showScan && <InvoiceScanModal onClose={() => setShowScan(false)} />}
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('products.title')}</h1>
           <p className="page-subtitle">{t('products.subtitle', { count: data?.total ?? 0 })}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button className="btn-secondary" onClick={() => setShowScan(true)} title={t('invoiceScan.title')}>
+            <ScanLine size={14} /> <span className="hidden sm:inline">{t('invoiceScan.title')}</span>
+          </button>
           <button className="btn-secondary" onClick={openImport} title={t('products.importCsv')}>
             <Upload size={14} /> <span className="hidden sm:inline">{t('products.importCsv')}</span>
           </button>

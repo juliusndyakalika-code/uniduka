@@ -6,6 +6,7 @@ import {
   AlertCircle, Check, Clock, CreditCard, Inbox, Loader2, PackageX,
 } from 'lucide-react';
 import api from '../../api/client';
+import ReorderSheet from '../inventory/ReorderSheet';
 import { useAuthStore } from '../../store/authStore';
 
 /**
@@ -21,7 +22,7 @@ import { useAuthStore } from '../../store/authStore';
 interface Attention {
   currency: string;
   orders: { count: number; oldestAt: string } | null;
-  lowStock: { count: number; items: { name: string; quantity: number }[] } | null;
+  lowStock: { count: number; orderable?: number; items: { name: string; quantity: number; daysLeft?: number | null }[] } | null;
   debts: {
     count: number; total: number; remindable: number; smsReady: boolean;
     top: { name: string; amount: number }[];
@@ -42,6 +43,7 @@ export default function NeedsYou() {
   const qc = useQueryClient();
   const { shopId, user } = useAuthStore();
   const [confirming, setConfirming] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   const { data } = useQuery<{ data: Attention }>({
     queryKey: ['attention', shopId],
@@ -64,11 +66,14 @@ export default function NeedsYou() {
   const rows = [a.orders, a.lowStock, a.debts, a.subscription].filter(Boolean).length;
   if (!rows) return null;
 
+  const canOrder = user?.role === 'ACCOUNT_OWNER' || user?.role === 'INVENTORY_STAFF';
+
   const minutesAgo = (iso: string) =>
     Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
 
   return (
     <div className="card p-5 sm:p-6">
+      {reordering && <ReorderSheet currency={a.currency} onClose={() => setReordering(false)} />}
       <div className="mb-4 flex items-baseline gap-2">
         <h3 className="text-sm font-bold text-stone-900">{t('needs.title')}</h3>
         <span className="text-xs text-stone-400">{t('needs.count', { count: rows })}</span>
@@ -93,13 +98,19 @@ export default function NeedsYou() {
             icon={<PackageX size={15} />}
             title={t('needs.lowStock', { count: a.lowStock.count })}
             detail={a.lowStock.items
-              .map(i => t('needs.lowStockItem', { name: i.name, qty: i.quantity }))
+              .map(i => i.daysLeft != null
+                ? t('needs.lowStockDays', { name: i.name, count: i.daysLeft })
+                : t('needs.lowStockItem', { name: i.name, qty: i.quantity }))
               .join(', ')
               + (a.lowStock.count > a.lowStock.items.length
                 ? t('needs.andMore', { count: a.lowStock.count - a.lowStock.items.length })
                 : '')}
             action={t('needs.reorder')}
-            onAction={() => navigate('/inventory/products')}
+            // A ready order when the forecast has one and this person may raise
+            // it; otherwise the product list, as before.
+            onAction={() => a.lowStock!.orderable && canOrder
+              ? setReordering(true)
+              : navigate('/inventory/products')}
           />
         )}
 

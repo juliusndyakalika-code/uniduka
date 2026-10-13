@@ -1060,7 +1060,10 @@
     "planRenews_one": "Plan renews tomorrow",
     "planEnded": "Your plan has ended",
     "payNow": "Pay now",
-    "planPrice": "{{plan}} · {{amount}} / month"
+    "planPrice": "{{plan}} · {{amount}} / month",
+    "lowStockDays": "{{name}} (out in {{count}} days)",
+    "lowStockDays_one": "{{name}} (out tomorrow)",
+    "lowStockDays_zero": "{{name}} (out today)"
   },
   "search": {
     "title": "Search",
@@ -1102,5 +1105,42 @@
     "title": "Something went wrong on this screen",
     "body": "Your sales and stock are safe. The problem has been reported. Reloading usually fixes it.",
     "reload": "Reload"
+  },
+  "reorder": {
+    "title": "Reorder from sales",
+    "basis": "Based on the last {{window}} days of sales. Covers {{lead}} days for delivery plus {{cover}} days after.",
+    "working": "{{stock}} in stock · {{rate}} sold a day · {{days}} days left",
+    "none": "Nothing needs ordering right now.",
+    "summary": "{{count}} products",
+    "summary_one": "1 product",
+    "create": "Create draft orders",
+    "failed": "Could not create the orders. Try again."
+  },
+  "invoiceScan": {
+    "title": "Scan invoice",
+    "hint": "Photograph a supplier invoice. You check every line before anything goes into stock.",
+    "take": "Take or choose photo",
+    "reading": "Reading the invoice…",
+    "left": "{{count}} scans left today",
+    "left_one": "1 scan left today",
+    "unavailable": "Invoice scanning is not switched on yet.",
+    "supplier": "Supplier",
+    "invoiceNo": "Invoice no.",
+    "item": "On the invoice",
+    "product": "Your product",
+    "qty": "Qty",
+    "cost": "Unit cost",
+    "pick": "Choose product…",
+    "skip": "Skip this line",
+    "newProduct": "Add as new product",
+    "unsure": "Hard to read, check it",
+    "derived": "Worked out from the line total",
+    "apply": "Add {{count}} lines to stock",
+    "apply_one": "Add 1 line to stock",
+    "applied": "{{count}} lines added to stock.",
+    "applied_one": "1 line added to stock.",
+    "again": "Scan another",
+    "failed": "Could not add the stock. Nothing was changed.",
+    "creating": "Adding new products…"
   }
 }

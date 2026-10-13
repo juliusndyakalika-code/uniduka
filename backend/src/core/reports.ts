@@ -1,5 +1,7 @@
 import { prisma } from './prisma';
 import { logger } from '../utils/logger';
+import { toGsm } from './gsm';
+export { smsParts } from './gsm';
 
 /**
  * The periodic business report: what a shop sold, earned, and holds in stock.
@@ -135,11 +137,14 @@ export function composeReport(
   // The shop name is the only unbounded part, so it is the part that is cut.
   // Everything else has a known ceiling, which is what keeps the whole message
   // inside one billed part.
-  const name = shopName.length > 24 ? shopName.slice(0, 23) + '…' : shopName;
+  // Sanitised first: one curly apostrophe in a shop name would switch the
+  // whole message to UCS-2 and triple what it costs.
+  const clean = toGsm(shopName).trim() || 'Shop';
+  const name = clean.length > 24 ? clean.slice(0, 22) + '..' : clean;
 
   return [
     heading,
-    `${name} · ${label}`,
+    `${name} - ${label}`,
     `Sales ${shortMoney(m.revenue)}`,
     `Profit ${shortMoney(m.netProfit)}`,
     `Receipts ${m.transactions}`,
@@ -155,8 +160,6 @@ const PERIOD_WORD: Record<Period, string> = {
   yearly:    'Annual',
 };
 
-/** Billed SMS parts for a message. */
-export const smsParts = (body: string) => Math.max(1, Math.ceil(body.length / 160));
 
 // ─── PERIOD BOUNDARIES ───────────────────────────────────────────────────────
 

@@ -1060,7 +1060,10 @@
     "planRenews_one": "Mpango unaisha kesho",
     "planEnded": "Mpango wako umeisha",
     "payNow": "Lipa sasa",
-    "planPrice": "{{plan}} · {{amount}} / mwezi"
+    "planPrice": "{{plan}} · {{amount}} / mwezi",
+    "lowStockDays": "{{name}} (itaisha ndani ya siku {{count}})",
+    "lowStockDays_one": "{{name}} (itaisha kesho)",
+    "lowStockDays_zero": "{{name}} (itaisha leo)"
   },
   "search": {
     "title": "Tafuta",
@@ -1102,5 +1105,42 @@
     "title": "Kuna hitilafu kwenye skrini hii",
     "body": "Mauzo na hisa zako ziko salama. Tatizo limeripotiwa. Kupakia upya kwa kawaida hurekebisha.",
     "reload": "Pakia upya"
+  },
+  "reorder": {
+    "title": "Agiza kulingana na mauzo",
+    "basis": "Kulingana na mauzo ya siku {{window}} zilizopita. Inatosha siku {{lead}} za usafirishaji na siku {{cover}} baada ya hapo.",
+    "working": "{{stock}} zipo · {{rate}} zinauzwa kwa siku · siku {{days}} zimebaki",
+    "none": "Hakuna kinachohitaji kuagizwa sasa.",
+    "summary": "Bidhaa {{count}}",
+    "summary_one": "Bidhaa 1",
+    "create": "Tengeneza rasimu za oda",
+    "failed": "Imeshindwa kutengeneza oda. Jaribu tena."
+  },
+  "invoiceScan": {
+    "title": "Soma ankara",
+    "hint": "Piga picha ya ankara ya msambazaji. Utakagua kila mstari kabla hakuna kinachoingia kwenye hisa.",
+    "take": "Piga au chagua picha",
+    "reading": "Inasoma ankara…",
+    "left": "Zimebaki skani {{count}} leo",
+    "left_one": "Imebaki skani 1 leo",
+    "unavailable": "Usomaji wa ankara bado haujawashwa.",
+    "supplier": "Msambazaji",
+    "invoiceNo": "Namba ya ankara",
+    "item": "Kwenye ankara",
+    "product": "Bidhaa yako",
+    "qty": "Idadi",
+    "cost": "Bei ya kununua",
+    "pick": "Chagua bidhaa…",
+    "skip": "Ruka mstari huu",
+    "newProduct": "Ongeza kama bidhaa mpya",
+    "unsure": "Haisomeki vizuri, ihakiki",
+    "derived": "Imehesabiwa kutoka jumla ya mstari",
+    "apply": "Ongeza mistari {{count}} kwenye hisa",
+    "apply_one": "Ongeza mstari 1 kwenye hisa",
+    "applied": "Mistari {{count}} imeongezwa kwenye hisa.",
+    "applied_one": "Mstari 1 umeongezwa kwenye hisa.",
+    "again": "Soma nyingine",
+    "failed": "Imeshindwa kuongeza hisa. Hakuna kilichobadilika.",
+    "creating": "Inaongeza bidhaa mpya…"
   }
 }

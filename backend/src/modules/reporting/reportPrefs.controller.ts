@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { prisma } from '../../core/prisma';
 import { AuthRequest } from '../../types';
 import * as R from '../../utils/response';
+import { withInsight } from '../../core/insight';
+import { aiReady } from '../../core/ai';
 import { shopMetrics, composeReport, periodRange, periodLabel, smsParts, type Period } from '../../core/reports';
 import { sendSms, smsReady } from '../../core/sms';
 import { prisma as db } from '../../core/prisma';
@@ -92,16 +94,19 @@ export async function previewReport(req: AuthRequest, res: Response) {
   });
   if (!shop) return R.notFound(res, 'Shop not found');
 
-  const { from, to } = periodRange(period, new Date(), shop.timezone);
+  const { from, to, key } = periodRange(period, new Date(), shop.timezone);
   const metrics = await shopMetrics(id, from, to);
   const label   = periodLabel(period, to, shop.timezone);
-  const body    = composeReport(shop.tradingName, period, label, metrics);
+  const body    = await withInsight(composeReport(shop.tradingName, period, label, metrics), {
+    shopId: id, period, periodKey: key, from, to, metrics,
+  });
 
   return R.ok(res, {
     period,
     covers: { from, to },
     body,
     characters: body.length,
+    ai: aiReady,
     parts: smsParts(body),
     // A quiet period is not sent at all, and the owner should know that before
     // wondering why nothing arrived.
@@ -157,12 +162,14 @@ export async function sendTestReport(req: AuthRequest, res: Response) {
     });
   }
 
-  const { from, to: periodEnd } = periodRange(period, new Date(), shop.timezone);
+  const { from, to: periodEnd, key } = periodRange(period, new Date(), shop.timezone);
   const metrics = await shopMetrics(id, from, periodEnd);
   const label   = periodLabel(period, periodEnd, shop.timezone);
   // Sent even when the period is quiet: the point is proving delivery, and a
   // test that silently sends nothing teaches the opposite of what it should.
-  const body    = composeReport(shop.tradingName, period, label, metrics);
+  const body    = await withInsight(composeReport(shop.tradingName, period, label, metrics), {
+    shopId: id, period, periodKey: key, from, to: periodEnd, metrics,
+  });
 
   const ok = await sendSms(to, body);
 

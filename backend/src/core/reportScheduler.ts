@@ -2,6 +2,7 @@ import { prisma } from './prisma';
 import { logger } from '../utils/logger';
 import { sendSms, smsReady } from './sms';
 import { pushToShop, webPushReady } from './push';
+import { withInsight } from './insight';
 import {
   shopMetrics, composeReport, periodRange, periodLabel, localHour, smsParts,
   type Period,
@@ -97,7 +98,9 @@ async function sendOne(
   }
 
   const label = periodLabel(period, to, shop.timezone);
-  const body  = composeReport(shop.tradingName, period, label, metrics);
+  const body  = await withInsight(composeReport(shop.tradingName, period, label, metrics), {
+    shopId: shop.id, period, periodKey: key, from, to, metrics,
+  });
 
   // Push is free and reaches the same person, so it is tried first and SMS is
   // only the fallback. The device check comes before the send, not after:
@@ -109,7 +112,7 @@ async function sendOne(
         // The title carries the brand and the window; the body is the same
         // text the SMS would have carried, minus its heading, which the title
         // already says.
-        title: `MauzoHalisi ${label} — ${shop.tradingName}`,
+        title: `MauzoHalisi ${label}: ${shop.tradingName}`,
         body: body.split('\n').slice(2).join('\n'),
         url: '/reports',
         tag: `report-${period}`,

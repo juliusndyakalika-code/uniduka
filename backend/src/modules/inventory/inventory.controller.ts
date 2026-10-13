@@ -634,6 +634,35 @@ export async function listStock(req: AuthRequest, res: Response) {
   return R.ok(res, items);
 }
 
+/**
+ * Books received stock: inventory row plus a PURCHASE movement.
+ *
+ * Shared by manual restock and invoice scanning so both land stock the same
+ * way. Without a batch or expiry the existing row is topped up, which keeps
+ * the POS FIFO deduction correct; tracked lots get a row of their own.
+ */
+export async function receiveStock(
+  db: Pick<typeof prisma, 'inventoryItem' | 'stockMovement'>,
+  o: { shopId: string; userId: string; productId: string; qty: number; cost: number; note: string; batchNo?: string; expiryDate?: string },
+) {
+  const existingRow = !o.batchNo && !o.expiryDate
+    ? await db.inventoryItem.findFirst({ where: { shopId: o.shopId, productId: o.productId }, orderBy: { createdAt: 'asc' } })
+    : null;
+  if (existingRow) {
+    await db.inventoryItem.update({
+      where: { id: existingRow.id },
+      data: { quantity: { increment: o.qty }, costPrice: o.cost || existingRow.costPrice },
+    });
+  } else {
+    await db.inventoryItem.create({
+      data: { shopId: o.shopId, productId: o.productId, quantity: o.qty, costPrice: o.cost, batchNo: o.batchNo, expiryDate: o.expiryDate ? new Date(o.expiryDate) : undefined },
+    });
+  }
+  await db.stockMovement.create({
+    data: { shopId: o.shopId, productId: o.productId, type: 'PURCHASE', quantity: o.qty, unitCost: o.cost, batchNo: o.batchNo, note: o.note, userId: o.userId },
+  });
+}
+
 export async function addProductStock(req: AuthRequest, res: Response) {
   const { quantity, unitCost, note, batchNo, expiryDate, updateSellPrice, newSellPrice } = req.body;
   const productId = req.params.id;
@@ -647,24 +676,9 @@ export async function addProductStock(req: AuthRequest, res: Response) {
   });
   if (!product) return R.notFound(res, 'Product not found');
 
-  // Persist inventory and movement.
-  // When no batch/expiry is specified, update the existing row so that the
-  // POS FIFO deduction stays correct. Only create a new row for tracked lots.
-  const existingRow = !batchNo && !expiryDate
-    ? await prisma.inventoryItem.findFirst({ where: { shopId: shop(req), productId }, orderBy: { createdAt: 'asc' } })
-    : null;
-  if (existingRow) {
-    await prisma.inventoryItem.update({
-      where: { id: existingRow.id },
-      data: { quantity: { increment: qty }, costPrice: cost || existingRow.costPrice },
-    });
-  } else {
-    await prisma.inventoryItem.create({
-      data: { shopId: shop(req), productId, quantity: qty, costPrice: cost, batchNo, expiryDate: expiryDate ? new Date(expiryDate) : undefined },
-    });
-  }
-  await prisma.stockMovement.create({
-    data: { shopId: shop(req), productId, type: 'PURCHASE', quantity: qty, unitCost: cost, batchNo, note: note || 'Manual restock', userId: req.user!.sub },
+  await receiveStock(prisma, {
+    shopId: shop(req), userId: req.user!.sub, productId, qty, cost, batchNo, expiryDate,
+    note: note || 'Manual restock',
   });
 
   // Optionally update selling price (and record new cost on product)

@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { stockForecast } from '../../core/forecast';
 import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import { sendSms, smsReady, toRecipient } from '../../core/sms';
@@ -94,22 +95,20 @@ async function debtors(shopId: string): Promise<Debtor[]> {
 }
 
 /** Products at or below the point where they should have been reordered. */
+/**
+ * Products that need ordering: below the owner's reorder point, or forecast
+ * to run out within the supplier lead time. The forecast catches the fast
+ * seller nobody set a reorder point on, which is the one that hurts.
+ */
 async function runningOut(shopId: string) {
-  const products = await prisma.product.findMany({
-    where: { shopId, isActive: true, trackStock: true, reorderPoint: { gt: 0 } },
-    select: {
-      id: true, name: true, reorderPoint: true,
-      inventory: { select: { quantity: true } },
-    },
-  });
-  return products
-    .map(p => ({
-      id: p.id, name: p.name,
-      quantity: p.inventory.reduce((s, i) => s + i.quantity, 0),
-      reorderPoint: p.reorderPoint,
-    }))
-    .filter(p => p.quantity <= p.reorderPoint)
-    .sort((a, b) => a.quantity - b.quantity);
+  const rows = await stockForecast(shopId);
+  return rows
+    .filter(r => r.urgent)
+    .map(r => ({
+      id: r.productId, name: r.name, quantity: r.stock,
+      daysLeft: r.daysLeft === null ? null : Math.floor(r.daysLeft),
+      orderable: r.suggestedQty > 0,
+    }));
 }
 
 export async function needsAttention(req: AuthRequest, res: Response) {
@@ -156,7 +155,11 @@ export async function needsAttention(req: AuthRequest, res: Response) {
       ? { count: orders.length, oldestAt: orders[0].createdAt }
       : null,
     lowStock: low.length
-      ? { count: low.length, items: low.slice(0, 3).map(p => ({ name: p.name, quantity: p.quantity })) }
+      ? {
+          count: low.length,
+          orderable: low.filter(p => p.orderable).length,
+          items: low.slice(0, 3).map(p => ({ name: p.name, quantity: p.quantity, daysLeft: p.daysLeft })),
+        }
       : null,
     debts: owed.length
       ? {
