@@ -624,7 +624,7 @@
       "title1": "Endesha biashara yako",
       "title2": "kwa uhakika zaidi",
       "title3": "kila siku.",
-      "subtitle": "MauzoHalisi inafaa maduka ya reja reja, migahawa, famasi, saluni na zaidi. Risiti za kodi, stoo ya wakati halisi, na POS kamili ya Android, vyote tangu siku ya kwanza.",
+      "subtitle": "Maduka ya rejareja, migahawa, maduka ya dawa, saluni, nyumba za wageni na zaidi. Risiti za kodi, hisa papo hapo, ripoti za biashara kwa SMS na orodha ya yanayokuhitaji leo, tangu siku ya kwanza.",
       "ctaPrimary": "Jaribu Bure",
       "ctaSecondary": "Ingia",
       "trial": "Siku 30 bure",
@@ -663,7 +663,15 @@
       "branchT": "Maduka Mengi, Akaunti Moja",
       "branchD": "Matawi, uhamisho, na ripoti kwa kila duka. Badilisha kati yao kwa sekunde.",
       "staffT": "Wafanyakazi wa Kuaminika",
-      "staffD": "Mpe kila mtu akaunti yake. Keshia anaona mauzo tu, si faida wala ripoti zako."
+      "staffD": "Mpe kila mtu akaunti yake. Keshia anaona mauzo tu, si faida wala ripoti zako.",
+      "needsT": "Inakuhitaji",
+      "needsD": "Orodha moja ya yanayokusubiri: oda za kukubali, hisa ya kuagiza, madeni ya kufuatilia. Kila moja na kitufe chake.",
+      "forecastT": "Jua Kabla Haijaisha",
+      "forecastD": "Siku za hisa zilizobaki kwa kila bidhaa, kulingana na kinachouzwa kweli, na rasimu ya oda kwa kila msambazaji.",
+      "scanT": "Soma Ankara za Wasambazaji",
+      "scanD": "Piga picha ya ankara ya mzigo na mistari inasomwa kwa ajili yako. Ihakiki, ilinganishe, na hisa na gharama zinasasishwa.",
+      "smsT": "Ripoti kwa SMS",
+      "smsD": "Mauzo, faida, risiti na hisa zinatumwa kwenye simu yako kila siku, wiki au mwezi, pamoja na dokezo moja la kufanya."
     },
     "inventory": {
       "eyebrow": "Usimamizi wa Stoo",
@@ -671,9 +679,9 @@
       "body": "Fuatilia kila kipande katika bidhaa zako zote. Chini ya jedwali kuna jumla za papo hapo za unachotafuta. Tahadhari hubadilika manjano bidhaa inapofika kiwango cha kuagiza tena, na nyekundu inapoisha.",
       "p1": "Gharama ya wastani inasasishwa kila unapoongeza mzigo",
       "p2": "Kusoma barcode kwa kifaa au kamera",
-      "p3": "Kupakia kwa CSV na kupokea mzigo kwa jina, SKU au barcode",
+      "p3": "Kuingiza kwa CSV, kupokea mzigo, au picha ya ankara ya msambazaji",
       "p4": "Kuingiza kwa katoni nzima",
-      "p5": "Hesabu za stoo ndogo na iliyoisha zinaonekana juu kila wakati"
+      "p5": "Siku za hisa zilizobaki kwa kila bidhaa, ili uagize kabla haijaisha"
     },
     "pos": {
       "eyebrow": "Mauzo (POS)",
@@ -683,7 +691,7 @@
       "p2": "Uza juu ya bei iliyowekwa kwa makubaliano",
       "p3": "Risiti inachapishwa kiotomatiki kila mauzo",
       "p4": "Futa au rudisha muamala wowote kwa mguso mmoja",
-      "p5": "Ufuatiliaji wa madeni ya wateja"
+      "p5": "Kitufe cha Mauzo Mapya kipo karibu kwenye kila skrini, kwenye wavuti na Android"
     },
     "who": {
       "eyebrow": "Aina za Biashara",
@@ -715,7 +723,7 @@
       "s1T": "Sajili biashara yako",
       "s1D": "Jisajili na uchague aina ya biashara. MauzoHalisi inaandaa mipangilio sahihi kwa ajili yako.",
       "s2T": "Andaa duka lako",
-      "s2D": "Ongeza bidhaa, weka bei, na ingiza TIN yako. Pakia stoo kwa CSV au pokea mzigo. Timu yako inaweza kuanza ndani ya saa moja.",
+      "s2D": "Ongeza bidhaa zako, weka bei na TIN yako. Ingiza hisa kwa CSV, pokea mzigo, au piga picha ya ankara ya msambazaji. Timu yako inaweza kuanza kuuza ndani ya saa moja.",
       "s3T": "Anza kuuza",
       "s3D": "Fungua POS na uanze. Stoo inajisasisha, ripoti zinajijaza, na kila mauzo yanachapisha risiti."
     },
@@ -800,7 +808,8 @@
       "h1": "Fungua Chrome na uende kwenye kiungo cha MauzoHalisi",
       "h2": "Gusa menyu ya nukta tatu kona ya juu kulia",
       "h3": "Gusa \"Add to Home screen\" kisha \"Add\"",
-      "h4": "Aikoni ya MauzoHalisi itaonekana kwenye skrini yako"
+      "h4": "Aikoni ya MauzoHalisi itaonekana kwenye skrini yako",
+      "p6": "Mandhari ya mwanga au giza, kufuata simu yako au chaguo lako"
     },
     "cta": {
       "badge": "Jiunge na biashara kote Tanzania",
@@ -833,7 +842,8 @@
       "i3": "Mgahawa na Kahawa",
       "i4": "Saluni na Spa",
       "features": "Vipengele",
-      "pricing": "Bei"
+      "pricing": "Bei",
+      "manual": "Mwongozo wa matumizi"
     },
     "mock": {
       "dashboard": "Dashibodi",
@@ -889,7 +899,31 @@
       "n6": "Sukari 1kg",
       "uEa": "kip",
       "uKg": "kg",
-      "uBtl": "chu"
+      "uBtl": "chu",
+      "needsYou": "Inakuhitaji",
+      "needsCount": "Mambo 3",
+      "needOrders": "Oda 2 za mtandaoni zinasubiri",
+      "needOrdersD": "Ya zamani zaidi dakika 12 zilizopita",
+      "review": "Kagua",
+      "needStock": "Bidhaa 3 zinakaribia kuisha",
+      "needStockD": "Sukari 1kg (itaisha siku 3), Mafuta 1L",
+      "reorder": "Agiza tena",
+      "needDebts": "Wateja 4 wanakudai",
+      "needDebtsD": "TZS 186,000 hazijalipwa",
+      "viewDebts": "Ona madeni",
+      "smsShop": "Duka la Mama Asha",
+      "smsTip": "Mauzo yamepanda 12%; agiza Sukari 1kg kabla ya siku 3.",
+      "smsParts": "SMS 1. Dokezo linaongezwa tu likitosha."
+    },
+    "smart": {
+      "eyebrow": "Inakufanyia Kazi",
+      "title": "Duka lako linakuambia la kufanya",
+      "body": "Hupaswi kuchimba ripoti ili kujua kinachohitaji kushughulikiwa. MauzoHalisi inakiweka mbele yako, pamoja na takwimu zake na kitufe cha kuchukua hatua.",
+      "p1": "Inakuhitaji: oda zinazosubiri, bidhaa zinazokaribia kuisha na wateja wanaokudai, kwenye orodha moja",
+      "p2": "Utabiri wa hisa kutoka mauzo ya wiki nne zilizopita, na oda iko tayari kutumwa",
+      "p3": "Piga picha ya ankara ya msambazaji iwe ingizo la hisa unaloidhinisha mstari kwa mstari",
+      "p4": "Ripoti ya biashara kwa SMS, inayotosha ujumbe mmoja, ikimalizia na dokezo moja la vitendo",
+      "p5": "Kila takwimu inatoka kwenye kumbukumbu zako. Hakuna kinachokisiwa"
     }
   },
   "loans": {

@@ -624,7 +624,7 @@
       "title1": "Run your business",
       "title2": "smarter, faster",
       "title3": "every single day.",
-      "subtitle": "MauzoHalisi covers retail, restaurants, pharmacies, salons and more. Tax receipts, real-time inventory, and a full Android POS are included from day one.",
+      "subtitle": "Retail, restaurants, pharmacies, salons, guesthouses and more. Tax receipts, live stock, SMS business reports and a list of what needs you today, from day one.",
       "ctaPrimary": "Start Free Trial",
       "ctaSecondary": "Sign In",
       "trial": "30-day free trial",
@@ -663,7 +663,15 @@
       "branchT": "Many Shops, One Account",
       "branchD": "Branches, transfers and per-shop reporting. Switch between them in seconds.",
       "staffT": "Staff You Can Trust",
-      "staffD": "Give each person their own login. Cashiers see the till, not your margins or your reports."
+      "staffD": "Give each person their own login. Cashiers see the till, not your margins or your reports.",
+      "needsT": "Needs You",
+      "needsD": "One list of what is waiting on you: orders to accept, stock to reorder, debts to chase. Each with the button that settles it.",
+      "forecastT": "Know Before You Run Out",
+      "forecastD": "Days of stock left for every product, worked out from what actually sells, and a draft order ready per supplier.",
+      "scanT": "Scan Supplier Invoices",
+      "scanD": "Photograph a delivery invoice and the lines are read for you. Check them, match them, and stock and costs update.",
+      "smsT": "Reports by SMS",
+      "smsD": "Sales, profit, receipts and stock sent to your phone daily, weekly or monthly, with one tip on what to do next."
     },
     "inventory": {
       "eyebrow": "Inventory Management",
@@ -671,9 +679,9 @@
       "body": "Track every unit across all your products. The table footer shows live totals for whatever you are searching. Stock alerts turn amber when a product hits its reorder point and red when it runs out.",
       "p1": "Weighted average cost pricing updated on every restock",
       "p2": "Barcode scanning with a physical scanner or camera",
-      "p3": "CSV bulk import and shipment receiving by name, SKU, or barcode",
+      "p3": "CSV import, shipment receiving, or a photo of the supplier invoice",
       "p4": "Box-quantity entry for carton deliveries",
-      "p5": "Low stock and out-of-stock counters always visible at the top"
+      "p5": "Days of stock left for every product, so you reorder before you run out"
     },
     "pos": {
       "eyebrow": "Point of Sale",
@@ -683,7 +691,7 @@
       "p2": "Sell above listed price for negotiated deals",
       "p3": "Receipt printed automatically on every sale",
       "p4": "Void or refund any transaction with one tap",
-      "p5": "Debt tracking to record and collect customer balances"
+      "p5": "A New Sale button one tap away on every screen, on web and Android"
     },
     "who": {
       "eyebrow": "Business Types",
@@ -715,7 +723,7 @@
       "s1T": "Register your business",
       "s1D": "Sign up and choose your business type. MauzoHalisi sets up the right settings and modules for you.",
       "s2T": "Set up your shop",
-      "s2D": "Add your products, set prices, and enter your TIN. Import stock by CSV or receive a shipment. Your team can be up and running within an hour.",
+      "s2D": "Add your products, set prices and enter your TIN. Import stock by CSV, receive a shipment, or photograph a supplier invoice. Your team can be selling within an hour.",
       "s3T": "Start selling",
       "s3D": "Open the POS and start. Stock updates automatically, reports fill in on their own, and every sale prints a receipt."
     },
@@ -800,7 +808,8 @@
       "h1": "Open Chrome and go to the MauzoHalisi link",
       "h2": "Tap the three-dot menu in the top-right corner",
       "h3": "Tap \"Add to Home screen\" then \"Add\"",
-      "h4": "The MauzoHalisi icon will appear on your home screen"
+      "h4": "The MauzoHalisi icon will appear on your home screen",
+      "p6": "Light or dark theme, matching your phone or your choice"
     },
     "cta": {
       "badge": "Join businesses across Tanzania",
@@ -833,7 +842,8 @@
       "i3": "Restaurant & Café",
       "i4": "Salon & Spa",
       "features": "Features",
-      "pricing": "Pricing"
+      "pricing": "Pricing",
+      "manual": "User manual"
     },
     "mock": {
       "dashboard": "Dashboard",
@@ -889,7 +899,31 @@
       "n6": "Sugar 1kg",
       "uEa": "ea",
       "uKg": "kg",
-      "uBtl": "btl"
+      "uBtl": "btl",
+      "needsYou": "Needs you",
+      "needsCount": "3 things",
+      "needOrders": "2 online orders waiting",
+      "needOrdersD": "Oldest placed 12 minutes ago",
+      "review": "Review",
+      "needStock": "3 products running out",
+      "needStockD": "Sugar 1kg (out in 3 days), Cooking oil 1L",
+      "reorder": "Reorder",
+      "needDebts": "4 customers owe you",
+      "needDebtsD": "TZS 186,000 outstanding",
+      "viewDebts": "View debts",
+      "smsShop": "Mama Asha Shop",
+      "smsTip": "Mauzo yamepanda 12%; agiza Sukari 1kg kabla ya siku 3.",
+      "smsParts": "1 SMS. The tip only goes in when it fits."
+    },
+    "smart": {
+      "eyebrow": "Works For You",
+      "title": "Your shop tells you what to do next",
+      "body": "You should not have to dig through reports to find out what needs attention. MauzoHalisi puts it in front of you, with the figures to back it up and a button to act on it.",
+      "p1": "Needs you: pending orders, products running out and customers who owe you, on one list",
+      "p2": "Stock forecast from your last four weeks of sales, with a reorder ready to send",
+      "p3": "Photograph a supplier invoice and it becomes a stock entry you approve line by line",
+      "p4": "Business report by SMS, sized to fit one message, ending with one practical tip",
+      "p5": "Every figure comes from your own records. Nothing is guessed"
     }
   },
   "loans": {

@@ -8,6 +8,7 @@ import {
   TrendingUp, Lock, RefreshCw,
   ShoppingBag, Utensils, Stethoscope, Scissors, Wrench, Hotel,
   Wine, Layers, AlertTriangle, FileText, Clock, Truck, Wallet, Building2,
+  ListChecks, MessageSquare, ScanLine, TrendingDown, Inbox, PackageX, BookOpen,
 } from 'lucide-react';
 import { LogoMark } from '../components/ui/Logo';
 
@@ -57,6 +58,11 @@ const FEATURES = [
   { icon: Wallet,       k: 'exp',    color: '#065f46' },
   { icon: Building2,    k: 'branch', color: '#b91c1c' },
   { icon: Shield,       k: 'staff',  color: '#374151' },
+
+  { icon: ListChecks,    k: 'needs',    color: '#a66624' },
+  { icon: TrendingDown,  k: 'forecast', color: '#b91c1c' },
+  { icon: ScanLine,      k: 'scan',     color: '#0d9488' },
+  { icon: MessageSquare, k: 'sms',      color: '#4f46e5' },
 ];
 
 // Limits here must match PLAN_LIMITS in backend/src/core/plans.ts, which is what
@@ -148,6 +154,57 @@ function DashboardMockup() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Mockup: what needs doing, and the report that arrives by SMS ─────────────
+// The SMS is the real format the scheduler sends: four figures in one billed
+// part, with the one-line tip in the room that is left.
+function SmartMockup() {
+  const { t } = useTranslation();
+  const m = (k: string) => t(`landing.mock.${k}`);
+  const rows = [
+    { icon: Inbox,    tone: '#b45309', title: m('needOrders'), detail: m('needOrdersD'), action: m('review') },
+    { icon: PackageX, tone: '#b91c1c', title: m('needStock'),  detail: m('needStockD'),  action: m('reorder') },
+    { icon: Clock,    tone: '#065f46', title: m('needDebts'),  detail: m('needDebtsD'),  action: m('viewDebts') },
+  ];
+  return (
+    <div className="relative w-full max-w-lg mx-auto select-none space-y-5">
+      <div className="absolute inset-0 scale-95 translate-y-4 rounded-2xl blur-2xl" style={{ background: '#a6662418' }} />
+      <div className="relative rounded-2xl p-4" style={neu.card}>
+        <div className="flex items-baseline gap-2 mb-3">
+          <p className="text-xs font-bold text-stone-900">{m('needsYou')}</p>
+          <p className="text-[10px] text-stone-400">{m('needsCount')}</p>
+        </div>
+        <div className="space-y-2">
+          {rows.map(({ icon: Icon, tone, title, detail, action }) => (
+            <div key={title} className="flex items-center gap-3 p-2.5 rounded-xl" style={neu.inset}>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${tone}18`, color: tone }}>
+                <Icon size={13} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-stone-900 truncate">{title}</p>
+                <p className="text-[9.5px] text-stone-500 truncate">{detail}</p>
+              </div>
+              <span className="text-[9px] font-bold px-2.5 py-1 rounded-lg text-snow shrink-0" style={{ background: '#a66624' }}>{action}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative flex justify-end">
+        <div className="w-full max-w-xs rounded-2xl p-4" style={neu.card}>
+          <p className="text-[9px] uppercase tracking-widest text-stone-400 mb-2 flex items-center gap-1.5">
+            <MessageSquare size={10} /> SMS · MauzoHalisi
+          </p>
+          <div className="rounded-xl rounded-tl-sm px-3 py-2.5 font-mono text-[10.5px] leading-relaxed text-stone-800 whitespace-pre-line" style={neu.inset}>
+            {'MauzoHalisi Weekly Report\n'}{m('smsShop')}{' - Wk to 12 Oct\nSales 1.2M\nProfit 310K\nReceipts 214\nStock 4.8M\n'}
+            <span style={{ color: '#a66624', fontWeight: 700 }}>{m('smsTip')}</span>
+          </div>
+          <p className="text-[9px] text-stone-400 mt-2">{m('smsParts')}</p>
         </div>
       </div>
     </div>
@@ -501,6 +558,29 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Works for you: Needs-you, forecast, invoice scan, SMS reports */}
+      <section id="smart" className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
+            <div className="mb-12 lg:mb-0">
+              <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>{t('landing.smart.eyebrow')}</p>
+              <h2 className="text-3xl font-bold mb-4">{t('landing.smart.title')}</h2>
+              <p className="text-stone-500 leading-relaxed mb-6">
+                {t('landing.smart.body')}
+              </p>
+              <ul className="space-y-3">
+                {bullets('smart', 5).map(item => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-stone-600">
+                    <Check size={14} className="text-emerald-600 mt-0.5 shrink-0" />{item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <SmartMockup />
+          </div>
+        </div>
+      </section>
+
       {/* Who it's for */}
       <section id="who" className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -678,7 +758,7 @@ export default function LandingPage() {
                 {t('landing.install.body')}
               </p>
               <ul className="space-y-3 mb-10">
-                {bullets('install', 5).map(item => (
+                {bullets('install', 6).map(item => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-stone-600">
                     <Check size={14} className="text-emerald-600 mt-0.5 shrink-0" />{item}
                   </li>
@@ -782,6 +862,11 @@ export default function LandingPage() {
                 {([['features','#features'],['pricing','#pricing'],['installApp','#install']] as const).map(([k, h]) => (
                   <li key={k}><a href={h} className="text-sm text-stone-500 hover:text-stone-900 transition-colors">{t(`landing.footer.${k}`)}</a></li>
                 ))}
+                <li>
+                  <a href="/manual/" className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 transition-colors">
+                    <BookOpen size={13} /> {t('landing.footer.manual')}
+                  </a>
+                </li>
               </ul>
             </div>
             <div>
