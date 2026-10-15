@@ -18,6 +18,7 @@ import SubscriptionExpiredPage from './pages/auth/SubscriptionExpiredPage';
 
 // Public marketing pages — lazy, since most visitors never open them
 const AboutPage   = lazy(() => import('./pages/public/AboutPage'));
+const ShopsDirectoryPage = lazy(() => import('./pages/public/ShopsDirectoryPage'));
 const ContactPage = lazy(() => import('./pages/public/ContactPage'));
 const PrivacyPage = lazy(() => import('./pages/public/PrivacyPage'));
 const TermsPage   = lazy(() => import('./pages/public/TermsPage'));
@@ -115,6 +116,7 @@ export default function App() {
           <Route path="/pending" element={<PendingApprovalPage />} />
           <Route path="/expired" element={<SubscriptionExpiredPage />} />
           <Route path="/about"   element={<AboutPage />} />
+          <Route path="/shops"   element={<ShopsDirectoryPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms"   element={<TermsPage />} />

@@ -617,7 +617,8 @@
       "pricing": "Bei",
       "install": "Sakinisha",
       "signIn": "Ingia",
-      "getStarted": "Anza Sasa"
+      "getStarted": "Anza Sasa",
+      "shops": "Maduka mtandaoni"
     },
     "hero": {
       "badge": "Kwa aina zote za biashara",
@@ -647,7 +648,7 @@
       "invT": "Ankara",
       "invD": "Mdai mteja sasa, ulipwe baadaye. Rekodi malipo ya sehemu, peleka bidhaa, na tuma kwa WhatsApp.",
       "shopT": "Duka Lako Mtandaoni",
-      "shopD": "Sambaza kiungo kimoja na upokee oda. Wateja wanaona bidhaa zako, wanaagiza, na wanalipa wakipokea.",
+      "shopD": "Shiriki kiungo kimoja upokee oda. Orodhesha bidhaa unazochagua, na picha, na kila oda inakufikia kwa arifa au SMS.",
       "rcptT": "Risiti za Kodi",
       "rcptD": "Kila mauzo yanachapisha risiti yenye TIN, VRN na misimbo ya kodi ikiwa tayari.",
       "debtT": "Mikopo na Madeni",
@@ -843,7 +844,8 @@
       "i4": "Saluni na Spa",
       "features": "Vipengele",
       "pricing": "Bei",
-      "manual": "Mwongozo wa matumizi"
+      "manual": "Mwongozo wa matumizi",
+      "shops": "Maduka mtandaoni"
     },
     "mock": {
       "dashboard": "Dashibodi",
@@ -930,6 +932,12 @@
       "products": "Orodha ya bidhaa yenye bei ya kuuza, bei ya kununua na hisa",
       "pos": "Skrini ya mauzo yenye bidhaa tatu kwenye kikapu, tayari kulipisha",
       "phone": "Dashibodi kwenye simu ya Android, na kitufe cha Mauzo mapya"
+    },
+    "shopsBand": {
+      "eyebrow": "Nunua mtandaoni",
+      "title": "Agiza kutoka maduka ya MauzoHalisi",
+      "body": "Maduka yanayotumia MauzoHalisi yanaweza kufungua duka la mtandaoni kwa dakika moja. Angalia walichonacho, agiza, na ulipe mzigo ukikufikia. Oda yako inaenda moja kwa moja kwa mwenye duka.",
+      "cta": "Tazama maduka"
     }
   },
   "loans": {
@@ -1182,5 +1190,20 @@
     "again": "Soma nyingine",
     "failed": "Imeshindwa kuongeza hisa. Hakuna kilichobadilika.",
     "creating": "Inaongeza bidhaa mpya…"
+  },
+  "shops": {
+    "title": "Maduka mtandaoni",
+    "intro": "Maduka yanayopokea oda mtandaoni kupitia MauzoHalisi. Chagua duka, weka unachohitaji kwenye kikapu, na duka linapata oda yako papo hapo.",
+    "search": "Tafuta kwa jina la duka au mji",
+    "none": "Bado hakuna duka linalopokea oda mtandaoni. Rudi baadaye.",
+    "noMatch": "Hakuna duka linalolingana na utafutaji huo.",
+    "error": "Imeshindwa kupakia maduka. Jaribu tena baada ya muda mfupi.",
+    "products": "Bidhaa {{count}}",
+    "products_one": "Bidhaa 1",
+    "delivery": "Usafirishaji",
+    "pickup": "Kuchukua dukani",
+    "ownerTitle": "Una duka?",
+    "ownerBody": "Fungua duka lako la mtandaoni na MauzoHalisi. Chagua bidhaa za kuonyesha, weka picha, na upokee oda kwenye simu yako.",
+    "ownerCta": "Anza majaribio bure"
   }
 }

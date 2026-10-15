@@ -16,6 +16,10 @@ import { io } from '../../app';
 import * as R from '../../utils/response';
 import { screenFields } from '../../core/profanity';
 import { pushToShop } from '../../core/push';
+import { sendSms, smsReady } from '../../core/sms';
+import { redis } from '../../core/redis';
+import { toGsm } from '../../core/gsm';
+import { logger } from '../../utils/logger';
 
 const LOW_STOCK_THRESHOLD = 5;
 const ORDER_TTL_HOURS     = 48;
@@ -70,24 +74,68 @@ function publicProduct(
  * result without touching anything: the storefront goes dark while unpaid and
  * comes straight back on renewal, with the shop's own flag untouched.
  */
-async function liveShop(slug: string) {
+function liveWhere() {
   const now = new Date();
-  return prisma.shop.findFirst({
-    where: {
-      slug,
-      storefrontEnabled: true,
+  return {
+    storefrontEnabled: true,
+    isActive: true,
+    ownerAccount: {
       isActive: true,
-      ownerAccount: {
-        isActive: true,
-        suspendedAt: null,
-        subscriptionActive: true,
+      suspendedAt: null,
+      subscriptionActive: true,
+      OR: [
+        { subscriptionExpiresAt: null },          // never expires
+        { subscriptionExpiresAt: { gt: now } },
+      ],
+    },
+  };
+}
+
+async function liveShop(slug: string) {
+  return prisma.shop.findFirst({ where: { slug, ...liveWhere() } });
+}
+
+// ── GET /public/shops ────────────────────────────────────────────────────────
+/**
+ * The directory the landing page links to: every live store with at least
+ * one product listed. Only what the store already shows on its own page is
+ * returned, so being listed here reveals nothing a store had not published.
+ */
+export async function listStorefronts(req: Request, res: Response) {
+  const q = String(req.query.q ?? '').trim().slice(0, 60);
+  const shops = await prisma.shop.findMany({
+    where: {
+      ...liveWhere(),
+      slug: { not: null },
+      products: { some: { isPublished: true, isActive: true } },
+      ...(q && {
         OR: [
-          { subscriptionExpiresAt: null },          // never expires
-          { subscriptionExpiresAt: { gt: now } },
+          { tradingName: { contains: q, mode: 'insensitive' as const } },
+          { city:        { contains: q, mode: 'insensitive' as const } },
+          { region:      { contains: q, mode: 'insensitive' as const } },
         ],
+      }),
+    },
+    select: {
+      slug: true, tradingName: true, storefrontBio: true, logoUrl: true,
+      city: true, region: true, businessType: true,
+      acceptsDelivery: true, acceptsPickup: true,
+      _count: { select: { products: { where: { isPublished: true, isActive: true } } } },
+      products: {
+        where: { isPublished: true, isActive: true, imageUrl: { not: null } },
+        select: { imageUrl: true }, take: 3, orderBy: { updatedAt: 'desc' },
       },
     },
+    orderBy: { tradingName: 'asc' },
+    take: 60,
   });
+  return R.ok(res, shops.map(s => ({
+    slug: s.slug, name: s.tradingName, bio: s.storefrontBio, logoUrl: s.logoUrl,
+    city: s.city, region: s.region, businessType: s.businessType,
+    acceptsDelivery: s.acceptsDelivery, acceptsPickup: s.acceptsPickup,
+    productCount: s._count.products,
+    previews: s.products.map(p => p.imageUrl),
+  })));
 }
 
 // ── GET /public/shops/:slug ──────────────────────────────────────────────────
@@ -299,6 +347,12 @@ export async function placeOrder(req: Request, res: Response) {
     tag:   `order-${order.id}`,
   }).catch(() => { /* logged inside pushToShop */ });
 
+  // A shop with no phone set up for push would only hear about the order if a
+  // tab happened to be open. An SMS to the order phone closes that gap. Push
+  // is free and SMS is not, so it is the fallback, and capped per shop per
+  // day so a burst of orders cannot run up the SMS bill.
+  void smsOrderAlert(shop, order.orderNo, String(buyerName).trim(), order.total, mode);
+
   // Enough to show a confirmation and compose the WhatsApp hand-off, nothing more.
   return R.created(res, {
     orderNo:   order.orderNo,
@@ -337,4 +391,34 @@ export async function trackOrder(req: Request, res: Response) {
   });
   if (!order) return R.notFound(res, 'Order not found');
   return R.ok(res, order);
+}
+
+const ORDER_SMS_DAILY_CAP = 30;
+
+async function smsOrderAlert(
+  shop: { id: string; tradingName: string; phone: string | null; orderPhone: string | null; currency: string },
+  orderNo: string, buyer: string, total: number, mode: 'DELIVERY' | 'PICKUP',
+) {
+  try {
+    const to = shop.orderPhone || shop.phone;
+    if (!smsReady || !to) return;
+    const devices = await prisma.pushSubscription.count({ where: { shopId: shop.id } });
+    if (devices > 0) return;
+
+    const key = `sms:order:${shop.id}:${new Date().toISOString().slice(0, 10)}`;
+    const n = await redis.incr(key);
+    if (n === 1) await redis.expire(key, 2 * 86_400);
+    if (n > ORDER_SMS_DAILY_CAP) return;
+
+    // GSM-7 and one part: a buyer's name with a curly apostrophe must not
+    // turn a one-part alert into a three-part one.
+    const body = toGsm(
+      `MauzoHalisi: new order ${orderNo} from ${buyer.slice(0, 24)}, ` +
+      `${shop.currency} ${Math.round(total).toLocaleString('en-US')}, ${mode === 'DELIVERY' ? 'delivery' : 'pickup'}. ` +
+      `Open mauzohalisi.com/orders to accept it.`,
+    ).slice(0, 160);
+    await sendSms(to, body);
+  } catch (err) {
+    logger.error(`Order SMS alert failed for shop ${shop.id}: ${(err as Error).message}`);
+  }
 }

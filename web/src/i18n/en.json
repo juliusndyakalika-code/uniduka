@@ -617,7 +617,8 @@
       "pricing": "Pricing",
       "install": "Install",
       "signIn": "Sign In",
-      "getStarted": "Get Started"
+      "getStarted": "Get Started",
+      "shops": "Online shops"
     },
     "hero": {
       "badge": "Built for all business types",
@@ -647,7 +648,7 @@
       "invT": "Invoices",
       "invD": "Bill a customer now and get paid later. Record part payments, deliver when ready, and send it on WhatsApp.",
       "shopT": "Your Own Online Shop",
-      "shopD": "Share one link and take orders. Customers browse your stock, order, and pay when it reaches them.",
+      "shopD": "Share one link and take orders. List the products you choose, with photos, and every order reaches you by notification or SMS.",
       "rcptT": "Tax Receipts",
       "rcptD": "Every sale prints with your TIN, VRN and tax codes worked out for you.",
       "debtT": "Credit and Debts",
@@ -843,7 +844,8 @@
       "i4": "Salon & Spa",
       "features": "Features",
       "pricing": "Pricing",
-      "manual": "User manual"
+      "manual": "User manual",
+      "shops": "Online shops"
     },
     "mock": {
       "dashboard": "Dashboard",
@@ -930,6 +932,12 @@
       "products": "The products list with selling price, cost price and stock",
       "pos": "The point of sale with three items in the cart, ready to charge",
       "phone": "The dashboard on an Android phone, with the New sale button"
+    },
+    "shopsBand": {
+      "eyebrow": "Shop online",
+      "title": "Order from MauzoHalisi shops",
+      "body": "Shops on MauzoHalisi can open an online store in a minute. Browse what they have in stock, order, and pay when it reaches you. Your order goes straight to the shop.",
+      "cta": "Browse shops"
     }
   },
   "loans": {
@@ -1182,5 +1190,20 @@
     "again": "Scan another",
     "failed": "Could not add the stock. Nothing was changed.",
     "creating": "Adding new products…"
+  },
+  "shops": {
+    "title": "Online shops",
+    "intro": "Shops that take orders online through MauzoHalisi. Pick one, add what you need to your cart, and the shop gets your order straight away.",
+    "search": "Search by shop name or town",
+    "none": "No shops are taking online orders yet. Check back soon.",
+    "noMatch": "No shop matches that search.",
+    "error": "Could not load the shops. Try again in a moment.",
+    "products": "{{count}} products",
+    "products_one": "1 product",
+    "delivery": "Delivery",
+    "pickup": "Pickup",
+    "ownerTitle": "Own a shop?",
+    "ownerBody": "Open your own online store with MauzoHalisi. Choose which products to show, add photos, and receive orders on your phone.",
+    "ownerCta": "Start free trial"
   }
 }

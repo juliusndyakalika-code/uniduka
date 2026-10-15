@@ -9,6 +9,7 @@ import {
   getExpiryAlerts,
 } from './inventory.controller';
 import { authenticate, authorize, requireShop } from '../../middleware/auth';
+import { uploadProductImage, deleteProductImage, bulkPublish } from './images.controller';
 import { getForecast, draftReorder, scanStatus, scanInvoice, applyInvoice } from './smart.controller';
 
 const router = Router();
@@ -25,6 +26,8 @@ const upload = multer({
 
 // Forecast and invoice scanning
 const stockRoles = authorize('ACCOUNT_OWNER', 'INVENTORY_STAFF');
+router.post('/products/:id/image',     stockRoles, uploadProductImage);
+router.delete('/products/:id/image',   stockRoles, deleteProductImage);
 router.get('/forecast',                 getForecast);
 router.post('/forecast/reorder',        stockRoles, draftReorder);
 router.get('/invoice-scan',             stockRoles, scanStatus);
@@ -39,6 +42,7 @@ router.get('/products',               listProducts);
 router.post('/products',              createProduct);
 router.post('/products/import',          upload.single('file'), importProducts);
 router.post('/products/import-shipment', upload.single('file'), importShipment);
+router.patch('/products/publish',       authorize('ACCOUNT_OWNER', 'INVENTORY_STAFF'), bulkPublish);
 router.get('/products/lookup',           lookupByBarcode);   // must be before /:id
 router.get('/products/:id',           getProduct);
 router.put('/products/:id',           updateProduct);

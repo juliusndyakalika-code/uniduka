@@ -521,6 +521,7 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  image               ProductImage?
   inventory           InventoryItem[]
   txItems             TransactionItem[]
   orderItems          OrderItem[]
@@ -1926,4 +1927,28 @@ model AppSetting {
   updatedBy String?
 
   @@map("app_settings")
+}
+
+// ─── PRODUCT IMAGES ──────────────────────────────────────────────────────────
+
+// One picture per product, for the online store. Kept in the database rather
+// than on disk because the API runs on containers with no persistent volume:
+// a file written to disk would vanish on the next deploy. Every image is
+// re-encoded on upload (WebP, metadata stripped, so no phone GPS leaks), at
+// two sizes: the product page and the grid thumbnail. A replaced image gets a
+// new id, so its URL can be cached forever.
+model ProductImage {
+  id        String   @id @default(cuid())
+  shopId    String
+  productId String   @unique
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  full      Bytes
+  thumb     Bytes
+  width     Int
+  height    Int
+  bytes     Int // full + thumb, for storage accounting
+  createdAt DateTime @default(now())
+
+  @@index([shopId])
+  @@map("product_images")
 }

@@ -239,6 +239,7 @@ export default function LandingPage() {
 
   const NAV = [
     ['features', '#features'],
+    ['shops',    '/shops'],
     ['who',      '#who'],
     ['pricing',  '#pricing'],
     ['install',  '#install'],
@@ -640,6 +641,25 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Online shops: the stores customers can order from today */}
+      <section className="py-16">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="p-8 sm:p-10 rounded-2xl flex flex-col md:flex-row md:items-center gap-6" style={neu.card}>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#a6662418', color: '#a66624' }}>
+              <Globe size={22} />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: '#a66624' }}>{t('landing.shopsBand.eyebrow')}</p>
+              <h2 className="text-2xl font-bold mb-2">{t('landing.shopsBand.title')}</h2>
+              <p className="text-stone-500 leading-relaxed">{t('landing.shopsBand.body')}</p>
+            </div>
+            <Link to="/shops" className="btn-primary py-3 px-6 shrink-0">
+              {t('landing.shopsBand.cta')} <ArrowRight size={15} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-24">
         <div className="max-w-3xl mx-auto px-4 text-center">
@@ -678,7 +698,7 @@ export default function LandingPage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-stone-700 mb-4">{t('landing.footer.product')}</p>
               <ul className="space-y-2.5">
-                {([['features','#features'],['pricing','#pricing'],['installApp','#install']] as const).map(([k, h]) => (
+                {([['features','#features'],['shops','/shops'],['pricing','#pricing'],['installApp','#install']] as const).map(([k, h]) => (
                   <li key={k}><a href={h} className="text-sm text-stone-500 hover:text-stone-900 transition-colors">{t(`landing.footer.${k}`)}</a></li>
                 ))}
                 <li>

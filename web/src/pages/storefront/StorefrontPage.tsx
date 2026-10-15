@@ -12,6 +12,7 @@ import {
   CheckCircle2, Truck, Package, Loader2, AlertCircle, MessageCircle,
 } from 'lucide-react';
 import publicApi from '../../api/publicClient';
+import { mediaUrl } from '../../lib/media';
 import { buildOrderMessage, waLink } from '../../utils/whatsapp';
 
 interface Shop {
@@ -332,7 +333,7 @@ export default function StorefrontPage() {
                 <div key={p.id} className="bg-white rounded-xl border border-stone-100 overflow-hidden flex flex-col">
                   <div className="aspect-square bg-stone-100 relative">
                     {p.imageUrl
-                      ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                      ? <img src={mediaUrl(p.imageUrl, 'thumb')} alt={p.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                       : <div className="w-full h-full grid place-items-center"><ShoppingBag size={26} className="text-stone-300" /></div>}
                     {!p.inStock && (
                       <div className="absolute inset-0 bg-white/70 grid place-items-center">
@@ -426,7 +427,7 @@ export default function StorefrontPage() {
                     <div key={l.product.id} className="flex gap-3 items-center">
                       <div className="w-12 h-12 rounded-lg bg-stone-100 shrink-0 overflow-hidden grid place-items-center">
                         {l.product.imageUrl
-                          ? <img src={l.product.imageUrl} alt="" className="w-full h-full object-cover" />
+                          ? <img src={mediaUrl(l.product.imageUrl, 'thumb')} alt="" className="w-full h-full object-cover" />
                           : <ShoppingBag size={16} className="text-stone-300" />}
                       </div>
                       <div className="flex-1 min-w-0">

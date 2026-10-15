@@ -2,12 +2,13 @@
  * Shop-side control panel for the public storefront: the link, whether it is
  * open, delivery terms, and which products are listed.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Globe, Copy, Check, ExternalLink, Search, Loader2, AlertCircle,
-  Truck, Package, ShoppingBag, Bell, BellOff, MessageCircle,
+  Truck, Package, ShoppingBag, Bell, BellOff, MessageCircle, Camera, X,
 } from 'lucide-react';
+import { mediaUrl, shrinkPhoto } from '../../lib/media';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { PageLoader } from '../../components/ui/Loader';
@@ -108,7 +109,49 @@ export default function StorefrontSettingsPage() {
     },
   });
 
+  // ── Product pictures ─────────────────────────────────────────────────────
+  // One hidden file input serves every row; the row that opened it is held
+  // in a ref. The photo is shrunk in the browser first, then re-encoded by
+  // the server into the small sizes the store actually loads.
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pickFor = useRef<string | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null);
+
+  const refreshProducts = () => qc.invalidateQueries({ queryKey: ['products-storefront', shopId] });
+
+  async function uploadImage(id: string, file: File) {
+    setUploading(id); setError('');
+    try {
+      const image = await shrinkPhoto(file);
+      await api.post(`/inventory/products/${id}/image`, { image });
+      await refreshProducts();
+    } catch (e) {
+      setError(apiError(e, 'Could not upload that photo'));
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  async function removeImage(id: string) {
+    setUploading(id); setError('');
+    try {
+      await api.delete(`/inventory/products/${id}/image`);
+      await refreshProducts();
+    } catch (e) {
+      setError(apiError(e, 'Could not remove the photo'));
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  const { mutate: publishAll, isPending: publishing } = useMutation({
+    mutationFn: (isPublished: boolean) => api.patch('/inventory/products/publish', { isPublished }).then(r => r.data.data.updated as number),
+    onSuccess: () => { setError(''); refreshProducts(); },
+    onError: (e) => setError(apiError(e, 'Could not update the products')),
+  });
+
   const publishedCount = products.filter(p => p.isPublished).length;
+  const listedWithoutPhoto = products.filter(p => p.isPublished && !p.imageUrl).length;
   const liveUrl = config?.slug ? `${window.location.origin}/s/${config.slug}` : '';
   const isLive  = !!config?.storefrontEnabled && !!config?.slug;
 
@@ -378,7 +421,23 @@ export default function StorefrontSettingsPage() {
             <h3 className="text-sm font-semibold text-stone-700">Listed products</h3>
             <p className="text-xs text-stone-400 mt-0.5">
               {publishedCount} of {products.length} shown online
+              {listedWithoutPhoto > 0 && (
+                <span className="text-amber-700"> · {listedWithoutPhoto} listed without a photo</span>
+              )}
             </p>
+            <p className="text-[11px] text-stone-400 mt-0.5">Tap a picture to add or change a product photo.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button type="button" className="btn-secondary py-1.5 px-3 text-[11px]" disabled={publishing}
+                onClick={() => publishAll(true)} title="Lists every active product that has stock">
+                {publishing ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} List all in stock
+              </button>
+              {publishedCount > 0 && (
+                <button type="button" className="btn-secondary py-1.5 px-3 text-[11px]" disabled={publishing}
+                  onClick={() => { if (confirm('Hide every product from your online store?')) publishAll(false); }}>
+                  Hide all
+                </button>
+              )}
+            </div>
           </div>
           <div className="relative w-full sm:w-56">
             <Search size={14} className="absolute left-3 top-3 text-stone-400" />
@@ -400,10 +459,37 @@ export default function StorefrontSettingsPage() {
           <div className="divide-y divide-stone-50">
             {products.map(p => (
               <div key={p.id} className="px-5 py-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-stone-100 shrink-0 overflow-hidden grid place-items-center">
-                  {p.imageUrl
-                    ? <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
-                    : <ShoppingBag size={15} className="text-stone-300" />}
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => { pickFor.current = p.id; fileRef.current?.click(); }}
+                    disabled={uploading === p.id}
+                    title={p.imageUrl ? 'Change photo' : 'Add photo'}
+                    aria-label={`${p.imageUrl ? 'Change' : 'Add'} photo for ${p.name}`}
+                    className="group relative w-12 h-12 rounded-lg bg-stone-100 overflow-hidden grid place-items-center border border-dashed border-stone-300 hover:border-stone-500"
+                  >
+                    {uploading === p.id
+                      ? <Loader2 size={15} className="animate-spin text-stone-400" />
+                      : p.imageUrl
+                        ? <img src={mediaUrl(p.imageUrl, 'thumb')} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        : <Camera size={15} className="text-stone-400" />}
+                    {p.imageUrl && uploading !== p.id && (
+                      <span className="absolute inset-0 hidden group-hover:grid place-items-center bg-black/40 text-white">
+                        <Camera size={14} />
+                      </span>
+                    )}
+                  </button>
+                  {p.imageUrl && uploading !== p.id && (
+                    <button
+                      type="button"
+                      onClick={() => removeImage(p.id)}
+                      title="Remove photo"
+                      aria-label={`Remove photo for ${p.name}`}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-snow border border-stone-200 grid place-items-center text-stone-500 hover:text-red-600 shadow-sm"
+                    >
+                      <X size={11} />
+                    </button>
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-stone-900 truncate">{p.name}</p>
@@ -428,6 +514,19 @@ export default function StorefrontSettingsPage() {
           </div>
         )}
       </div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={e => {
+          const f = e.target.files?.[0];
+          const id = pickFor.current;
+          e.target.value = '';
+          if (f && id) void uploadImage(id, f);
+        }}
+      />
 
       <p className="text-[11px] text-stone-400 px-1">
         Orders never reduce your stock on their own. Stock only moves when you mark an order fulfilled,

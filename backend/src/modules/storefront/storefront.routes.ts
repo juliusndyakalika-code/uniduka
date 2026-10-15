@@ -6,8 +6,9 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import {
-  getStorefront, listPublicProducts, placeOrder, trackOrder,
+  getStorefront, listPublicProducts, placeOrder, trackOrder, listStorefronts,
 } from './storefront.controller';
+import { serveProductImage } from '../inventory/images.controller';
 
 const router = Router();
 
@@ -43,6 +44,17 @@ const trackLimit = rateLimit({
   message: { success: false, message: 'Too many lookups. Please slow down.' },
 });
 
+// A store page loads two dozen pictures at once, so images get their own,
+// looser limit. They are cached for a year, so repeat visits cost nothing.
+const imageLimit = rateLimit({
+  windowMs: 60_000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.get('/shops',                browseLimit, listStorefronts);
+router.get('/images/:id',           imageLimit,  serveProductImage);
 router.get('/shops/:slug',          browseLimit, getStorefront);
 router.get('/shops/:slug/products', browseLimit, listPublicProducts);
 router.post('/shops/:slug/orders',  orderLimit,  placeOrder);
