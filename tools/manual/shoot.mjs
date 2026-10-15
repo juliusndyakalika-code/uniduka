@@ -63,18 +63,15 @@ await shot('02-calendar');
 log('pos');
 await page.goto(`${BASE}/pos`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(2000);
-// Clicking a product opens a quantity dialog; the sale only reaches the cart
-// once Add to Cart is pressed, so both steps are needed.
+// A tap opens a quantity dialog, and the sale reaches the cart only once Add
+// to Cart is pressed. The dialog's +/- are unlabelled icons, so the quantity
+// is typed into its field instead.
 for (const [term, qty] of [['Sukari Kilombero', 2], ['Coca-Cola 500ml', 6], ['Omo 1kg', 1]]) {
-  const card = page.locator('button').filter({ hasText: term }).first();
-  await card.click();
-  await page.waitForTimeout(700);
-  for (let i = 1; i < qty; i++) {
-    await page.getByRole('button', { name: '+' }).first().click().catch(() => {});
-    await page.waitForTimeout(150);
-  }
+  await page.locator('button').filter({ hasText: term }).first().click();
+  await page.waitForTimeout(500);
+  await page.locator('div.fixed input').first().fill(String(qty));
   await page.getByRole('button', { name: /add to cart/i }).click();
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(500);
 }
 await shot('03-pos-midsale');
 
