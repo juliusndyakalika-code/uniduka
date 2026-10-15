@@ -42,7 +42,7 @@ export async function uploadProductImage(req: AuthRequest, res: Response) {
 
   // Reviewed before anything is stored. A rejected photo is never saved, so
   // there is nothing to clean up and nothing that could leak into the store.
-  const verdict = await reviewImage(sid, encoded.thumb);
+  const { verdict, scores } = await reviewImage(sid, encoded.thumb);
   if (verdict.status === 'REJECTED') {
     logger.warn(`Product image rejected on upload for shop ${sid}, product ${product.id}`);
     return R.badRequest(res, verdict.reason);
@@ -58,6 +58,7 @@ export async function uploadProductImage(req: AuthRequest, res: Response) {
         bytes: encoded.full.length + encoded.thumb.length,
         status: verdict.status,
         reviewedAt: verdict.status === 'APPROVED' ? new Date() : null,
+        ...(scores && { scores }),
       },
       select: { id: true, bytes: true, width: true, height: true, status: true },
     });

@@ -10,6 +10,7 @@ import {
 } from './config.controller';
 
 import { listErrors, setRetention, dismissError } from './errors.controller';
+import { listImages, decideImage } from './images.controller';
 
 const router = Router();
 
@@ -20,6 +21,10 @@ router.get('/metrics',          getMetrics);
 router.get('/monitor',          getMonitor);
 
 // Errors, grouped and masked, and how long they are kept.
+// Product photos held for a person to review.
+router.get   ('/images',              listImages);
+router.post  ('/images/:id/decision', decideImage);
+
 router.get   ('/errors',            listErrors);
 router.patch ('/errors/retention',  setRetention);
 router.delete('/errors/:id',        dismissError);

@@ -1953,6 +1953,9 @@ model ProductImage {
   status     String    @default("PENDING") // PENDING | APPROVED | REJECTED
   reason     String?
   reviewedAt DateTime?
+  // The built-in checker's scores (porn, hentai, sexy, neutral, drawing), so a
+  // reviewer can see why a photo was held. Null until it has been checked.
+  scores     Json?
   createdAt  DateTime  @default(now())
 
   @@index([shopId])

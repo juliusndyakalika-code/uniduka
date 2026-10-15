@@ -1,6 +1,9 @@
+import path from 'node:path';
+import { Worker } from 'node:worker_threads';
 import sharp from 'sharp';
 import { z } from 'zod';
 import { prisma } from './prisma';
+import { Prisma } from '@prisma/client';
 import { logger } from '../utils/logger';
 import { aiImage, aiReady } from './ai';
 
@@ -13,15 +16,17 @@ import { aiImage, aiReady } from './ai';
  *
  *   1. Is it a real picture? Decoding is checked on upload; here a blank or
  *      single-colour image is refused, because it is never a product photo.
- *   2. Is it acceptable? The AI looks at the thumbnail and refuses nudity,
- *      sexual content, graphic violence and hate symbols. A refusal by the
- *      model to look at the image at all is treated as a rejection: that is
- *      what refusing usually means here.
+ *   2. Is it acceptable? A classifier that runs inside the API (NSFW.js,
+ *      no key, no network, the photo never leaves the server) scores it:
+ *        clearly explicit   rejected at once
+ *        clearly clean      approved at once
+ *        in between         (swimwear, underwear, a lot of skin) held
+ *      A held photo goes to the AI if a key is configured, and otherwise to
+ *      the review queue in the admin portal, where a person decides.
  *
- * When the AI is not available (no key, an outage, the day's allowance
- * spent) the image is kept as PENDING and is not shown to anyone until the
- * sweep below has reviewed it. Failing open would publish whatever was
- * uploaded during an outage; failing closed would block every upload.
+ * A held photo is PENDING and shown to nobody until it is decided. Failing
+ * open would publish whatever slipped through; failing closed would block
+ * every upload whenever the classifier hiccups.
  */
 
 export type Verdict =
@@ -60,9 +65,84 @@ const SYSTEM =
   'on its own or on a mannequin, beauty products, food, logos, price lists and shop interiors. ' +
   'Judge what is visible, not the product category.';
 
+// ── The built-in classifier ─────────────────────────────────────────────────
+
+export type Scores = Partial<Record<'porn' | 'hentai' | 'sexy' | 'neutral' | 'drawing', number>>;
+
+const SIZE = 224;
+let worker: Worker | null = null;
+let seq = 0;
+const waiting = new Map<number, { ok: (s: Scores) => void; fail: (e: Error) => void; timer: NodeJS.Timeout }>();
+
+function getWorker(): Worker {
+  if (worker) return worker;
+  // Compiled, the worker sits next to this file as .js. Under ts-node-dev in
+  // development it is still .ts and needs ts-node to load.
+  const isTs = __filename.endsWith('.ts');
+  const w = new Worker(path.join(__dirname, `nsfwWorker.${isTs ? 'ts' : 'js'}`), {
+    execArgv: isTs ? ['-r', 'ts-node/register/transpile-only'] : [],
+  });
+  w.on('message', (m: { id: number; scores?: Scores; error?: string }) => {
+    const job = waiting.get(m.id);
+    if (!job) return;
+    waiting.delete(m.id);
+    clearTimeout(job.timer);
+    if (m.scores) job.ok(m.scores); else job.fail(new Error(m.error || 'classifier failed'));
+  });
+  const reset = (why: string) => {
+    logger.error(`Image classifier worker stopped: ${why}`);
+    for (const [, job] of waiting) { clearTimeout(job.timer); job.fail(new Error('classifier stopped')); }
+    waiting.clear();
+    worker = null;
+  };
+  w.on('error', e => reset(e.message));
+  w.on('exit', code => { if (worker === w) reset(`exit ${code}`); });
+  w.unref();
+  worker = w;
+  return w;
+}
+
+/** Class probabilities for an image, from the classifier thread. */
+export async function classify(img: Buffer): Promise<Scores> {
+  const { data } = await sharp(img).resize(SIZE, SIZE, { fit: 'cover' }).removeAlpha().raw()
+    .toBuffer({ resolveWithObject: true });
+  const id = ++seq;
+  return new Promise<Scores>((ok, fail) => {
+    // The first call also loads the model, which takes a few seconds.
+    const timer = setTimeout(() => { waiting.delete(id); fail(new Error('classifier timed out')); }, 30_000);
+    waiting.set(id, { ok, fail, timer });
+    getWorker().postMessage({ id, pixels: new Uint8Array(data), size: SIZE });
+  });
+}
+
+/** What the scores mean for this store. Thresholds lean towards holding, not publishing. */
+export function readScores(s: Scores): 'reject' | 'hold' | 'allow' {
+  const porn = s.porn ?? 0, hentai = s.hentai ?? 0, sexy = s.sexy ?? 0;
+  if (porn >= 0.7 || hentai >= 0.7 || porn + hentai >= 0.8) return 'reject';
+  if (porn + hentai >= 0.15 || sexy >= 0.35) return 'hold';
+  return 'allow';
+}
+
+export interface Review { verdict: Verdict; scores: Scores | null }
+
 /** Reviews one encoded image (pass the thumbnail: it is small and enough to judge). */
-export async function reviewImage(shopId: string, thumb: Buffer): Promise<Verdict> {
-  if (await looksBlank(thumb)) return { status: 'REJECTED', reason: REASONS.blank };
+export async function reviewImage(shopId: string, thumb: Buffer): Promise<Review> {
+  if (await looksBlank(thumb)) return { verdict: { status: 'REJECTED', reason: REASONS.blank }, scores: null };
+
+  let scores: Scores | null = null;
+  try {
+    scores = await classify(thumb);
+    const read = readScores(scores);
+    if (read === 'reject') return { verdict: { status: 'REJECTED', reason: REASONS.sexual }, scores };
+    if (read === 'allow') return { verdict: { status: 'APPROVED' }, scores };
+  } catch (err) {
+    logger.error(`Image classifier failed for shop ${shopId}: ${(err as Error).message}`);
+  }
+  // Held, or the classifier could not run: a second opinion if there is one.
+  return { verdict: await askAi(shopId, thumb), scores };
+}
+
+async function askAi(shopId: string, thumb: Buffer): Promise<Verdict> {
   if (!aiReady) return { status: 'PENDING' };
 
   const out = await aiImage({
@@ -78,25 +158,36 @@ export async function reviewImage(shopId: string, thumb: Buffer): Promise<Verdic
   return { status: 'REJECTED', reason: REASONS[out.value.category] ?? REASONS.refused };
 }
 
-/** Reviews images left PENDING, oldest first, a small batch at a time. */
+/**
+ * Reviews images left PENDING, oldest first, a small batch at a time.
+ *
+ * Images never checked (uploaded before the classifier, or while it was
+ * down) get the full review. Images already held by the classifier only get
+ * another look if the AI is available; otherwise they wait for a person in
+ * the admin portal.
+ */
 export async function sweepPendingImages(): Promise<number> {
-  if (!aiReady) return 0;
+  const unscored = { status: 'PENDING', scores: { equals: Prisma.DbNull } };
   const pending = await prisma.productImage.findMany({
-    where: { status: 'PENDING' },
+    where: aiReady ? { status: 'PENDING' } : unscored,
     orderBy: { createdAt: 'asc' },
     take: 20,
     select: { id: true, shopId: true, thumb: true },
   });
   let done = 0;
   for (const img of pending) {
-    const v = await reviewImage(img.shopId, Buffer.from(img.thumb));
-    if (v.status === 'PENDING') continue;
+    const { verdict, scores } = await reviewImage(img.shopId, Buffer.from(img.thumb));
     await prisma.productImage.update({
       where: { id: img.id },
-      data: { status: v.status, reason: v.status === 'REJECTED' ? v.reason : null, reviewedAt: new Date() },
+      data: {
+        status: verdict.status,
+        reason: verdict.status === 'REJECTED' ? verdict.reason : null,
+        reviewedAt: verdict.status === 'PENDING' ? null : new Date(),
+        ...(scores && { scores }),
+      },
     });
-    if (v.status === 'REJECTED') logger.warn(`Product image ${img.id} rejected for shop ${img.shopId}`);
-    done++;
+    if (verdict.status === 'REJECTED') logger.warn(`Product image ${img.id} rejected for shop ${img.shopId}`);
+    if (verdict.status !== 'PENDING') done++;
   }
   return done;
 }
