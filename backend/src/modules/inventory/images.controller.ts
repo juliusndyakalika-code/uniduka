@@ -4,6 +4,7 @@ import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
 import { encodeProductImage, ImageError } from '../../core/images';
 import { logger } from '../../utils/logger';
+import { reviewImage } from '../../core/moderation';
 
 const shop = (req: AuthRequest) => req.user!.shopId!;
 
@@ -39,6 +40,14 @@ export async function uploadProductImage(req: AuthRequest, res: Response) {
     return R.badRequest(res, 'Could not process that photo. Try another one.');
   }
 
+  // Reviewed before anything is stored. A rejected photo is never saved, so
+  // there is nothing to clean up and nothing that could leak into the store.
+  const verdict = await reviewImage(sid, encoded.thumb);
+  if (verdict.status === 'REJECTED') {
+    logger.warn(`Product image rejected on upload for shop ${sid}, product ${product.id}`);
+    return R.badRequest(res, verdict.reason);
+  }
+
   const image = await prisma.$transaction(async tx => {
     await tx.productImage.deleteMany({ where: { productId: product.id } });
     const row = await tx.productImage.create({
@@ -47,14 +56,19 @@ export async function uploadProductImage(req: AuthRequest, res: Response) {
         full: encoded.full, thumb: encoded.thumb,
         width: encoded.width, height: encoded.height,
         bytes: encoded.full.length + encoded.thumb.length,
+        status: verdict.status,
+        reviewedAt: verdict.status === 'APPROVED' ? new Date() : null,
       },
-      select: { id: true, bytes: true, width: true, height: true },
+      select: { id: true, bytes: true, width: true, height: true, status: true },
     });
     await tx.product.update({ where: { id: product.id }, data: { imageUrl: imagePath(row.id) } });
     return row;
   });
 
-  return R.ok(res, { imageUrl: imagePath(image.id), bytes: image.bytes, width: image.width, height: image.height });
+  return R.ok(res, {
+    imageUrl: imagePath(image.id), status: image.status,
+    bytes: image.bytes, width: image.width, height: image.height,
+  });
 }
 
 /** DELETE /inventory/products/:id/image */
@@ -82,8 +96,10 @@ export async function serveProductImage(req: Request, res: Response) {
   if (!/^[a-z0-9]{20,40}$/.test(id)) return res.status(404).end();
   const thumb = req.query.s === 'thumb';
 
-  const row = await prisma.productImage.findUnique({
-    where: { id },
+  // Only approved images are served. A pending or rejected one does not
+  // exist as far as the public is concerned.
+  const row = await prisma.productImage.findFirst({
+    where: { id, status: 'APPROVED' },
     select: thumb ? { thumb: true } : { full: true },
   });
   if (!row) return res.status(404).end();

@@ -1938,17 +1938,24 @@ model AppSetting {
 // two sizes: the product page and the grid thumbnail. A replaced image gets a
 // new id, so its URL can be cached forever.
 model ProductImage {
-  id        String   @id @default(cuid())
-  shopId    String
-  productId String   @unique
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  full      Bytes
-  thumb     Bytes
-  width     Int
-  height    Int
-  bytes     Int // full + thumb, for storage accounting
-  createdAt DateTime @default(now())
+  id         String    @id @default(cuid())
+  shopId     String
+  productId  String    @unique
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  full       Bytes
+  thumb      Bytes
+  width      Int
+  height     Int
+  bytes      Int // full + thumb, for storage accounting
+  // Content review. Only APPROVED images are ever shown to the public; a
+  // PENDING one waits for review (the AI was unavailable at upload), and a
+  // REJECTED one stays so the owner can see why.
+  status     String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  reason     String?
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
 
   @@index([shopId])
+  @@index([status])
   @@map("product_images")
 }

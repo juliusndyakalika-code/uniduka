@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Globe, Copy, Check, ExternalLink, Search, Loader2, AlertCircle,
-  Truck, Package, ShoppingBag, Bell, BellOff, MessageCircle, Camera, X,
+  Truck, Package, ShoppingBag, Bell, BellOff, MessageCircle, Camera, X, Clock, Ban,
 } from 'lucide-react';
 import { mediaUrl, shrinkPhoto } from '../../lib/media';
 import api from '../../api/client';
@@ -27,6 +27,7 @@ interface Product {
   id: string; name: string; sku?: string; sellingPrice: number; stock: number;
   imageUrl?: string; category?: string; isActive: boolean;
   isPublished?: boolean; publicPrice?: number | null;
+  image?: { status: 'PENDING' | 'APPROVED' | 'REJECTED'; reason?: string | null } | null;
 }
 
 function apiError(e: unknown, fallback: string) {
@@ -152,6 +153,8 @@ export default function StorefrontSettingsPage() {
 
   const publishedCount = products.filter(p => p.isPublished).length;
   const listedWithoutPhoto = products.filter(p => p.isPublished && !p.imageUrl).length;
+  const awaitingReview = products.filter(p => p.image?.status === 'PENDING').length;
+  const rejectedPhotos = products.filter(p => p.image?.status === 'REJECTED').length;
   const liveUrl = config?.slug ? `${window.location.origin}/s/${config.slug}` : '';
   const isLive  = !!config?.storefrontEnabled && !!config?.slug;
 
@@ -425,7 +428,11 @@ export default function StorefrontSettingsPage() {
                 <span className="text-amber-700"> · {listedWithoutPhoto} listed without a photo</span>
               )}
             </p>
-            <p className="text-[11px] text-stone-400 mt-0.5">Tap a picture to add or change a product photo.</p>
+            <p className="text-[11px] text-stone-400 mt-0.5">
+              Tap a picture to add or change a product photo. Photos are checked before customers see them.
+              {awaitingReview > 0 && <span className="text-stone-600"> {awaitingReview} awaiting review.</span>}
+              {rejectedPhotos > 0 && <span className="text-red-600"> {rejectedPhotos} not approved.</span>}
+            </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button type="button" className="btn-secondary py-1.5 px-3 text-[11px]" disabled={publishing}
                 onClick={() => publishAll(true)} title="Lists every active product that has stock">
@@ -464,15 +471,21 @@ export default function StorefrontSettingsPage() {
                     type="button"
                     onClick={() => { pickFor.current = p.id; fileRef.current?.click(); }}
                     disabled={uploading === p.id}
-                    title={p.imageUrl ? 'Change photo' : 'Add photo'}
+                    title={p.image?.status === 'PENDING' ? 'Photo awaiting review. Customers will see it once approved.'
+                      : p.image?.status === 'REJECTED' ? (p.image.reason || 'Photo not approved') + ' Tap to choose another.'
+                      : p.imageUrl ? 'Change photo' : 'Add photo'}
                     aria-label={`${p.imageUrl ? 'Change' : 'Add'} photo for ${p.name}`}
                     className="group relative w-12 h-12 rounded-lg bg-stone-100 overflow-hidden grid place-items-center border border-dashed border-stone-300 hover:border-stone-500"
                   >
                     {uploading === p.id
                       ? <Loader2 size={15} className="animate-spin text-stone-400" />
-                      : p.imageUrl
-                        ? <img src={mediaUrl(p.imageUrl, 'thumb')} alt="" className="w-full h-full object-cover" loading="lazy" />
-                        : <Camera size={15} className="text-stone-400" />}
+                      : p.image?.status === 'PENDING'
+                        ? <Clock size={15} className="text-stone-500" />
+                        : p.image?.status === 'REJECTED'
+                          ? <Ban size={15} className="text-red-600" />
+                          : p.imageUrl
+                            ? <img src={mediaUrl(p.imageUrl, 'thumb')} alt="" className="w-full h-full object-cover" loading="lazy" />
+                            : <Camera size={15} className="text-stone-400" />}
                     {p.imageUrl && uploading !== p.id && (
                       <span className="absolute inset-0 hidden group-hover:grid place-items-center bg-black/40 text-white">
                         <Camera size={14} />
@@ -493,6 +506,8 @@ export default function StorefrontSettingsPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-stone-900 truncate">{p.name}</p>
+                  {p.image?.status === 'PENDING' && <p className="text-[11px] text-stone-500">Photo awaiting review</p>}
+                  {p.image?.status === 'REJECTED' && <p className="text-[11px] text-red-600 line-clamp-2">{p.image.reason || 'Photo not approved'}</p>}
                   <p className="text-xs text-stone-400">
                     {money(p.sellingPrice, config?.currency)}
                     <span className={`ml-2 ${p.stock <= 0 ? 'text-red-500' : ''}`}>

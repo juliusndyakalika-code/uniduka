@@ -29,12 +29,13 @@ export const AI_MODEL = process.env.AI_MODEL || 'claude-opus-5-5';
 const client = aiReady ? new Anthropic({ apiKey: KEY, maxRetries: 2, timeout: 60_000 }) : null;
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 
-export type AiKind = 'insight' | 'invoice';
+export type AiKind = 'insight' | 'invoice' | 'moderation';
 
 /** Calls per shop per day. Generous for real use, low enough to bound cost. */
 const DAILY_CAP: Record<AiKind, number> = {
   insight: Number(process.env.AI_INSIGHT_DAILY_CAP) || 20,
   invoice: Number(process.env.AI_INVOICE_DAILY_CAP) || 30,
+  moderation: Number(process.env.AI_MODERATION_DAILY_CAP) || 300,
 };
 
 /** Takes one unit of today's allowance. False when spent or unreadable. */
@@ -110,8 +111,17 @@ export async function aiText(opts: {
 
 export type AiImage = { mediaType: 'image/jpeg' | 'image/png' | 'image/webp'; data: string };
 
-/** Structured output read from an image, validated against the schema. */
-export async function aiReadImage<S extends z.ZodType>(opts: {
+/**
+ * The outcome of an image request, keeping apart the cases a caller treats
+ * differently: content moderation reads a refusal as "reject", but an outage
+ * or a spent allowance as "try again later".
+ */
+export type ImageOutcome<T> =
+  | { status: 'ok'; value: T }
+  | { status: 'refused' }
+  | { status: 'unavailable' };
+
+export async function aiImage<S extends z.ZodType>(opts: {
   kind: AiKind;
   shopId: string;
   system: string;
@@ -119,16 +129,17 @@ export async function aiReadImage<S extends z.ZodType>(opts: {
   image: AiImage;
   schema: S;
   maxTokens?: number;
-}): Promise<z.infer<S> | null> {
-  if (!client) return null;
-  if (!(await takeAllowance(opts.shopId, opts.kind))) return null;
+  effort?: 'low' | 'medium';
+}): Promise<ImageOutcome<z.infer<S>>> {
+  if (!client) return { status: 'unavailable' };
+  if (!(await takeAllowance(opts.shopId, opts.kind))) return { status: 'unavailable' };
   try {
     const res = await client.beta.messages.parse({
       model: AI_MODEL,
       max_tokens: opts.maxTokens ?? 8_000,
       betas: [FALLBACK_BETA],
       fallbacks: 'default',
-      output_config: { effort: 'medium', format: betaZodOutputFormat(opts.schema) },
+      output_config: { effort: opts.effort ?? 'medium', format: betaZodOutputFormat(opts.schema) },
       system: opts.system,
       messages: [{
         role: 'user',
@@ -139,10 +150,25 @@ export async function aiReadImage<S extends z.ZodType>(opts: {
       }],
     });
     logUsage(opts.kind, opts.shopId, res.usage);
-    if (res.stop_reason === 'refusal' || res.stop_reason === 'max_tokens') return null;
-    return (res.parsed_output ?? null) as z.infer<S> | null;
+    if (res.stop_reason === 'refusal') return { status: 'refused' };
+    if (res.stop_reason === 'max_tokens' || res.parsed_output == null) return { status: 'unavailable' };
+    return { status: 'ok', value: res.parsed_output as z.infer<S> };
   } catch (err) {
     logFailure(opts.kind, opts.shopId, err);
-    return null;
+    return { status: 'unavailable' };
   }
+}
+
+/** Structured output read from an image, validated against the schema. */
+export async function aiReadImage<S extends z.ZodType>(opts: {
+  kind: AiKind;
+  shopId: string;
+  system: string;
+  prompt: string;
+  image: AiImage;
+  schema: S;
+  maxTokens?: number;
+}): Promise<z.infer<S> | null> {
+  const out = await aiImage(opts);
+  return out.status === 'ok' ? out.value : null;
 }

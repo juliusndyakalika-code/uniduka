@@ -87,7 +87,7 @@ export async function listProducts(req: AuthRequest, res: Response) {
   const [items, total, allForTotals] = await Promise.all([
     prisma.product.findMany({
       where, skip, take: Number(limit), orderBy: { name: 'asc' },
-      include: { inventory: true, _count: { select: { txItems: { where: { transaction: { status: { not: 'VOIDED' } } } } } } },
+      include: { inventory: true, image: { select: { status: true, reason: true } }, _count: { select: { txItems: { where: { transaction: { status: { not: 'VOIDED' } } } } } } },
     }),
     prisma.product.count({ where }),
     prisma.product.findMany({

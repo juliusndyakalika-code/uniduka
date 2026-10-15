@@ -46,14 +46,15 @@ function publicProduct(
   p: { id: string; name: string; description: string | null; imageUrl: string | null;
        category: string | null; brand: string | null; unit: string | null;
        sellPrice: number; publicPrice: number | null; trackStock: boolean;
-       inventory: { quantity: number }[] },
+       inventory: { quantity: number }[]; image?: { status: string } | null },
 ) {
   const stock = p.inventory.reduce((s, i) => s + i.quantity, 0);
   return {
     id:          p.id,
     name:        p.name,
     description: p.description,
-    imageUrl:    p.imageUrl,
+    // An uploaded picture is shown only once it has passed review.
+    imageUrl:    p.image && p.image.status !== 'APPROVED' ? null : p.imageUrl,
     category:    p.category,
     brand:       p.brand,
     unit:        p.unit ?? 'pcs',
@@ -122,7 +123,7 @@ export async function listStorefronts(req: Request, res: Response) {
       acceptsDelivery: true, acceptsPickup: true,
       _count: { select: { products: { where: { isPublished: true, isActive: true } } } },
       products: {
-        where: { isPublished: true, isActive: true, imageUrl: { not: null } },
+        where: { isPublished: true, isActive: true, image: { status: 'APPROVED' } },
         select: { imageUrl: true }, take: 3, orderBy: { updatedAt: 'desc' },
       },
     },
@@ -203,6 +204,7 @@ export async function listPublicProducts(req: Request, res: Response) {
         category: true, brand: true, unit: true,
         sellPrice: true, publicPrice: true, trackStock: true,
         inventory: { select: { quantity: true } },
+        image: { select: { status: true } },
       },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
       skip, take,
