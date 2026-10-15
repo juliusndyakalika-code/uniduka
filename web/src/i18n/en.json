@@ -924,6 +924,12 @@
       "p3": "Photograph a supplier invoice and it becomes a stock entry you approve line by line",
       "p4": "Business report by SMS, sized to fit one message, ending with one practical tip",
       "p5": "Every figure comes from your own records. Nothing is guessed"
+    },
+    "shots": {
+      "dashboard": "The MauzoHalisi dashboard: today's sales and profit, and the Needs you list",
+      "products": "The products list with selling price, cost price and stock",
+      "pos": "The point of sale with three items in the cart, ready to charge",
+      "phone": "The dashboard on an Android phone, with the New sale button"
     }
   },
   "loans": {

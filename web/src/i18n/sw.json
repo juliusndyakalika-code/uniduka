@@ -924,6 +924,12 @@
       "p3": "Piga picha ya ankara ya msambazaji iwe ingizo la hisa unaloidhinisha mstari kwa mstari",
       "p4": "Ripoti ya biashara kwa SMS, inayotosha ujumbe mmoja, ikimalizia na dokezo moja la vitendo",
       "p5": "Kila takwimu inatoka kwenye kumbukumbu zako. Hakuna kinachokisiwa"
+    },
+    "shots": {
+      "dashboard": "Dashibodi ya MauzoHalisi: mauzo na faida ya leo, na orodha ya Inakuhitaji",
+      "products": "Orodha ya bidhaa yenye bei ya kuuza, bei ya kununua na hisa",
+      "pos": "Skrini ya mauzo yenye bidhaa tatu kwenye kikapu, tayari kulipisha",
+      "phone": "Dashibodi kwenye simu ya Android, na kitufe cha Mauzo mapya"
     }
   },
   "loans": {

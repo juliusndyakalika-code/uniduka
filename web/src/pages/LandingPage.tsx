@@ -85,77 +85,27 @@ const STATS = [
   { value: '20s',  k: 'checkout' },
 ];
 
-// ── Mockup: Dashboard ─────────────────────────────────────────────────────────
-// The mockups are screenshots of the product, so they follow the page language
-// too — a Swahili page showing an English till reads as a mock-up of a different
-// product. Sample product names are localised for the same reason.
-function DashboardMockup() {
-  const { t } = useTranslation();
-  const m = (k: string) => t(`landing.mock.${k}`);
+// ── Screenshots ──────────────────────────────────────────────────────────────
+// Real captures of the app from the seeded demo shop (tools/manual/
+// shoot-landing.mjs), one set per language: a Kiswahili page showing an
+// English till reads as a picture of a different product. Width and height
+// are set so the page does not jump as they load.
+function Screenshot({ name, alt, eager = false, phone = false }: { name: string; alt: string; eager?: boolean; phone?: boolean }) {
+  const { i18n } = useTranslation();
+  const lang = i18n.language?.startsWith('sw') ? 'sw' : 'en';
   return (
-    <div className="relative w-full max-w-2xl mx-auto select-none">
+    <div className={`relative w-full mx-auto select-none ${phone ? 'max-w-[15rem]' : 'max-w-2xl'}`}>
       <div className="absolute inset-0 scale-95 translate-y-4 rounded-2xl blur-2xl" style={{ background: '#a6662420' }} />
-      <div className="relative rounded-2xl overflow-hidden" style={{ ...neu.card, padding: 0 }}>
-
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200/60" style={{ background: 'rgb(var(--ground))' }}>
-          <div className="flex items-center gap-2">
-            <LogoMark size={26} />
-            <span className="text-xs font-bold text-stone-800">MauzoHalisi</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-[9px] text-stone-500 hidden sm:block">USER · {m('dashboard')}</div>
-            <div className="w-6 h-6 rounded-full bg-stone-700 text-white text-[9px] font-bold flex items-center justify-center">U</div>
-          </div>
-        </div>
-
-        <div className="flex" style={{ background: 'rgb(var(--ground))' }}>
-          <div className="w-28 shrink-0 p-3 space-y-1 border-r border-stone-200/60 hidden sm:block">
-            {['dashboard', 'pos', 'inventory', 'customers', 'reports'].map((k, i) => (
-              <div key={k} className="px-2 py-1.5 rounded-lg text-[9px] font-medium"
-                style={i === 0 ? { ...neu.inset, color: 'rgb(var(--c-stone-900))', fontWeight: 700 } : { color: 'rgb(var(--c-stone-500))' }}>
-                {m(k)}
-              </div>
-            ))}
-          </div>
-
-          <div className="flex-1 p-3 space-y-3">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[
-                { k: 'salesToday',   value: '485,200', unit: 'TZS',            color: '#a66624' },
-                { k: 'transactions', value: '47',      unit: m('today'),       color: '#0d9488' },
-                { k: 'products',     value: '312',     unit: m('active'),      color: '#7c3aed' },
-                { k: 'lowStock',     value: '8',       unit: m('items'),       color: '#b91c1c' },
-              ].map(({ k, value, unit, color }) => (
-                <div key={k} className="p-2.5 rounded-xl" style={neu.card}>
-                  <p className="text-[8px] uppercase tracking-wider font-semibold" style={{ color: '#a8a29e' }}>{m(k)}</p>
-                  <p className="text-base font-bold mt-0.5" style={{ color }}>{value}</p>
-                  <p className="text-[8px] text-stone-400">{unit}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-xl p-2.5" style={neu.card}>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-stone-500 mb-2">{m('recentSales')}</p>
-              <div className="space-y-1.5">
-                {[
-                  { name: m('n1'), qty: `1 ${m('uEa')}`,  amount: '45,000', method: 'M-Pesa'  },
-                  { name: m('n2'), qty: `4 ${m('uKg')}`,  amount: '12,800', method: m('cash') },
-                  { name: m('n3'), qty: `2 ${m('uBtl')}`, amount: '8,600',  method: m('cash') },
-                  { name: m('n4'), qty: `1 ${m('uEa')}`,  amount: '35,000', method: 'M-Pesa'  },
-                ].map((tx, i) => (
-                  <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={i === 0 ? neu.inset : {}}>
-                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#10b981' }} />
-                    <span className="flex-1 text-[9px] text-stone-700 font-medium truncate">{tx.name}</span>
-                    <span className="text-[8px] text-stone-400 hidden sm:inline">{tx.qty}</span>
-                    <span className="text-[9px] font-bold text-stone-800 tabular-nums">{tx.amount}/=</span>
-                    <span className="text-[7px] px-1.5 py-0.5 rounded-full" style={{ background: '#d1fae5', color: '#065f46' }}>{tx.method}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <img
+        src={`/landing/${name}-${lang}.webp`}
+        alt={alt}
+        width={phone ? 780 : 1600}
+        height={phone ? 1688 : 1000}
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        className={`relative block w-full h-auto ${phone ? 'rounded-[2rem] border-[6px]' : 'rounded-2xl border'} border-stone-200`}
+        style={{ boxShadow: neu.card.boxShadow }}
+      />
     </div>
   );
 }
@@ -205,153 +155,6 @@ function SmartMockup() {
             <span style={{ color: '#a66624', fontWeight: 700 }}>{m('smsTip')}</span>
           </div>
           <p className="text-[9px] text-stone-400 mt-2">{m('smsParts')}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Mockup: POS ───────────────────────────────────────────────────────────────
-function PosMockup() {
-  const { t } = useTranslation();
-  const m = (k: string) => t(`landing.mock.${k}`);
-  return (
-    <div className="relative w-full max-w-lg mx-auto select-none">
-      <div className="absolute inset-0 scale-95 translate-y-4 rounded-2xl blur-2xl" style={{ background: '#a6662420' }} />
-      <div className="relative rounded-2xl overflow-hidden" style={{ ...neu.card, padding: 0 }}>
-
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200/60" style={{ background: 'rgb(var(--ground))' }}>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-stone-600">{m('pointOfSale')}</span>
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] text-emerald-600 font-semibold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block" /> {m('online')}
-            </span>
-            <span className="text-[9px] text-stone-400">{m('yourShop')}</span>
-          </div>
-        </div>
-
-        <div className="flex h-60" style={{ background: 'rgb(var(--ground))' }}>
-          <div className="flex-1 p-3 grid grid-cols-3 gap-2 content-start">
-            {[
-              { name: m('n1'), price: '45,000', qty: `184 ${m('uEa')}`,  highlight: true  },
-              { name: m('n4'), price: '35,000', qty: `125 ${m('uEa')}`,  highlight: false },
-              { name: m('n3'), price: '4,300',  qty: `123 ${m('uBtl')}`, highlight: false },
-              { name: m('n2'), price: '3,200',  qty: `107 ${m('uKg')}`,  highlight: false },
-              { name: m('n5'), price: '12,500', qty: `39 ${m('uEa')}`,   highlight: false },
-              { name: m('n6'), price: '2,800',  qty: `88 ${m('uKg')}`,   highlight: false },
-            ].map((p, i) => (
-              <div key={i} className="rounded-xl p-2 cursor-pointer"
-                style={{ ...neu.card, ...(p.highlight ? neu.inset : {}), outline: p.highlight ? '2px solid #a66624' : 'none' }}>
-                <p className="text-[8px] font-semibold text-stone-800 leading-tight line-clamp-2">{p.name}</p>
-                <p className="text-[10px] font-bold mt-1" style={{ color: '#a66624' }}>{p.price}/=</p>
-                <p className="text-[7px] text-stone-400">{p.qty}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="w-36 flex flex-col border-l border-stone-200/60">
-            <div className="px-3 py-2 border-b border-stone-200/60">
-              <p className="text-[9px] font-bold text-stone-700 uppercase tracking-widest">{m('cart')} (2)</p>
-            </div>
-            <div className="flex-1 px-2 py-2 space-y-1.5 overflow-hidden">
-              {[
-                { name: m('n1'), qty: 1, total: '45,000' },
-                { name: m('n2'), qty: 3, total: '9,600'  },
-              ].map((item, i) => (
-                <div key={i} className="p-1.5 rounded-lg" style={neu.card}>
-                  <p className="text-[8px] font-medium text-stone-800 leading-tight">{item.name}</p>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-[7px] px-1 rounded" style={{ background: 'rgb(var(--c-stone-200))', color: 'rgb(var(--c-stone-600))' }}>x{item.qty}</span>
-                    <span className="text-[9px] font-bold text-stone-900 tabular-nums">{item.total}/=</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="px-3 py-2 rounded-b-2xl text-white" style={{ background: 'linear-gradient(145deg, rgb(var(--ink-from)), rgb(var(--ink-to)))' }}>
-              <div className="flex justify-between text-[8px] mb-1.5">
-                <span className="opacity-70 uppercase">{m('total')}</span>
-                <span className="font-bold">54,600/=</span>
-              </div>
-              <div className="w-full rounded-lg text-center py-1 text-[8px] font-bold" style={{ background: '#a66624' }}>
-                {m('charge')}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Mockup: Products table ────────────────────────────────────────────────────
-function ProductsMockup() {
-  const { t } = useTranslation();
-  const m = (k: string, o?: Record<string, unknown>) => t(`landing.mock.${k}`, o ?? {});
-  return (
-    <div className="relative w-full max-w-xl mx-auto select-none">
-      <div className="relative rounded-2xl overflow-hidden p-4 space-y-3" style={neu.card}>
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-bold text-stone-800">{m('productsCount', { n: 312 })}</p>
-          <div className="flex gap-1.5">
-            <div className="px-2 py-1 rounded-lg text-[9px] font-semibold" style={neu.inset}>{m('all')}</div>
-            <div className="px-2 py-1 rounded-lg text-[9px] text-stone-500 capitalize">{m('active')}</div>
-            <div className="px-2 py-1 rounded-lg text-[9px] text-stone-500">{m('inactive')}</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { k: 'products',    value: '312',                       warn: false },
-            { k: 'totalItems',  value: `5,842 ${m('items')}`,       warn: false },
-            { k: 'retailValue', value: '18.4M',                     warn: false },
-            { k: 'lowOut',      value: '8 / 3',                     warn: true  },
-          ].map(({ k, value, warn }) => (
-            <div key={k} className="p-2 rounded-xl" style={neu.card}>
-              <p className="text-[7px] uppercase tracking-wider text-stone-400">{m(k)}</p>
-              <p className="text-[10px] font-bold mt-0.5" style={{ color: warn ? 'rgb(var(--c-red-700))' : 'rgb(var(--c-stone-900))' }}>{value}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="rounded-xl overflow-hidden" style={neu.inset}>
-          <table className="w-full text-[8px]">
-            <thead>
-              <tr className="border-b border-stone-200/60">
-                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold">{m('product')}</th>
-                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold hidden sm:table-cell">{m('sku')}</th>
-                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold">{m('price')}</th>
-                <th className="text-left px-2 py-1.5 text-stone-500 font-semibold">{m('stock')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { name: m('n1'), sku: 'PRD-001', price: '45,000', stock: '184', unit: m('uEa'),  warn: false },
-                { name: m('n4'), sku: 'PRD-002', price: '35,000', stock: '125', unit: m('uEa'),  warn: false },
-                { name: m('n3'), sku: 'PRD-003', price: '4,300',  stock: '5',   unit: m('uBtl'), warn: true  },
-                { name: m('n2'), sku: 'PRD-004', price: '3,200',  stock: '107', unit: m('uKg'),  warn: false },
-              ].map((p, i) => (
-                <tr key={i} className="border-b border-stone-100">
-                  <td className="px-2 py-1.5 font-medium text-stone-800">{p.name}</td>
-                  <td className="px-2 py-1.5 text-stone-400 font-mono hidden sm:table-cell">{p.sku}</td>
-                  <td className="px-2 py-1.5 font-semibold text-stone-800 tabular-nums">{p.price}/=</td>
-                  <td className="px-2 py-1.5">
-                    <span className="flex items-center gap-1">
-                      {p.warn && <AlertTriangle size={8} className="text-amber-500" />}
-                      <span className={p.warn ? 'text-amber-600 font-semibold' : 'text-stone-700'}>{p.stock} {p.unit}</span>
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-stone-200">
-                <td className="px-2 py-1.5 text-[7px] uppercase tracking-wide text-stone-400">{m('total')}</td>
-                <td className="hidden sm:table-cell" />
-                <td />
-                <td className="px-2 py-1.5 font-bold text-stone-800 text-[9px]">{m('units', { n: '5,842' })}</td>
-              </tr>
-            </tfoot>
-          </table>
         </div>
       </div>
     </div>
@@ -465,7 +268,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="mt-16 lg:mt-0">
-              <DashboardMockup />
+              <Screenshot name="dashboard" alt={t('landing.shots.dashboard')} eager />
             </div>
           </div>
         </div>
@@ -528,7 +331,7 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-            <ProductsMockup />
+            <Screenshot name="products" alt={t('landing.shots.products')} />
           </div>
         </div>
       </section>
@@ -538,7 +341,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
             <div className="order-2 lg:order-1 mt-12 lg:mt-0">
-              <PosMockup />
+              <Screenshot name="pos" alt={t('landing.shots.pos')} />
             </div>
             <div className="order-1 lg:order-2">
               <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: '#a66624' }}>{t('landing.pos.eyebrow')}</p>
@@ -779,43 +582,7 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-12 lg:mt-0 flex justify-center">
-              <div className="w-52 h-[26rem] rounded-3xl flex flex-col overflow-hidden" style={{ ...neu.card, padding: 0 }}>
-                <div className="h-6 flex items-center justify-center border-b border-stone-200/60" style={{ background: 'rgb(var(--ground))' }}>
-                  <div className="w-16 h-1.5 rounded-full" style={{ background: 'rgb(var(--neu-dark))' }} />
-                </div>
-                <div className="flex-1 p-3 space-y-2" style={{ background: 'rgb(var(--ground))' }}>
-                  <div className="p-3 rounded-xl" style={neu.card}>
-                    <p className="text-[9px] uppercase tracking-widest text-stone-400">{t('landing.mock.salesToday')}</p>
-                    <p className="text-xl font-bold mt-0.5 text-stone-900">485,200<span className="text-xs font-normal text-stone-400 ml-1">TZS</span></p>
-                    <p className="text-[9px] text-emerald-600 mt-0.5">{t('landing.mock.upFrom')}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="p-2.5 rounded-xl" style={neu.card}>
-                      <p className="text-[8px] text-stone-400">{t('landing.mock.transactions')}</p>
-                      <p className="text-sm font-bold text-stone-900">47</p>
-                    </div>
-                    <div className="p-2.5 rounded-xl" style={neu.card}>
-                      <p className="text-[8px] text-stone-400">{t('landing.mock.itemsSold')}</p>
-                      <p className="text-sm font-bold text-stone-900">312</p>
-                    </div>
-                  </div>
-                  <div className="p-2 rounded-xl text-center" style={neu.inset}>
-                    <p className="text-[9px] font-bold text-emerald-600">{t('landing.mock.installedAsApp')}</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    {[
-                      { name: t('landing.mock.n1'), price: '45,000/=' },
-                      { name: t('landing.mock.n2'), price: '3,200/='  },
-                      { name: t('landing.mock.n3'), price: '4,300/='  },
-                    ].map(p => (
-                      <div key={p.name} className="p-2 rounded-lg flex justify-between items-center" style={neu.card}>
-                        <p className="text-[8px] text-stone-600 truncate">{p.name}</p>
-                        <p className="text-[8px] font-bold text-stone-800 shrink-0">{p.price}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <Screenshot name="phone" alt={t('landing.shots.phone')} phone />
             </div>
           </div>
         </div>

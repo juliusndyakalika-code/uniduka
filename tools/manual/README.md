@@ -40,6 +40,19 @@ cd ../../web/public/manual/shots && for f in *.png; do sips -Z 1600 "$f"; done
 Then look at the result at <http://localhost:5173/manual/index.html>, in both
 languages, before committing.
 
+## The landing page
+
+The landing page's pictures are real screenshots too, one set per language,
+in `web/public/landing/`. With the same seed and servers running:
+
+```sh
+cd tools/manual && node shoot-landing.mjs
+cd ../../web/public/landing
+for f in dashboard products pos; do for l in en sw; do cwebp -quiet -q 80 -resize 1600 0 $f-$l.png -o $f-$l.webp; done; done
+for l in en sw; do cwebp -quiet -q 82 -resize 780 0 phone-$l.png -o phone-$l.webp; done
+rm *.png
+```
+
 ## Three traps
 
 **The subscription page needs payment keys.** Without `SPLASHPAY_*` in
