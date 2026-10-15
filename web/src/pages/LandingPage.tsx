@@ -161,6 +161,59 @@ function SmartMockup() {
   );
 }
 
+// ── Headline that writes itself ──────────────────────────────────────────────
+// Types the first two lines, holds, erases and types them again. The full
+// text sits underneath, invisible, so the hero never changes height while it
+// types; a screen reader gets the whole headline once. With reduced motion asked for,
+// the headline is simply shown.
+const TYPE_MS = 65, ERASE_MS = 30, HOLD_MS = 2800, REST_MS = 450;
+
+function TypedHeadline({ line1, line2 }: { line1: string; line2: string }) {
+  const total = line1.length + line2.length;
+  const [reduced] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+  const [n, setN] = useState(reduced ? total : 0);
+  const [erasing, setErasing] = useState(false);
+
+  // A language switch changes the words, so start writing the new ones.
+  useEffect(() => { setN(reduced ? total : 0); setErasing(false); }, [line1, line2, total, reduced]);
+
+  useEffect(() => {
+    if (reduced) return;
+    let delay = erasing ? ERASE_MS : TYPE_MS;
+    if (!erasing && n === total) delay = HOLD_MS;
+    if (erasing && n === 0) delay = REST_MS;
+    const id = window.setTimeout(() => {
+      if (!erasing && n === total) setErasing(true);
+      else if (erasing && n === 0) setErasing(false);
+      else setN(v => v + (erasing ? -1 : 1));
+    }, delay);
+    return () => window.clearTimeout(id);
+  }, [n, erasing, total, reduced]);
+
+  const a = line1.slice(0, Math.min(n, line1.length));
+  const b = line2.slice(0, Math.max(0, n - line1.length));
+  const caret = !reduced && (
+    <span aria-hidden="true" className="mh-caret inline-block align-baseline ml-0.5 w-[3px] h-[0.9em] translate-y-[0.08em] rounded-sm"
+      style={{ background: '#a66624' }} />
+  );
+
+  return (
+    <span className="grid">
+      <span className="sr-only">{line1} {line2}</span>
+      {/* Holds the space, so the hero keeps its height while typing. */}
+      <span className="col-start-1 row-start-1 invisible" aria-hidden="true">
+        {line1}
+        <span className="block">{line2}</span>
+      </span>
+      <span className="col-start-1 row-start-1" aria-hidden="true">
+        {a}{n <= line1.length && caret}
+        <span className="block" style={{ color: '#a66624' }}>{b}{n > line1.length && caret}&#8203;</span>
+      </span>
+    </span>
+  );
+}
+
 function Logo({ light = false }: { light?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
@@ -240,8 +293,7 @@ export default function LandingPage() {
                 <Zap size={12} className="fill-amber-700" /> {t('landing.hero.badge')}
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight mb-6">
-                {t('landing.hero.title1')}
-                <span className="block" style={{ color: '#a66624' }}>{t('landing.hero.title2')}</span>
+                <TypedHeadline line1={t('landing.hero.title1')} line2={t('landing.hero.title2')} />
                 <span className="block text-stone-400 font-light">{t('landing.hero.title3')}</span>
               </h1>
               <p className="text-lg text-stone-500 leading-relaxed mb-8 max-w-lg">

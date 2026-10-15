@@ -300,3 +300,8 @@
     @apply text-xs uppercase tracking-widest text-stone-500 mt-1;
   }
 }
+
+/* The landing headline's typing cursor. */
+@keyframes mh-caret-blink { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0 } }
+.mh-caret { animation: mh-caret-blink 1s step-end infinite; }
+@media (prefers-reduced-motion: reduce) { .mh-caret { animation: none; } }
