@@ -360,6 +360,7 @@ export default function PosPage() {
 
   // ── Checkout ───────────────────────────────────────────────────────────────
   const { mutate: checkout, isPending } = useMutation({
+    meta: { silent: true },   // the receipt screen is the acknowledgement
     mutationFn: () => api.post('/pos/transactions', {
       items: cart.map(i => ({
         productId:   i.product.id,

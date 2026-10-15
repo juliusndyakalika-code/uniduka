@@ -9,6 +9,8 @@ import {
   Truck, Package, ShoppingBag, Bell, BellOff, MessageCircle, Camera, X, Clock, Ban,
 } from 'lucide-react';
 import { mediaUrl, shrinkPhoto } from '../../lib/media';
+import { toast, errorMessage } from '../../lib/toast';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { PageLoader } from '../../components/ui/Loader';
@@ -38,6 +40,7 @@ function money(n: number, c = 'TZS') {
 }
 
 export default function StorefrontSettingsPage() {
+  const { t } = useTranslation();
   const { shopId } = useAuthStore();
   const qc = useQueryClient();
 
@@ -93,6 +96,7 @@ export default function StorefrontSettingsPage() {
   });
 
   const { mutate: togglePublish } = useMutation({
+    meta: { silent: true },   // the switch moving is the acknowledgement
     mutationFn: ({ id, isPublished }: { id: string; isPublished: boolean }) =>
       api.patch(`/inventory/products/${id}`, { isPublished }),
     onMutate: async ({ id, isPublished }) => {
@@ -121,25 +125,28 @@ export default function StorefrontSettingsPage() {
   const refreshProducts = () => qc.invalidateQueries({ queryKey: ['products-storefront', shopId] });
 
   async function uploadImage(id: string, file: File) {
-    setUploading(id); setError('');
+    setUploading(id);
     try {
       const image = await shrinkPhoto(file);
-      await api.post(`/inventory/products/${id}/image`, { image });
+      const r = await api.post(`/inventory/products/${id}/image`, { image });
       await refreshProducts();
+      toast.success(t(r.data.data?.status === 'APPROVED' ? 'toast.photoAdded' : 'toast.photoPending'));
     } catch (e) {
-      setError(apiError(e, 'Could not upload that photo'));
+      // A rejected photo comes back with the reason, which is what the owner needs.
+      toast.error(errorMessage(e) ?? t('toast.photoFailed'));
     } finally {
       setUploading(null);
     }
   }
 
   async function removeImage(id: string) {
-    setUploading(id); setError('');
+    setUploading(id);
     try {
       await api.delete(`/inventory/products/${id}/image`);
       await refreshProducts();
+      toast.success(t('toast.photoRemoved'));
     } catch (e) {
-      setError(apiError(e, 'Could not remove the photo'));
+      toast.error(errorMessage(e) ?? t('toast.failed'));
     } finally {
       setUploading(null);
     }
@@ -147,8 +154,11 @@ export default function StorefrontSettingsPage() {
 
   const { mutate: publishAll, isPending: publishing } = useMutation({
     mutationFn: (isPublished: boolean) => api.patch('/inventory/products/publish', { isPublished }).then(r => r.data.data.updated as number),
-    onSuccess: () => { setError(''); refreshProducts(); },
-    onError: (e) => setError(apiError(e, 'Could not update the products')),
+    meta: { silent: true },
+    onSuccess: (n, isPublished) => {
+      refreshProducts();
+      toast.success(isPublished ? t('toast.listed', { count: n }) : t('toast.hiddenAll'));
+    },
   });
 
   const publishedCount = products.filter(p => p.isPublished).length;
@@ -166,6 +176,7 @@ export default function StorefrontSettingsPage() {
 
   function copyLink() {
     navigator.clipboard.writeText(liveUrl).then(() => {
+      toast.success(t('toast.copied'));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }).catch(() => setError('Could not copy the link'));

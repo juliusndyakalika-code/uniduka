@@ -1205,5 +1205,19 @@
     "ownerTitle": "Una duka?",
     "ownerBody": "Fungua duka lako la mtandaoni na MauzoHalisi. Chagua bidhaa za kuonyesha, weka picha, na upokee oda kwenye simu yako.",
     "ownerCta": "Anza majaribio bure"
+  },
+  "toast": {
+    "saved": "Imehifadhiwa",
+    "updated": "Mabadiliko yamehifadhiwa",
+    "deleted": "Imefutwa",
+    "failed": "Kuna hitilafu. Tafadhali jaribu tena.",
+    "copied": "Kiungo kimenakiliwa",
+    "photoAdded": "Picha imeongezwa na kuidhinishwa. Wateja wanaiona sasa.",
+    "photoPending": "Picha imeongezwa. Itaonekana dukani kwako ikishakaguliwa.",
+    "photoRemoved": "Picha imeondolewa",
+    "photoFailed": "Imeshindwa kupakia picha hiyo.",
+    "listed": "Bidhaa {{count}} zimeorodheshwa mtandaoni",
+    "listed_one": "Bidhaa 1 imeorodheshwa mtandaoni",
+    "hiddenAll": "Bidhaa zote zimefichwa kwenye duka lako la mtandaoni"
   }
 }

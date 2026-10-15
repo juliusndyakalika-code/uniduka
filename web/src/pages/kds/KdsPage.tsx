@@ -32,6 +32,7 @@ export default function KdsPage() {
   });
 
   const { mutate: updateStatus } = useMutation({
+    meta: { silent: true },   // the ticket moving column is the acknowledgement
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       api.put(`/kds/${id}`, { status }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['kds-orders'] }),

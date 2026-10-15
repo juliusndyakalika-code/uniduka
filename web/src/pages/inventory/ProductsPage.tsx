@@ -5,6 +5,7 @@ import ShipmentImportModal from './ShipmentImportModal';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import { toast } from '../../lib/toast';
 import { useAuthStore } from '../../store/authStore';
 import CameraScanner from '../../components/CameraScanner';
 import { TablePagination } from '../../components/ui/DataTable';
@@ -467,7 +468,7 @@ export default function ProductsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
     onError: (e: unknown) => {
       qc.invalidateQueries({ queryKey: ['products'] });
-      alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Delete failed');
+      toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Delete failed');
     },
   });
 

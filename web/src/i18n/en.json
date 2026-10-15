@@ -1205,5 +1205,19 @@
     "ownerTitle": "Own a shop?",
     "ownerBody": "Open your own online store with MauzoHalisi. Choose which products to show, add photos, and receive orders on your phone.",
     "ownerCta": "Start free trial"
+  },
+  "toast": {
+    "saved": "Saved",
+    "updated": "Changes saved",
+    "deleted": "Deleted",
+    "failed": "Something went wrong. Please try again.",
+    "copied": "Link copied",
+    "photoAdded": "Photo added and approved. Customers can see it now.",
+    "photoPending": "Photo added. It will show in your store once it has been reviewed.",
+    "photoRemoved": "Photo removed",
+    "photoFailed": "Could not upload that photo.",
+    "listed": "{{count}} products listed online",
+    "listed_one": "1 product listed online",
+    "hiddenAll": "All products hidden from your online store"
   }
 }

@@ -6,7 +6,16 @@ import { useAuthStore } from '../store/authStore';
 // the only way the browser can send it and no script can read it.
 export const api = axios.create({ baseURL: API_BASE, withCredentials: true });
 
+/**
+ * The method of the most recent write, so a save's pop-up can say "Saved"
+ * or "Deleted" without every screen passing it along. Writes from one person
+ * are sequential in practice, so the last one is the one that just finished.
+ */
+export let lastWriteMethod: string | undefined;
+
 api.interceptors.request.use((config) => {
+  const m = config.method?.toLowerCase();
+  if (m && m !== 'get') lastWriteMethod = m;
   let token: string | null = null;
   try { token = localStorage.getItem('ud_token'); } catch {}
   if (!token) token = useAuthStore.getState().token;
