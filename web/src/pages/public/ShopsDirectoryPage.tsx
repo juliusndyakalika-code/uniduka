@@ -97,10 +97,10 @@ export default function ShopsDirectoryPage() {
   const filtering = !!(search || category);
 
   return (
-    <div className="min-h-screen bg-stone-100 pb-16">
+    <div className="min-h-screen mh-ground pb-16">
 
       {/* ── Header ───────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white border-b border-stone-200 shadow-sm">
+      <header className="sticky top-0 z-30 mh-ground mh-bar">
         <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="MauzoHalisi home">
             <LogoMark size={30} />
@@ -109,7 +109,7 @@ export default function ShopsDirectoryPage() {
             </span>
           </Link>
           <form className="flex-1 min-w-0" role="search" onSubmit={e => { e.preventDefault(); setSearch(query.trim()); }}>
-            <div className="flex items-stretch rounded-full border-2 border-primary-600 bg-white overflow-hidden">
+            <div className="flex items-stretch rounded-full border-2 border-primary-600 mh-ground overflow-hidden">
               <input
                 className="flex-1 min-w-0 px-4 py-2 text-sm bg-transparent outline-none text-stone-900 placeholder:text-stone-400"
                 placeholder={t('market.search')}
@@ -146,7 +146,7 @@ export default function ShopsDirectoryPage() {
       </header>
 
       {/* ── Trust strip ──────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-stone-200">
+      <div className="mh-ground border-b border-stone-200/60">
         <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2 flex gap-x-6 overflow-x-auto text-[12px] text-stone-600 scrollbar-none">
           <span className="flex items-center gap-1.5 whitespace-nowrap"><Wallet size={13} className="text-primary-700" /> {t('market.payOnDelivery')}</span>
           <span className="flex items-center gap-1.5 whitespace-nowrap"><ShieldCheck size={13} className="text-primary-700" /> {t('market.direct')}</span>
@@ -156,13 +156,13 @@ export default function ShopsDirectoryPage() {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-3 sm:px-5 mt-3 space-y-3">
+      <main className="max-w-6xl mx-auto px-3 sm:px-5 mt-4 space-y-5">
 
         {/* ── Hero ─────────────────────────────────────────────────── */}
         {!filtering && (
-          <section className="grid gap-3 lg:grid-cols-[13rem_minmax(0,1fr)_15rem]">
+          <section className="grid gap-4 lg:grid-cols-[13rem_minmax(0,1fr)_15rem]">
             {categories.length > 0 && (
-              <div className="hidden lg:block bg-white rounded-xl p-2">
+              <div className="hidden lg:block card p-2">
                 <p className="px-2 py-1.5 text-xs font-bold text-stone-900 flex items-center gap-1.5"><LayoutGrid size={13} /> {t('market.categories')}</p>
                 <ul className="max-h-[15rem] overflow-y-auto">
                   {categories.map(c => (
@@ -178,7 +178,7 @@ export default function ShopsDirectoryPage() {
             )}
 
             <div className={`relative rounded-xl overflow-hidden min-h-[9.5rem] sm:min-h-[15rem] bg-gradient-to-br from-primary-500 via-primary-600 to-primary-800 ${categories.length ? '' : 'lg:col-span-2'}`}>
-              <div className="absolute right-3 sm:right-8 top-1/2 -translate-y-1/2 flex gap-2 sm:gap-3">
+              <div className="absolute right-3 sm:right-8 top-1/2 -translate-y-1/2 flex gap-3 sm:gap-4">
                 {bannerShots.map((p, i) => (
                   <div key={p.id} className={`w-16 h-16 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-snow shadow-lg ${i === 1 ? '-translate-y-3' : 'translate-y-2'}`}>
                     <ProductImage p={p} />
@@ -196,7 +196,7 @@ export default function ShopsDirectoryPage() {
               </div>
             </div>
 
-            <aside className="hidden lg:flex flex-col bg-white rounded-xl p-4 gap-2">
+            <aside className="hidden lg:flex flex-col card p-4 gap-2">
               <Sparkles size={20} className="text-primary-700" />
               <p className="font-bold text-sm text-stone-900">{t('market.ownerTitle')}</p>
               <p className="text-[12px] text-stone-600">{t('market.ownerBody')}</p>
@@ -209,7 +209,7 @@ export default function ShopsDirectoryPage() {
 
         {/* ── Category tiles ───────────────────────────────────────── */}
         {!filtering && categories.length > 1 && (
-          <section className="bg-white rounded-xl px-2 py-3">
+          <section className="card px-2 py-3">
             <div className="flex gap-1 sm:gap-3 overflow-x-auto scrollbar-none">
               {categories.map(c => {
                 const img = tileImage(c.name);
@@ -242,18 +242,18 @@ export default function ShopsDirectoryPage() {
           {products.isLoading && items.length === 0 ? (
             <div className="py-16 grid place-items-center"><Loader2 className="animate-spin text-stone-300" size={22} /></div>
           ) : products.isError ? (
-            <p className="py-10 text-center text-sm text-red-600 bg-white rounded-xl">{t('market.error')}</p>
+            <p className="py-10 text-center text-sm text-red-600 card">{t('market.error')}</p>
           ) : items.length === 0 ? (
-            <div className="py-16 text-center bg-white rounded-xl">
+            <div className="py-16 text-center card">
               <ShoppingBag size={32} className="mx-auto mb-2 text-stone-300" />
               <p className="text-sm text-stone-500">{filtering ? t('market.noMatch') : t('market.none')}</p>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                 {items.map(p => (
                   <button key={p.id} onClick={() => setViewing(p)}
-                    className="group bg-white rounded-xl overflow-hidden flex flex-col text-left hover:shadow-md transition-shadow">
+                    className="group card-hover flex flex-col text-left">
                     <div className="relative aspect-square overflow-hidden">
                       <ProductImage p={p} className="group-hover:scale-[1.03] transition-transform duration-300" />
                       {!p.inStock && <span className="absolute inset-0 bg-white/70 grid place-items-center text-[11px] font-bold text-stone-500 uppercase tracking-wide">{t('market.out')}</span>}
@@ -272,7 +272,7 @@ export default function ShopsDirectoryPage() {
               {products.hasNextPage && (
                 <div className="flex justify-center pt-4">
                   <button onClick={() => products.fetchNextPage()} disabled={products.isFetchingNextPage}
-                    className="px-8 py-2.5 rounded-full border border-stone-300 bg-white text-sm font-semibold text-stone-700 hover:border-stone-500 disabled:opacity-50 flex items-center gap-2">
+                    className="btn-secondary px-8 py-2.5 disabled:opacity-50">
                     {products.isFetchingNextPage && <Loader2 size={14} className="animate-spin" />} {t('market.loadMore')}
                   </button>
                 </div>
@@ -285,10 +285,10 @@ export default function ShopsDirectoryPage() {
         {!filtering && shopCards.length > 0 && (
           <section className="pt-2">
             <h2 className="px-1 py-2 text-base sm:text-lg font-extrabold text-stone-900">{t('market.shopsTitle')}</h2>
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {shopCards.map(s => (
                 <li key={s.slug}>
-                  <Link to={`/s/${s.slug}`} className="group block bg-white rounded-xl p-3 h-full hover:shadow-md transition-shadow">
+                  <Link to={`/s/${s.slug}`} className="group block card-hover p-4 h-full">
                     <div className="flex items-center gap-3">
                       <div className="w-11 h-11 rounded-full overflow-hidden bg-primary-50 grid place-items-center shrink-0">
                         {s.logoUrl ? <img src={mediaUrl(s.logoUrl)} alt="" className="w-full h-full object-cover" loading="lazy" /> : <Store size={18} className="text-primary-700" />}
@@ -320,7 +320,7 @@ export default function ShopsDirectoryPage() {
             {shops.hasNextPage && (
               <div className="flex justify-center pt-4">
                 <button onClick={() => shops.fetchNextPage()} disabled={shops.isFetchingNextPage}
-                  className="px-8 py-2.5 rounded-full border border-stone-300 bg-white text-sm font-semibold text-stone-700 hover:border-stone-500 disabled:opacity-50 flex items-center gap-2">
+                  className="btn-secondary px-8 py-2.5 disabled:opacity-50">
                   {shops.isFetchingNextPage && <Loader2 size={14} className="animate-spin" />} {t('market.moreShops')}
                 </button>
               </div>
@@ -328,7 +328,7 @@ export default function ShopsDirectoryPage() {
           </section>
         )}
 
-        <footer className="bg-white rounded-xl p-4 sm:p-5 text-[12px] text-stone-500 flex flex-wrap items-center justify-between gap-3">
+        <footer className="card p-4 sm:p-5 text-[12px] text-stone-500 flex flex-wrap items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-1.5 hover:text-stone-800"><LogoMark size={18} /> MauzoHalisi</Link>
           <div className="flex gap-4">
             <Link to="/register" className="hover:text-stone-800">{t('market.sell')}</Link>
@@ -342,7 +342,7 @@ export default function ShopsDirectoryPage() {
       {viewing && (
         <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={viewing.name}>
           <div className="absolute inset-0 bg-black/50" onClick={() => setViewing(null)} />
-          <div className="relative bg-white w-full sm:max-w-3xl rounded-t-3xl sm:rounded-2xl max-h-[92vh] overflow-y-auto sm:grid sm:grid-cols-2">
+          <div className="relative mh-ground w-full sm:max-w-3xl rounded-t-3xl sm:rounded-2xl max-h-[92vh] overflow-y-auto sm:grid sm:grid-cols-2">
             <button onClick={() => setViewing(null)} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 shadow grid place-items-center text-stone-600" aria-label={t('common.close', 'Close')}>
               <X size={16} />
             </button>

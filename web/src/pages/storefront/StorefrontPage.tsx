@@ -203,14 +203,14 @@ export default function StorefrontPage() {
   // ── States ────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen grid place-items-center bg-stone-100">
+      <div className="min-h-screen grid place-items-center mh-ground">
         <Loader2 className="animate-spin text-stone-400" size={28} />
       </div>
     );
   }
   if (isError || !shop) {
     return (
-      <div className="min-h-screen grid place-items-center bg-stone-100 p-6 text-center">
+      <div className="min-h-screen grid place-items-center mh-ground p-6 text-center">
         <div>
           <Store size={40} className="mx-auto mb-3 text-stone-300" />
           <h1 className="text-lg font-bold text-stone-800">Shop not found</h1>
@@ -245,8 +245,8 @@ export default function StorefrontPage() {
     );
 
     return (
-      <div className="min-h-screen bg-stone-100 grid place-items-center p-5">
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-7 max-w-sm w-full text-center">
+      <div className="min-h-screen mh-ground grid place-items-center p-5">
+        <div className="card p-7 max-w-sm w-full text-center">
           <CheckCircle2 size={44} className="mx-auto mb-3 text-emerald-500" />
           <h1 className="text-lg font-bold text-stone-900">Order placed</h1>
           <p className="text-sm text-stone-500 mt-1">
@@ -293,10 +293,10 @@ export default function StorefrontPage() {
   const whatsappHref = waLink(shop.whatsapp ?? shop.phone, `Hello ${shop.name}, I saw your online shop.`);
 
   return (
-    <div className="min-h-screen bg-stone-100 pb-24">
+    <div className="min-h-screen mh-ground pb-24">
 
       {/* ── Header: identity, the big search, the cart ─────────────────── */}
-      <header className="sticky top-0 z-30 bg-white border-b border-stone-200 shadow-sm">
+      <header className="sticky top-0 z-30 mh-ground mh-bar">
         <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center gap-3">
           <div className="flex items-center gap-2 min-w-0 shrink-0 sm:max-w-[14rem]">
             <div className="w-9 h-9 rounded-lg bg-stone-100 overflow-hidden grid place-items-center shrink-0">
@@ -308,7 +308,7 @@ export default function StorefrontPage() {
           </div>
 
           <form className="flex-1 min-w-0" onSubmit={e => { e.preventDefault(); setSearch(query.trim()); }} role="search">
-            <div className="flex items-stretch rounded-full border-2 border-primary-600 bg-white overflow-hidden">
+            <div className="flex items-stretch rounded-full border-2 border-primary-600 mh-ground overflow-hidden">
               <input
                 className="flex-1 min-w-0 px-4 py-2 text-sm bg-transparent outline-none text-stone-900 placeholder:text-stone-400"
                 placeholder={`Search in ${shop.name}`}
@@ -353,7 +353,7 @@ export default function StorefrontPage() {
       </header>
 
       {/* ── Trust strip ──────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-stone-200">
+      <div className="mh-ground border-b border-stone-200/60">
         <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2 flex gap-x-6 gap-y-1 overflow-x-auto text-[12px] text-stone-600 scrollbar-none">
           <span className="flex items-center gap-1.5 whitespace-nowrap"><Wallet size={13} className="text-primary-700" /> Pay on {shop.acceptsDelivery ? 'delivery' : 'pickup'}</span>
           {shop.acceptsDelivery && (
@@ -366,12 +366,12 @@ export default function StorefrontPage() {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-3 sm:px-5 mt-3 space-y-3">
+      <main className="max-w-6xl mx-auto px-3 sm:px-5 mt-4 space-y-5">
 
         {/* ── Hero: categories, banner, shop card ─────────────────────── */}
-        <section className="grid gap-3 lg:grid-cols-[13rem_minmax(0,1fr)_15rem]">
+        <section className="grid gap-4 lg:grid-cols-[13rem_minmax(0,1fr)_15rem]">
           {shop.categories.length > 0 && (
-            <div className="hidden lg:block bg-white rounded-xl p-2">
+            <div className="hidden lg:block card p-2">
               <p className="px-2 py-1.5 text-xs font-bold text-stone-900 flex items-center gap-1.5"><LayoutGrid size={13} /> Categories</p>
               <ul className="max-h-[15rem] overflow-y-auto">
                 {shop.categories.map(c => (
@@ -393,7 +393,7 @@ export default function StorefrontPage() {
               : (
                 <div className="absolute inset-0 bg-gradient-to-br from-primary-500 via-primary-600 to-primary-800">
                   {/* A few product photos tilted on the banner, so it looks like this shop and not any shop. */}
-                  <div className="absolute right-3 sm:right-8 top-1/2 -translate-y-1/2 flex gap-2 sm:gap-3">
+                  <div className="absolute right-3 sm:right-8 top-1/2 -translate-y-1/2 flex gap-3 sm:gap-4">
                     {showcase.filter(p => p.imageUrl).slice(0, 2).map((p, i) => (
                       <div key={p.id} className={`w-16 h-16 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-snow shadow-lg ${i === 1 ? '-translate-y-3' : 'translate-y-2'}`}>
                         <ProductImage p={p} />
@@ -413,7 +413,7 @@ export default function StorefrontPage() {
             </div>
           </div>
 
-          <aside className="hidden lg:flex flex-col bg-white rounded-xl p-4 gap-3">
+          <aside className="hidden lg:flex flex-col card p-4 gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-11 h-11 rounded-full bg-primary-50 grid place-items-center overflow-hidden">
                 {shop.logoUrl ? <img src={mediaUrl(shop.logoUrl)} alt="" className="w-full h-full object-cover" /> : <Store size={18} className="text-primary-700" />}
@@ -445,7 +445,7 @@ export default function StorefrontPage() {
 
         {/* ── Round category tiles ───────────────────────────────────── */}
         {tiles.length > 1 && (
-          <section className="bg-white rounded-xl px-2 py-3">
+          <section className="card px-2 py-3">
             <div className="flex gap-1 sm:gap-3 overflow-x-auto scrollbar-none">
               {tiles.map(({ name: c, product }) => (
                 <button key={c} onClick={() => pickCategory(c)} className="flex flex-col items-center gap-1.5 w-[4.6rem] sm:w-24 shrink-0">
@@ -461,7 +461,7 @@ export default function StorefrontPage() {
 
         {/* ── Few left: the marketplace "deals" row ──────────────────── */}
         {fewLeft.length > 0 && !search && !category && (
-          <section className="bg-white rounded-xl p-3">
+          <section className="card p-3">
             <h2 className="flex items-center gap-1.5 text-sm sm:text-base font-extrabold text-stone-900 mb-2.5">
               <Flame size={17} className="text-red-600" /> Few left, order now
             </h2>
@@ -496,7 +496,7 @@ export default function StorefrontPage() {
           {listing.isLoading && products.length === 0 ? (
             <div className="py-16 grid place-items-center"><Loader2 className="animate-spin text-stone-300" size={22} /></div>
           ) : products.length === 0 ? (
-            <div className="py-16 text-center bg-white rounded-xl">
+            <div className="py-16 text-center card">
               <ShoppingBag size={32} className="mx-auto mb-2 text-stone-300" />
               <p className="text-sm text-stone-500">
                 {search || category ? 'Nothing matches that search' : 'This shop has no items listed yet'}
@@ -504,11 +504,11 @@ export default function StorefrontPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                 {products.map(p => {
                   const inCart = cart.find(l => l.product.id === p.id);
                   return (
-                    <div key={p.id} className="group bg-white rounded-xl overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                    <div key={p.id} className="group card-hover flex flex-col">
                       <button onClick={() => openProduct(p)} className="relative aspect-square overflow-hidden text-left" aria-label={`View ${p.name}`}>
                         <ProductImage p={p} className="group-hover:scale-[1.03] transition-transform duration-300" />
                         {!p.inStock && (
@@ -548,7 +548,7 @@ export default function StorefrontPage() {
               {listing.hasNextPage && (
                 <div className="flex justify-center pt-4">
                   <button onClick={() => listing.fetchNextPage()} disabled={listing.isFetchingNextPage}
-                    className="px-8 py-2.5 rounded-full border border-stone-300 bg-white text-sm font-semibold text-stone-700 hover:border-stone-500 disabled:opacity-50 flex items-center gap-2">
+                    className="btn-secondary px-8 py-2.5 disabled:opacity-50">
                     {listing.isFetchingNextPage && <Loader2 size={14} className="animate-spin" />} Load more
                   </button>
                 </div>
@@ -558,7 +558,7 @@ export default function StorefrontPage() {
         </section>
 
         {/* ── Footer ─────────────────────────────────────────────────── */}
-        <footer className="bg-white rounded-xl p-4 sm:p-5 text-[12px] text-stone-500 grid gap-3 sm:grid-cols-[1fr_auto] items-center">
+        <footer className="card p-4 sm:p-5 text-[12px] text-stone-500 grid gap-3 sm:grid-cols-[1fr_auto] items-center">
           <div className="space-y-1">
             <p className="font-bold text-stone-800">{shop.name}</p>
             {location && <p className="flex items-center gap-1"><MapPin size={12} /> {location}</p>}
@@ -588,7 +588,7 @@ export default function StorefrontPage() {
       {viewing && (
         <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={viewing.name}>
           <div className="absolute inset-0 bg-black/50" onClick={() => setViewing(null)} />
-          <div className="relative bg-white w-full sm:max-w-3xl rounded-t-3xl sm:rounded-2xl max-h-[92vh] overflow-y-auto sm:grid sm:grid-cols-2">
+          <div className="relative mh-ground w-full sm:max-w-3xl rounded-t-3xl sm:rounded-2xl max-h-[92vh] overflow-y-auto sm:grid sm:grid-cols-2">
             <button onClick={() => setViewing(null)} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 shadow grid place-items-center text-stone-600" aria-label="Close">
               <X size={16} />
             </button>
@@ -638,8 +638,8 @@ export default function StorefrontPage() {
       {cartOpen && (
         <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setCartOpen(false); setCheckout(false); }} />
-          <div className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl max-h-[88vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+          <div className="relative mh-ground w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl max-h-[88vh] overflow-y-auto">
+            <div className="sticky top-0 mh-ground px-5 py-4 border-b border-stone-100 flex items-center justify-between">
               <h2 className="font-bold text-stone-900">
                 {checkout ? 'Your details' : `Cart (${itemCount})`}
               </h2>
@@ -738,7 +738,7 @@ export default function StorefrontPage() {
 
             {/* Totals + action */}
             {cart.length > 0 && (
-              <div className="sticky bottom-0 bg-white border-t border-stone-100 p-5 space-y-3">
+              <div className="sticky bottom-0 mh-ground border-t border-stone-100 p-5 space-y-3">
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between text-stone-500">
                     <span>Subtotal</span><span>{money(subtotal, shop.currency)}</span>

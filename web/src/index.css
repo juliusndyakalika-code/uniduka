@@ -314,3 +314,8 @@
 /* Sideways rows (store categories, deals) scroll by swipe; the bar is noise. */
 .scrollbar-none { scrollbar-width: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* Public store and marketplace: the app's ground and a soft raised bar,
+   so a shopper sees the same MauzoHalisi surfaces as the owner does. */
+.mh-ground { background: rgb(var(--ground)); }
+.mh-bar { box-shadow: 0 6px 16px -10px rgb(var(--neu-dark)); border-bottom: 1px solid rgb(var(--c-stone-200) / 0.6); }
