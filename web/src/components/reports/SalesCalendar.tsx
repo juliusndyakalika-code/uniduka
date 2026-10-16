@@ -43,7 +43,7 @@ export interface CalendarData {
   };
 }
 
-export const money = (n: number) => `TSh ${Math.round(n).toLocaleString()}`;
+export const money = (n: number) => `TZS ${Math.round(n).toLocaleString('en-US')}`;
 
 export const compactMoney = (n: number) => {
   const a = Math.abs(Math.round(n));

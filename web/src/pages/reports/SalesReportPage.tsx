@@ -60,7 +60,7 @@ interface Tx {
 
 const PIE_COLORS = ['#a66624', '#14b8a6', '#3b82f6', '#f59e0b', '#6b7280'];
 function fmt(n: number) {
-  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', currencyDisplay: 'code', maximumFractionDigits: 0 }).format(n);
 }
 function txProfit(tx: Tx): number {
   return tx.items.reduce((s, i) => {
@@ -251,7 +251,7 @@ function DayRow({ day, shopId, pmFilter, period, isHotel }: DayRowProps) {
                           <td className="py-1.5 pr-3 text-stone-600">{f.nights}</td>
                           <td className="py-1.5 pr-3 text-stone-500">{f.checkedInByName ?? '—'}</td>
                           <td className="py-1.5 pr-3 text-right font-semibold text-stone-900">
-                            {new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(f.grandTotal)}
+                            {new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', currencyDisplay: 'code', maximumFractionDigits: 0 }).format(f.grandTotal)}
                           </td>
                           <td className="py-1.5">
                             {f.checkOut
@@ -265,7 +265,7 @@ function DayRow({ day, shopId, pmFilter, period, isHotel }: DayRowProps) {
                       <tr className="border-t border-stone-300">
                         <td colSpan={4} className="py-1.5 font-semibold text-stone-600">{folios.length} check-in{folios.length !== 1 ? 's' : ''}</td>
                         <td className="py-1.5 text-right font-bold text-stone-900">
-                          {new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(folios.reduce((s, f) => s + f.grandTotal, 0))}
+                          {new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', currencyDisplay: 'code', maximumFractionDigits: 0 }).format(folios.reduce((s, f) => s + f.grandTotal, 0))}
                         </td>
                         <td></td>
                       </tr>

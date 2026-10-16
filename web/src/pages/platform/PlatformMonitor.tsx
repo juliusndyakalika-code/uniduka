@@ -56,7 +56,7 @@ function MetricCard({ icon: Icon, label, value, sub, color = 'text-stone-900' }:
 }
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', currencyDisplay: 'code', maximumFractionDigits: 0 }).format(n);
 
 export default function PlatformMonitor() {
   const { data, isLoading, isError, dataUpdatedAt, refetch, isFetching } = useQuery<MonitorData>({

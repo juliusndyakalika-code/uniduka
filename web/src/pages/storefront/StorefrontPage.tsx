@@ -50,7 +50,7 @@ type Line = { product: Product; qty: number };
 
 function money(n: number, currency = 'TZS') {
   return new Intl.NumberFormat('sw-TZ', {
-    style: 'currency', currency, maximumFractionDigits: 0,
+    style: 'currency', currency, currencyDisplay: 'code', maximumFractionDigits: 0,
   }).format(n);
 }
 
@@ -217,7 +217,7 @@ export default function StorefrontPage() {
           <p className="text-sm text-stone-500 mt-1">
             This storefront doesn't exist or isn't open right now.
           </p>
-          <Link to="/shops" className="inline-flex items-center gap-1 mt-4 text-sm font-semibold text-orange-600">
+          <Link to="/shops" className="inline-flex items-center gap-1 mt-4 text-sm font-semibold text-primary-700">
             Browse other shops <ChevronRight size={14} />
           </Link>
         </div>
@@ -302,13 +302,13 @@ export default function StorefrontPage() {
             <div className="w-9 h-9 rounded-lg bg-stone-100 overflow-hidden grid place-items-center shrink-0">
               {shop.logoUrl
                 ? <img src={mediaUrl(shop.logoUrl)} alt="" className="w-full h-full object-cover" />
-                : <Store size={18} className="text-orange-600" />}
+                : <Store size={18} className="text-primary-700" />}
             </div>
             <span className="hidden sm:block font-extrabold text-stone-900 truncate tracking-tight">{shop.name}</span>
           </div>
 
           <form className="flex-1 min-w-0" onSubmit={e => { e.preventDefault(); setSearch(query.trim()); }} role="search">
-            <div className="flex items-stretch rounded-full border-2 border-orange-500 bg-white overflow-hidden">
+            <div className="flex items-stretch rounded-full border-2 border-primary-600 bg-white overflow-hidden">
               <input
                 className="flex-1 min-w-0 px-4 py-2 text-sm bg-transparent outline-none text-stone-900 placeholder:text-stone-400"
                 placeholder={`Search in ${shop.name}`}
@@ -322,7 +322,7 @@ export default function StorefrontPage() {
                   <X size={15} />
                 </button>
               )}
-              <button type="submit" className="px-4 sm:px-6 bg-orange-500 hover:bg-orange-600 text-snow grid place-items-center" aria-label="Search">
+              <button type="submit" className="px-4 sm:px-6 bg-primary-600 hover:bg-primary-700 text-snow grid place-items-center" aria-label="Search">
                 <Search size={17} />
               </button>
             </div>
@@ -344,7 +344,7 @@ export default function StorefrontPage() {
             {['', ...shop.categories].map(c => (
               <button key={c || 'all'} onClick={() => pickCategory(c)}
                 className={`py-2 whitespace-nowrap border-b-2 transition-colors ${
-                  category === c ? 'border-orange-500 text-orange-600 font-bold' : 'border-transparent text-stone-600 hover:text-stone-900'}`}>
+                  category === c ? 'border-primary-600 text-primary-700 font-bold' : 'border-transparent text-stone-600 hover:text-stone-900'}`}>
                 {c || 'All'}
               </button>
             ))}
@@ -355,13 +355,13 @@ export default function StorefrontPage() {
       {/* ── Trust strip ──────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-stone-200">
         <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2 flex gap-x-6 gap-y-1 overflow-x-auto text-[12px] text-stone-600 scrollbar-none">
-          <span className="flex items-center gap-1.5 whitespace-nowrap"><Wallet size={13} className="text-orange-600" /> Pay on {shop.acceptsDelivery ? 'delivery' : 'pickup'}</span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap"><Wallet size={13} className="text-primary-700" /> Pay on {shop.acceptsDelivery ? 'delivery' : 'pickup'}</span>
           {shop.acceptsDelivery && (
-            <span className="flex items-center gap-1.5 whitespace-nowrap"><Truck size={13} className="text-orange-600" />
+            <span className="flex items-center gap-1.5 whitespace-nowrap"><Truck size={13} className="text-primary-700" />
               {shop.deliveryFee > 0 ? `Delivery ${money(shop.deliveryFee, shop.currency)}` : 'Free delivery'}</span>
           )}
-          {shop.acceptsPickup && <span className="flex items-center gap-1.5 whitespace-nowrap"><Package size={13} className="text-orange-600" /> Pickup from the shop</span>}
-          {location && <span className="flex items-center gap-1.5 whitespace-nowrap"><MapPin size={13} className="text-orange-600" /> {location}</span>}
+          {shop.acceptsPickup && <span className="flex items-center gap-1.5 whitespace-nowrap"><Package size={13} className="text-primary-700" /> Pickup from the shop</span>}
+          {location && <span className="flex items-center gap-1.5 whitespace-nowrap"><MapPin size={13} className="text-primary-700" /> {location}</span>}
           {shop.minOrderValue > 0 && <span className="whitespace-nowrap">Min. order {money(shop.minOrderValue, shop.currency)}</span>}
         </div>
       </div>
@@ -378,7 +378,7 @@ export default function StorefrontPage() {
                   <li key={c}>
                     <button onClick={() => pickCategory(c)}
                       className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[13px] text-left ${
-                        category === c ? 'bg-orange-50 text-orange-700 font-semibold' : 'text-stone-700 hover:bg-stone-100'}`}>
+                        category === c ? 'bg-primary-50 text-primary-800 font-semibold' : 'text-stone-700 hover:bg-stone-100'}`}>
                       <span className="truncate">{c}</span><ChevronRight size={13} className="text-stone-300 shrink-0" />
                     </button>
                   </li>
@@ -391,7 +391,7 @@ export default function StorefrontPage() {
             {shop.bannerUrl
               ? <img src={mediaUrl(shop.bannerUrl)} alt="" className="absolute inset-0 w-full h-full object-cover" />
               : (
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-red-500 to-rose-600">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary-500 via-primary-600 to-primary-800">
                   {/* A few product photos tilted on the banner, so it looks like this shop and not any shop. */}
                   <div className="absolute right-3 sm:right-8 top-1/2 -translate-y-1/2 flex gap-2 sm:gap-3">
                     {showcase.filter(p => p.imageUrl).slice(0, 2).map((p, i) => (
@@ -407,7 +407,7 @@ export default function StorefrontPage() {
               <h1 className="text-snow text-xl sm:text-3xl font-extrabold leading-tight mt-0.5 drop-shadow-sm">{shop.name}</h1>
               {shop.bio && <p className="text-snow/90 text-xs sm:text-sm mt-1.5 line-clamp-2">{shop.bio}</p>}
               <button onClick={() => document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth' })}
-                className="mt-3 self-start px-4 py-1.5 rounded-full bg-snow text-red-600 text-xs sm:text-sm font-bold shadow">
+                className="mt-3 self-start px-4 py-1.5 rounded-full bg-snow text-primary-700 text-xs sm:text-sm font-bold shadow">
                 Shop now
               </button>
             </div>
@@ -415,8 +415,8 @@ export default function StorefrontPage() {
 
           <aside className="hidden lg:flex flex-col bg-white rounded-xl p-4 gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-11 h-11 rounded-full bg-orange-50 grid place-items-center overflow-hidden">
-                {shop.logoUrl ? <img src={mediaUrl(shop.logoUrl)} alt="" className="w-full h-full object-cover" /> : <Store size={18} className="text-orange-600" />}
+              <div className="w-11 h-11 rounded-full bg-primary-50 grid place-items-center overflow-hidden">
+                {shop.logoUrl ? <img src={mediaUrl(shop.logoUrl)} alt="" className="w-full h-full object-cover" /> : <Store size={18} className="text-primary-700" />}
               </div>
               <div className="min-w-0">
                 <p className="font-bold text-sm text-stone-900 truncate">{shop.name}</p>
@@ -449,10 +449,10 @@ export default function StorefrontPage() {
             <div className="flex gap-1 sm:gap-3 overflow-x-auto scrollbar-none">
               {tiles.map(({ name: c, product }) => (
                 <button key={c} onClick={() => pickCategory(c)} className="flex flex-col items-center gap-1.5 w-[4.6rem] sm:w-24 shrink-0">
-                  <span className={`w-14 h-14 sm:w-[4.5rem] sm:h-[4.5rem] rounded-full overflow-hidden ring-2 ${category === c ? 'ring-orange-500' : 'ring-transparent'} bg-stone-100`}>
+                  <span className={`w-14 h-14 sm:w-[4.5rem] sm:h-[4.5rem] rounded-full overflow-hidden ring-2 ${category === c ? 'ring-primary-600' : 'ring-transparent'} bg-stone-100`}>
                     {product ? <ProductImage p={product} /> : null}
                   </span>
-                  <span className={`text-[11px] leading-tight text-center line-clamp-2 ${category === c ? 'text-orange-600 font-bold' : 'text-stone-700'}`}>{c}</span>
+                  <span className={`text-[11px] leading-tight text-center line-clamp-2 ${category === c ? 'text-primary-700 font-bold' : 'text-stone-700'}`}>{c}</span>
                 </button>
               ))}
             </div>
@@ -487,7 +487,7 @@ export default function StorefrontPage() {
               {search ? `Results for “${search}”` : category || 'More to love'}
             </h2>
             {(search || category) && (
-              <button onClick={() => { setQuery(''); setSearch(''); setCategory(''); }} className="text-xs font-semibold text-orange-600 shrink-0">
+              <button onClick={() => { setQuery(''); setSearch(''); setCategory(''); }} className="text-xs font-semibold text-primary-700 shrink-0">
                 Clear
               </button>
             )}
@@ -528,13 +528,13 @@ export default function StorefrontPage() {
                             <p className="text-[10px] text-stone-400">per {p.unit}{p.brand ? ` · ${p.brand}` : ''}</p>
                           </div>
                           {p.inStock && (inCart ? (
-                            <div className="flex items-center rounded-full bg-orange-50 text-orange-700 shrink-0">
+                            <div className="flex items-center rounded-full bg-primary-50 text-primary-800 shrink-0">
                               <button onClick={() => setQty(p.id, inCart.qty - 1)} className="w-7 h-7 grid place-items-center" aria-label="One less"><Minus size={12} /></button>
                               <span className="text-xs font-bold w-4 text-center">{inCart.qty}</span>
                               <button onClick={() => setQty(p.id, inCart.qty + 1)} className="w-7 h-7 grid place-items-center" aria-label="One more"><Plus size={12} /></button>
                             </div>
                           ) : (
-                            <button onClick={() => addToCart(p)} className="w-8 h-8 rounded-full bg-orange-500 hover:bg-orange-600 text-snow grid place-items-center shrink-0 shadow-sm" aria-label={`Add ${p.name} to cart`}>
+                            <button onClick={() => addToCart(p)} className="w-8 h-8 rounded-full bg-primary-600 hover:bg-primary-700 text-snow grid place-items-center shrink-0 shadow-sm" aria-label={`Add ${p.name} to cart`}>
                               <ShoppingCart size={15} />
                             </button>
                           ))}
@@ -575,7 +575,7 @@ export default function StorefrontPage() {
       {itemCount > 0 && !cartOpen && !viewing && (
         <button
           onClick={() => setCartOpen(true)}
-          className="fixed bottom-4 left-4 right-4 max-w-md mx-auto py-3 px-5 rounded-full bg-orange-500 text-snow shadow-xl flex items-center justify-between z-30 sm:hidden"
+          className="fixed bottom-4 left-4 right-4 max-w-md mx-auto py-3 px-5 rounded-full bg-primary-600 text-snow shadow-xl flex items-center justify-between z-30 sm:hidden"
         >
           <span className="flex items-center gap-2 text-sm font-bold">
             <ShoppingCart size={17} /> {itemCount} in cart
@@ -624,7 +624,7 @@ export default function StorefrontPage() {
                     <button onClick={() => setViewQty(q => q + 1)} className="w-9 h-9 grid place-items-center text-stone-600" aria-label="One more"><Plus size={14} /></button>
                   </div>
                   <button onClick={() => { addToCart(viewing, viewQty); setViewing(null); }}
-                    className="flex-1 py-2.5 rounded-full bg-orange-500 hover:bg-orange-600 text-snow text-sm font-bold flex items-center justify-center gap-1.5">
+                    className="flex-1 py-2.5 rounded-full bg-primary-600 hover:bg-primary-700 text-snow text-sm font-bold flex items-center justify-center gap-1.5">
                     <ShoppingCart size={15} /> Add to cart
                   </button>
                 </div>
@@ -689,12 +689,12 @@ export default function StorefrontPage() {
                 <>
                   <div>
                     <label className="block text-xs font-semibold text-stone-600 mb-1.5">Your name *</label>
-                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-orange-400"
+                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-primary-500"
                       value={name} onChange={e => setName(e.target.value)} placeholder="Asha Juma" autoFocus />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-stone-600 mb-1.5">Phone number *</label>
-                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-orange-400"
+                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-primary-500"
                       value={phone} onChange={e => setPhone(e.target.value)} placeholder="0712 345 678" inputMode="tel" />
                     <p className="text-[11px] text-stone-400 mt-1">The shop will call this number to confirm.</p>
                   </div>
@@ -705,12 +705,12 @@ export default function StorefrontPage() {
                       <div className="grid grid-cols-2 gap-2">
                         <button type="button" onClick={() => setMode('DELIVERY')}
                           className={`py-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 ${
-                            mode === 'DELIVERY' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-stone-200 text-stone-500'}`}>
+                            mode === 'DELIVERY' ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-stone-200 text-stone-500'}`}>
                           <Truck size={13} /> Delivery
                         </button>
                         <button type="button" onClick={() => setMode('PICKUP')}
                           className={`py-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 ${
-                            mode === 'PICKUP' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-stone-200 text-stone-500'}`}>
+                            mode === 'PICKUP' ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-stone-200 text-stone-500'}`}>
                           <Package size={13} /> Pickup
                         </button>
                       </div>
@@ -721,7 +721,7 @@ export default function StorefrontPage() {
                     <div>
                       <label className="block text-xs font-semibold text-stone-600 mb-1.5">Delivery address *</label>
                       <textarea rows={2}
-                        className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-orange-400 resize-none"
+                        className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-primary-500 resize-none"
                         value={address} onChange={e => setAddress(e.target.value)}
                         placeholder="Street, area, landmark" />
                     </div>
@@ -729,7 +729,7 @@ export default function StorefrontPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-stone-600 mb-1.5">Note (optional)</label>
-                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-orange-400"
+                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-primary-500"
                       value={note} onChange={e => setNote(e.target.value)} placeholder="Anything the shop should know" />
                   </div>
                 </>
@@ -749,7 +749,7 @@ export default function StorefrontPage() {
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-stone-900 pt-1 border-t border-stone-100">
-                    <span>Total</span><span className="text-red-600">{money(orderTotal, shop.currency)}</span>
+                    <span>Total</span><span className="text-primary-700">{money(orderTotal, shop.currency)}</span>
                   </div>
                 </div>
 
@@ -764,7 +764,7 @@ export default function StorefrontPage() {
                   <button
                     disabled={belowMin}
                     onClick={() => { setError(''); setCheckout(true); }}
-                    className="w-full py-3 rounded-full bg-orange-500 hover:bg-orange-600 text-snow text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full py-3 rounded-full bg-primary-600 hover:bg-primary-700 text-snow text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Check out
                   </button>
@@ -772,7 +772,7 @@ export default function StorefrontPage() {
                   <button
                     disabled={submitting || belowMin || !name.trim() || !phone.trim() || (mode === 'DELIVERY' && !address.trim())}
                     onClick={submitOrder}
-                    className="w-full py-3 rounded-full bg-orange-500 hover:bg-orange-600 text-snow text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-full bg-primary-600 hover:bg-primary-700 text-snow text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {submitting && <Loader2 size={14} className="animate-spin" />}
                     {submitting ? 'Placing order…' : `Place order · Pay on ${mode === 'PICKUP' ? 'pickup' : 'delivery'}`}

@@ -32,7 +32,7 @@ export default function BillingPage() {
   const [watching, setWatching] = useState<string | null>(null);
   const [result, setResult]   = useState<Payment | null>(null);
 
-  const money = (n: number) => `TSh ${Math.round(n).toLocaleString()}`;
+  const money = (n: number) => `TZS ${Math.round(n).toLocaleString('en-US')}`;
 
   const { data, isLoading } = useQuery<{ data: PlansResponse }>({
     queryKey: ['billing-plans'],

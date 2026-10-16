@@ -14,9 +14,9 @@ import { compose } from './templates';
  * and a gateway outage must not roll back a payment or break a cron tick.
  */
 
-/** 20000 → "TSh 20,000". Whole shillings; the gateway deals in no smaller unit. */
+/** 20000 → "TZS 20,000". Whole shillings; the gateway deals in no smaller unit. */
 function money(amount: number): string {
-  return `TSh ${Math.round(amount).toLocaleString('en-US')}`;
+  return `TZS ${Math.round(amount).toLocaleString('en-US')}`;
 }
 
 /** 2026-11-29T… → "29 Nov 2026", which reads the same in English and Swahili. */

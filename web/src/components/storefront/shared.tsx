@@ -10,7 +10,7 @@ import { mediaUrl } from '../../lib/media';
 export function Price({ value, currency, size = 'md' }: { value: number; currency: string; size?: 'md' | 'lg' }) {
   const n = Math.round(value).toLocaleString('en-US');
   return (
-    <span className="text-red-600 font-bold tabular-nums whitespace-nowrap">
+    <span className="text-primary-700 font-bold tabular-nums whitespace-nowrap">
       <span className={size === 'lg' ? 'text-sm mr-1' : 'text-[10px] mr-0.5'}>{currency}</span>
       <span className={size === 'lg' ? 'text-3xl' : 'text-base'}>{n}</span>
     </span>

@@ -37,7 +37,7 @@ const CATEGORY_LABEL = (v: string) => CATEGORIES.find(c => c.value === v)?.label
 const PAY_METHODS = ['CASH', 'MOBILE_MONEY', 'CARD', 'BANK'];
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', currencyDisplay: 'code', maximumFractionDigits: 0 }).format(n);
 }
 function ymd(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

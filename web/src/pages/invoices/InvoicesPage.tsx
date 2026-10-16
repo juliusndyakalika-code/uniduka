@@ -39,7 +39,7 @@ const TABS = [
 ];
 
 function money(n: number, c = 'TZS') {
-  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: c, maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: c, currencyDisplay: 'code', maximumFractionDigits: 0 }).format(n);
 }
 function dateOf(iso?: string | null) {
   return iso ? new Date(iso).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';

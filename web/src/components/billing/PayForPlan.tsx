@@ -43,7 +43,7 @@ const POLL_MS = 3000;
  */
 const WAIT_SECONDS = 180;
 const MAX_TRIES = WAIT_SECONDS / (POLL_MS / 1000);
-export const money = (n: number) => `TSh ${Math.round(n).toLocaleString()}`;
+export const money = (n: number) => `TZS ${Math.round(n).toLocaleString('en-US')}`;
 
 export default function PayForPlan({ onPaid, compact }: {
   /** Called once a payment succeeds, so the host screen can let the shop in. */
@@ -87,7 +87,7 @@ export default function PayForPlan({ onPaid, compact }: {
   // /billing/plans returns every tier so the comparison table elsewhere can
   // render them all. Only the buyable ones belong in this picker: Starter is
   // free and Enterprise is priced on application, and both rendered as
-  // "TSh 0 per month" when they leaked in.
+  // "TZS 0 per month" when they leaked in.
   const buyable = (info?.plans ?? []).filter(p => p.buyable !== false && (p.monthlyPrice ?? 0) > 0);
   const chosen = buyable.find(p => p.plan === plan);
   const total = (chosen?.monthlyPrice ?? 0) * months;

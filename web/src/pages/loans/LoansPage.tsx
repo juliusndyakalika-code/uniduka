@@ -38,7 +38,7 @@ export default function LoansPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const shopId = useAuthStore(s => s.shopId);
-  const currency = 'TSh';
+  const currency = 'TZS';
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(blank);

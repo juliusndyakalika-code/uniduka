@@ -48,7 +48,7 @@ const STATUS_BADGE: Record<RoomStatus, string> = {
 };
 const PM_LABELS: Record<string, string> = { CASH: 'Cash', MOBILE_MONEY: 'Mobile Money', CARD: 'Card' };
 
-const fmt = (n: number) => new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+const fmt = (n: number) => new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', currencyDisplay: 'code', maximumFractionDigits: 0 }).format(n);
 
 function PaymentModal({
   title, total, onConfirm, onCancel, isPending,

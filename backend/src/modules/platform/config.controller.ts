@@ -158,7 +158,7 @@ export async function previewTemplate(req: AuthRequest, res: Response) {
   if (typeof body !== 'string') return R.badRequest(res, 'Nothing to preview');
 
   const sample: Record<string, string | number> = {
-    amount: 'TSh 20,000', plan: 'BUSINESS', period: '3 months',
+    amount: 'TZS 20,000', plan: 'BUSINESS', period: '3 months',
     until: '29 Dec 2026', date: '29 Dec 2026', days: 7,
     code: '482913', name: 'Asha',
   };

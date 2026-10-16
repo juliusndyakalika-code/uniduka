@@ -46,7 +46,7 @@ export function waNumber(raw?: string | null): string | null {
 
 function money(n: number, currency = 'TZS') {
   return new Intl.NumberFormat('sw-TZ', {
-    style: 'currency', currency, maximumFractionDigits: 0,
+    style: 'currency', currency, currencyDisplay: 'code', maximumFractionDigits: 0,
   }).format(n);
 }
 

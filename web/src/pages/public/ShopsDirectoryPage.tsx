@@ -109,7 +109,7 @@ export default function ShopsDirectoryPage() {
             </span>
           </Link>
           <form className="flex-1 min-w-0" role="search" onSubmit={e => { e.preventDefault(); setSearch(query.trim()); }}>
-            <div className="flex items-stretch rounded-full border-2 border-orange-500 bg-white overflow-hidden">
+            <div className="flex items-stretch rounded-full border-2 border-primary-600 bg-white overflow-hidden">
               <input
                 className="flex-1 min-w-0 px-4 py-2 text-sm bg-transparent outline-none text-stone-900 placeholder:text-stone-400"
                 placeholder={t('market.search')}
@@ -122,7 +122,7 @@ export default function ShopsDirectoryPage() {
                   <X size={15} />
                 </button>
               )}
-              <button type="submit" className="px-4 sm:px-6 bg-orange-500 hover:bg-orange-600 text-snow grid place-items-center" aria-label={t('market.searchBtn')}>
+              <button type="submit" className="px-4 sm:px-6 bg-primary-600 hover:bg-primary-700 text-snow grid place-items-center" aria-label={t('market.searchBtn')}>
                 <Search size={17} />
               </button>
             </div>
@@ -137,7 +137,7 @@ export default function ShopsDirectoryPage() {
             {[{ name: '', count: 0 }, ...categories].map(c => (
               <button key={c.name || 'all'} onClick={() => pickCategory(c.name)}
                 className={`py-2 whitespace-nowrap border-b-2 transition-colors ${
-                  category === c.name ? 'border-orange-500 text-orange-600 font-bold' : 'border-transparent text-stone-600 hover:text-stone-900'}`}>
+                  category === c.name ? 'border-primary-600 text-primary-700 font-bold' : 'border-transparent text-stone-600 hover:text-stone-900'}`}>
                 {c.name || t('market.all')}
               </button>
             ))}
@@ -148,10 +148,10 @@ export default function ShopsDirectoryPage() {
       {/* ── Trust strip ──────────────────────────────────────────────── */}
       <div className="bg-white border-b border-stone-200">
         <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2 flex gap-x-6 overflow-x-auto text-[12px] text-stone-600 scrollbar-none">
-          <span className="flex items-center gap-1.5 whitespace-nowrap"><Wallet size={13} className="text-orange-600" /> {t('market.payOnDelivery')}</span>
-          <span className="flex items-center gap-1.5 whitespace-nowrap"><ShieldCheck size={13} className="text-orange-600" /> {t('market.direct')}</span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap"><Wallet size={13} className="text-primary-700" /> {t('market.payOnDelivery')}</span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap"><ShieldCheck size={13} className="text-primary-700" /> {t('market.direct')}</span>
           {overview && overview.shops > 0 && (
-            <span className="flex items-center gap-1.5 whitespace-nowrap"><Store size={13} className="text-orange-600" /> {t('market.stats', { shops: overview.shops, products: overview.products })}</span>
+            <span className="flex items-center gap-1.5 whitespace-nowrap"><Store size={13} className="text-primary-700" /> {t('market.stats', { shops: overview.shops, products: overview.products })}</span>
           )}
         </div>
       </div>
@@ -177,7 +177,7 @@ export default function ShopsDirectoryPage() {
               </div>
             )}
 
-            <div className={`relative rounded-xl overflow-hidden min-h-[9.5rem] sm:min-h-[15rem] bg-gradient-to-br from-orange-500 via-red-500 to-rose-600 ${categories.length ? '' : 'lg:col-span-2'}`}>
+            <div className={`relative rounded-xl overflow-hidden min-h-[9.5rem] sm:min-h-[15rem] bg-gradient-to-br from-primary-500 via-primary-600 to-primary-800 ${categories.length ? '' : 'lg:col-span-2'}`}>
               <div className="absolute right-3 sm:right-8 top-1/2 -translate-y-1/2 flex gap-2 sm:gap-3">
                 {bannerShots.map((p, i) => (
                   <div key={p.id} className={`w-16 h-16 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-snow shadow-lg ${i === 1 ? '-translate-y-3' : 'translate-y-2'}`}>
@@ -190,17 +190,17 @@ export default function ShopsDirectoryPage() {
                 <h1 className="text-snow text-xl sm:text-3xl font-extrabold leading-tight mt-0.5">{t('market.title')}</h1>
                 <p className="text-snow/90 text-xs sm:text-sm mt-1.5 line-clamp-2">{t('market.subtitle')}</p>
                 <button onClick={() => document.getElementById('market-products')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="mt-3 self-start px-4 py-1.5 rounded-full bg-snow text-red-600 text-xs sm:text-sm font-bold shadow">
+                  className="mt-3 self-start px-4 py-1.5 rounded-full bg-snow text-primary-700 text-xs sm:text-sm font-bold shadow">
                   {t('market.shopNow')}
                 </button>
               </div>
             </div>
 
             <aside className="hidden lg:flex flex-col bg-white rounded-xl p-4 gap-2">
-              <Sparkles size={20} className="text-orange-600" />
+              <Sparkles size={20} className="text-primary-700" />
               <p className="font-bold text-sm text-stone-900">{t('market.ownerTitle')}</p>
               <p className="text-[12px] text-stone-600">{t('market.ownerBody')}</p>
-              <Link to="/register" className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 rounded-full bg-orange-500 hover:bg-orange-600 text-snow text-xs font-bold">
+              <Link to="/register" className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 rounded-full bg-primary-600 hover:bg-primary-700 text-snow text-xs font-bold">
                 {t('market.ownerCta')} <ArrowRight size={13} />
               </Link>
             </aside>
@@ -215,8 +215,8 @@ export default function ShopsDirectoryPage() {
                 const img = tileImage(c.name);
                 return (
                   <button key={c.name} onClick={() => pickCategory(c.name)} className="flex flex-col items-center gap-1.5 w-[4.6rem] sm:w-24 shrink-0">
-                    <span className="w-14 h-14 sm:w-[4.5rem] sm:h-[4.5rem] rounded-full overflow-hidden bg-orange-50 grid place-items-center">
-                      {img ? <ProductImage p={img} /> : <ShoppingBag size={20} className="text-orange-400" />}
+                    <span className="w-14 h-14 sm:w-[4.5rem] sm:h-[4.5rem] rounded-full overflow-hidden bg-primary-50 grid place-items-center">
+                      {img ? <ProductImage p={img} /> : <ShoppingBag size={20} className="text-primary-500" />}
                     </span>
                     <span className="text-[11px] leading-tight text-center line-clamp-2 text-stone-700">{c.name}</span>
                   </button>
@@ -233,7 +233,7 @@ export default function ShopsDirectoryPage() {
               {search ? t('market.resultsFor', { q: search }) : category || t('market.forYou')}
             </h2>
             {filtering && (
-              <button onClick={() => { setQuery(''); setSearch(''); setCategory(''); }} className="text-xs font-semibold text-orange-600 shrink-0">
+              <button onClick={() => { setQuery(''); setSearch(''); setCategory(''); }} className="text-xs font-semibold text-primary-700 shrink-0">
                 {t('market.clear')}
               </button>
             )}
@@ -290,8 +290,8 @@ export default function ShopsDirectoryPage() {
                 <li key={s.slug}>
                   <Link to={`/s/${s.slug}`} className="group block bg-white rounded-xl p-3 h-full hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-full overflow-hidden bg-orange-50 grid place-items-center shrink-0">
-                        {s.logoUrl ? <img src={mediaUrl(s.logoUrl)} alt="" className="w-full h-full object-cover" loading="lazy" /> : <Store size={18} className="text-orange-600" />}
+                      <div className="w-11 h-11 rounded-full overflow-hidden bg-primary-50 grid place-items-center shrink-0">
+                        {s.logoUrl ? <img src={mediaUrl(s.logoUrl)} alt="" className="w-full h-full object-cover" loading="lazy" /> : <Store size={18} className="text-primary-700" />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-stone-900 truncate">{s.name}</p>
@@ -300,7 +300,7 @@ export default function ShopsDirectoryPage() {
                           {t('market.products', { count: s.productCount })}
                         </p>
                       </div>
-                      <span className="text-[11px] font-bold text-orange-600 flex items-center shrink-0">{t('market.visit')} <ChevronRight size={13} /></span>
+                      <span className="text-[11px] font-bold text-primary-700 flex items-center shrink-0">{t('market.visit')} <ChevronRight size={13} /></span>
                     </div>
                     {s.previews.length > 0 && (
                       <div className="mt-3 grid grid-cols-4 gap-1.5">
@@ -366,7 +366,7 @@ export default function ShopsDirectoryPage() {
               </div>
               {viewing.description && <p className="text-sm text-stone-600 whitespace-pre-line">{viewing.description}</p>}
               <div className="flex items-center gap-2.5 border-t border-stone-100 pt-3">
-                <div className="w-9 h-9 rounded-full bg-orange-50 grid place-items-center shrink-0"><Store size={16} className="text-orange-600" /></div>
+                <div className="w-9 h-9 rounded-full bg-primary-50 grid place-items-center shrink-0"><Store size={16} className="text-primary-700" /></div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-stone-900 truncate">{viewing.shop.name}</p>
                   {viewing.shop.city && <p className="text-[11px] text-stone-500">{viewing.shop.city}</p>}
@@ -376,7 +376,7 @@ export default function ShopsDirectoryPage() {
               <div className="mt-auto flex flex-col gap-2 pt-2">
                 {viewing.inStock && (
                   <button onClick={() => navigate(`/s/${viewing.shop.slug}?product=${viewing.id}`)}
-                    className="w-full py-2.5 rounded-full bg-orange-500 hover:bg-orange-600 text-snow text-sm font-bold">
+                    className="w-full py-2.5 rounded-full bg-primary-600 hover:bg-primary-700 text-snow text-sm font-bold">
                     {t('market.orderFrom', { shop: viewing.shop.name })}
                   </button>
                 )}

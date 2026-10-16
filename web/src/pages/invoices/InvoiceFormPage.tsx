@@ -28,7 +28,7 @@ interface Line {
 }
 
 function money(n: number, c = 'TZS') {
-  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: c, maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: c, currencyDisplay: 'code', maximumFractionDigits: 0 }).format(n);
 }
 function apiError(e: unknown, fallback: string) {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;

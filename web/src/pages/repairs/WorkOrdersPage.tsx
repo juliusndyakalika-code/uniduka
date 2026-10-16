@@ -28,7 +28,7 @@ const STATUS_META: Record<JobStatus, { label: string; color: string; icon: typeo
 
 const STATUSES = Object.keys(STATUS_META) as JobStatus[];
 
-const fmt = (n: number) => new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+const fmt = (n: number) => new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', currencyDisplay: 'code', maximumFractionDigits: 0 }).format(n);
 
 interface WOForm {
   deviceDesc: string; fault: string; serialNo: string;

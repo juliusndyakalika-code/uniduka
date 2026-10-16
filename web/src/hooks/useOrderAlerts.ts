@@ -54,7 +54,7 @@ function chime() {
 }
 
 function money(n: number) {
-  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', currencyDisplay: 'code', maximumFractionDigits: 0 }).format(n);
 }
 
 export function useOrderAlerts() {

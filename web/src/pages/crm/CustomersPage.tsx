@@ -16,7 +16,7 @@ interface Customer {
 interface Form { fullName: string; phone?: string; email?: string; notes?: string; }
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', currencyDisplay: 'code', maximumFractionDigits: 0 }).format(n);
 }
 
 export default function CustomersPage() {
