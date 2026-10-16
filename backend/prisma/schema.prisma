@@ -516,6 +516,10 @@ model Product {
   // price than the counter; null means fall back to sellPrice.
   isPublished Boolean @default(false)
   publicPrice Float?
+  // What the online store calls the product, when it should differ from the
+  // stock name ("SUK-KILO-25" in stock, "Sukari ya Kilombero 1kg" online).
+  // Null means use the stock name. Never used inside the app.
+  publicName  String?
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())

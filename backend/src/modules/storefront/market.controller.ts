@@ -41,7 +41,7 @@ function words(q: unknown): string[] {
 }
 
 const productSelect = {
-  id: true, name: true, description: true, imageUrl: true,
+  id: true, name: true, publicName: true, description: true, imageUrl: true,
   category: true, brand: true, unit: true,
   sellPrice: true, publicPrice: true, trackStock: true,
   inventory: { select: { quantity: true } },
@@ -65,7 +65,7 @@ export async function marketProducts(req: Request, res: Response) {
   for (const t of terms) {
     const like = `%${t}%`;
     conditions.push(Prisma.sql`(
-      p.name ILIKE ${like} OR p.category ILIKE ${like} OR p.brand ILIKE ${like} OR p.description ILIKE ${like}
+      p.name ILIKE ${like} OR p."publicName" ILIKE ${like} OR p.category ILIKE ${like} OR p.brand ILIKE ${like} OR p.description ILIKE ${like}
       OR (pi.status = 'APPROVED' AND ${t} = ANY(pi.tags))
     )`);
   }

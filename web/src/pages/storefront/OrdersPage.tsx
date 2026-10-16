@@ -18,6 +18,7 @@ import { waLink } from '../../utils/whatsapp';
 interface OrderItem {
   id: string; productId: string; name: string;
   quantity: number; unitLabel: string; unitPrice: number; lineTotal: number;
+  product?: { name: string } | null;
 }
 interface Order {
   id: string; orderNo: string; status: string; fulfilment: 'DELIVERY' | 'PICKUP';
@@ -221,6 +222,9 @@ export default function OrdersPage() {
                     <div key={it.id} className="flex justify-between text-xs">
                       <span className="text-stone-600">
                         {it.name} <span className="text-stone-400">×{it.quantity} {it.unitLabel}</span>
+                        {it.product?.name && it.product.name !== it.name && (
+                          <span className="block text-[10.5px] text-stone-400">Stock: {it.product.name}</span>
+                        )}
                       </span>
                       <span className="text-stone-700 font-medium">{money(it.lineTotal)}</span>
                     </div>

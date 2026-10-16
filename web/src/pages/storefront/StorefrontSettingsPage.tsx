@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Globe, Copy, Check, ExternalLink, Search, Loader2, AlertCircle,
-  Truck, Package, ShoppingBag, Bell, BellOff, MessageCircle, Camera, X, Clock, Ban,
+  Truck, Package, ShoppingBag, Bell, BellOff, MessageCircle, Camera, X, Clock, Ban, Pencil,
 } from 'lucide-react';
 import { mediaUrl, shrinkPhoto } from '../../lib/media';
 import { toast, errorMessage } from '../../lib/toast';
@@ -28,7 +28,7 @@ interface ShopConfig {
 interface Product {
   id: string; name: string; sku?: string; sellingPrice: number; stock: number;
   imageUrl?: string; category?: string; isActive: boolean;
-  isPublished?: boolean; publicPrice?: number | null;
+  isPublished?: boolean; publicPrice?: number | null; publicName?: string | null;
   image?: { status: 'PENDING' | 'APPROVED' | 'REJECTED'; reason?: string | null } | null;
 }
 
@@ -159,6 +159,18 @@ export default function StorefrontSettingsPage() {
       refreshProducts();
       toast.success(isPublished ? t('toast.listed', { count: n }) : t('toast.hiddenAll'));
     },
+  });
+
+  // ── Online name ──────────────────────────────────────────────────────────
+  // What customers see, when it should differ from the stock name. Empty
+  // means use the stock name.
+  const [naming, setNaming] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState('');
+  const { mutate: saveOnlineName, isPending: savingName } = useMutation({
+    mutationFn: ({ id, publicName }: { id: string; publicName: string }) =>
+      api.patch(`/inventory/products/${id}`, { publicName }),
+    meta: { success: t('toast.onlineNameSaved') },
+    onSuccess: () => { setNaming(null); refreshProducts(); },
   });
 
   const publishedCount = products.filter(p => p.isPublished).length;
@@ -517,6 +529,41 @@ export default function StorefrontSettingsPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-stone-900 truncate">{p.name}</p>
+                  {naming === p.id ? (
+                    <form
+                      className="mt-1 flex items-center gap-1.5"
+                      onSubmit={e => { e.preventDefault(); saveOnlineName({ id: p.id, publicName: nameDraft.trim() }); }}
+                    >
+                      <input
+                        autoFocus
+                        className="input py-1 text-xs flex-1 min-w-0"
+                        value={nameDraft}
+                        maxLength={120}
+                        placeholder={p.name}
+                        aria-label={`Online name for ${p.name}`}
+                        onChange={e => setNameDraft(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Escape') setNaming(null); }}
+                      />
+                      <button type="submit" disabled={savingName} className="p-1.5 rounded-md text-emerald-700 hover:bg-emerald-50" aria-label="Save online name">
+                        {savingName ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                      </button>
+                      <button type="button" onClick={() => setNaming(null)} className="p-1.5 rounded-md text-stone-400 hover:bg-stone-100" aria-label="Cancel">
+                        <X size={13} />
+                      </button>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setNaming(p.id); setNameDraft(p.publicName ?? ''); }}
+                      className="mt-0.5 flex items-center gap-1 text-[11px] text-left max-w-full"
+                      title="The name customers see in your online store"
+                    >
+                      <Pencil size={10} className="shrink-0 text-stone-400" />
+                      {p.publicName
+                        ? <span className="truncate text-primary-700 font-medium">Online: {p.publicName}</span>
+                        : <span className="text-stone-400">Set online name</span>}
+                    </button>
+                  )}
                   {p.image?.status === 'PENDING' && <p className="text-[11px] text-stone-500">Photo awaiting review</p>}
                   {p.image?.status === 'REJECTED' && <p className="text-[11px] text-red-600 line-clamp-2">{p.image.reason || 'Photo not approved'}</p>}
                   <p className="text-xs text-stone-400">

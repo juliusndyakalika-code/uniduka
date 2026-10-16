@@ -1218,7 +1218,8 @@
     "photoFailed": "Imeshindwa kupakia picha hiyo.",
     "listed": "Bidhaa {{count}} zimeorodheshwa mtandaoni",
     "listed_one": "Bidhaa 1 imeorodheshwa mtandaoni",
-    "hiddenAll": "Bidhaa zote zimefichwa kwenye duka lako la mtandaoni"
+    "hiddenAll": "Bidhaa zote zimefichwa kwenye duka lako la mtandaoni",
+    "onlineNameSaved": "Jina la mtandaoni limehifadhiwa"
   },
   "market": {
     "search": "Tafuta bidhaa kwenye maduka yote: jina, aina, rangi",

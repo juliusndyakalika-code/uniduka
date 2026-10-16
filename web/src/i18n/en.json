@@ -1218,7 +1218,8 @@
     "photoFailed": "Could not upload that photo.",
     "listed": "{{count}} products listed online",
     "listed_one": "1 product listed online",
-    "hiddenAll": "All products hidden from your online store"
+    "hiddenAll": "All products hidden from your online store",
+    "onlineNameSaved": "Online name saved"
   },
   "market": {
     "search": "Search products in every shop: name, category, colour",

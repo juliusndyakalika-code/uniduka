@@ -63,7 +63,8 @@ export async function listOrders(req: AuthRequest, res: Response) {
   const [orders, total, counts] = await Promise.all([
     prisma.order.findMany({
       where,
-      include: { items: true },
+      // The stock name alongside what the customer ordered by, for packing.
+      include: { items: { include: { product: { select: { name: true } } } } },
       orderBy: { createdAt: 'desc' },
       skip, take,
     }),
@@ -184,16 +185,19 @@ export async function fulfilOrder(req: AuthRequest, res: Response) {
   // owe; POS prices are tax-exclusive, storefront prices are not.
   const taxRules = await prisma.product.findMany({
     where: { id: { in: order.items.map(i => i.productId) } },
-    select: { id: true, taxRule: { select: { rate: true } } },
+    select: { id: true, name: true, taxRule: { select: { rate: true } } },
   });
   const rateFor = new Map(taxRules.map(p => [p.id, p.taxRule?.rate ?? 0]));
+  // The sale is recorded under the stock name, so reports and receipts match
+  // the rest of the shop even when the item was listed online as something else.
+  const stockName = new Map(taxRules.map(p => [p.id, p.name]));
 
   const txItems = order.items.map(i => {
     const rate = rateFor.get(i.productId) ?? 0;
     const taxAmount = rate > 0 ? i.lineTotal - i.lineTotal / (1 + rate / 100) : 0;
     return {
       productId: i.productId,
-      name: i.name,
+      name: stockName.get(i.productId) ?? i.name,
       quantity: i.quantity,
       unitLabel: i.unitLabel,
       unitPrice: i.unitPrice,

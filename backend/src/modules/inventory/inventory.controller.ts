@@ -216,6 +216,15 @@ export async function updateProduct(req: AuthRequest, res: Response) {
   // Storefront: publish toggle and optional online-only price
   if ('isPublished'     in b) data.isPublished      = bool(b.isPublished) ?? false;
   if ('publicPrice'     in b) data.publicPrice      = num(b.publicPrice) ?? null;
+  if ('publicName'      in b) {
+    // Customers read this, so it is screened like any other public text.
+    const pn = str(typeof b.publicName === 'string' ? b.publicName.trim().slice(0, 120) : undefined) ?? null;
+    if (pn) {
+      const unclean = screenFields({ 'online name': pn });
+      if (unclean) return R.badRequest(res, unclean);
+    }
+    data.publicName = pn;
+  }
 
   // Selling price — only validate if it was actually provided
   if ('sellingPrice' in b || 'sellPrice' in b) {

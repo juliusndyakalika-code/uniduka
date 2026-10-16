@@ -43,7 +43,7 @@ function isValidPhone(raw: string): boolean {
 
 /** The public shape of a product. Deliberately narrow. */
 export function publicProduct(
-  p: { id: string; name: string; description: string | null; imageUrl: string | null;
+  p: { id: string; name: string; publicName?: string | null; description: string | null; imageUrl: string | null;
        category: string | null; brand: string | null; unit: string | null;
        sellPrice: number; publicPrice: number | null; trackStock: boolean;
        inventory: { quantity: number }[]; image?: { status: string } | null },
@@ -51,7 +51,8 @@ export function publicProduct(
   const stock = p.inventory.reduce((s, i) => s + i.quantity, 0);
   return {
     id:          p.id,
-    name:        p.name,
+    // The online name when the shop set one, otherwise the stock name.
+    name:        p.publicName || p.name,
     // Belt and braces: a generated cost note must never reach a customer,
     // even if one slips into a description some other way.
     description: p.description && /Landed cost:|Supplier:/.test(p.description) ? null : p.description,
@@ -192,8 +193,9 @@ export async function listPublicProducts(req: Request, res: Response) {
     ...(category && { category }),
     ...(search && {
       OR: [
-        { name:  { contains: search, mode: 'insensitive' as const } },
-        { brand: { contains: search, mode: 'insensitive' as const } },
+        { name:       { contains: search, mode: 'insensitive' as const } },
+        { publicName: { contains: search, mode: 'insensitive' as const } },
+        { brand:      { contains: search, mode: 'insensitive' as const } },
       ],
     }),
   };
@@ -202,7 +204,7 @@ export async function listPublicProducts(req: Request, res: Response) {
     prisma.product.findMany({
       where,
       select: {
-        id: true, name: true, description: true, imageUrl: true,
+        id: true, name: true, publicName: true, description: true, imageUrl: true,
         category: true, brand: true, unit: true,
         sellPrice: true, publicPrice: true, trackStock: true,
         inventory: { select: { quantity: true } },
@@ -259,7 +261,7 @@ export async function placeOrder(req: Request, res: Response) {
   const products = await prisma.product.findMany({
     where: { id: { in: [...wanted.keys()] }, shopId: shop.id, isPublished: true, isActive: true },
     select: {
-      id: true, name: true, unit: true, sellPrice: true, publicPrice: true,
+      id: true, name: true, publicName: true, unit: true, sellPrice: true, publicPrice: true,
       trackStock: true, inventory: { select: { quantity: true } },
     },
   });
@@ -274,12 +276,13 @@ export async function placeOrder(req: Request, res: Response) {
     // must never move real inventory, or fake orders could empty the shop's POS.
     if (p.trackStock) {
       const stock = p.inventory.reduce((s, i) => s + i.quantity, 0);
-      if (stock <= 0) return R.badRequest(res, `${p.name} is out of stock`);
+      if (stock <= 0) return R.badRequest(res, `${p.publicName || p.name} is out of stock`);
     }
     const unitPrice = p.publicPrice ?? p.sellPrice;
     orderItems.push({
       productId: p.id,
-      name:      p.name,
+      // What the customer ordered by. The productId ties it to the stock item.
+      name:      p.publicName || p.name,
       quantity:  qty,
       unitLabel: p.unit ?? 'pcs',
       unitPrice,
