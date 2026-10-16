@@ -1,23 +1,29 @@
 /**
  * Public shop storefront at /s/:slug — no auth, no app chrome.
  *
- * Mobile-first: most shoppers arrive from a WhatsApp or Instagram link on a
- * phone, so the cart is a bottom sheet rather than a sidebar.
+ * Laid out like a big marketplace, because that is what shoppers already know
+ * how to use: a search bar that dominates the header, categories one tap
+ * away, a banner, then a dense grid where the price is the loudest thing on
+ * each card. Mobile-first: most shoppers arrive from a WhatsApp or Instagram
+ * link on a phone, so the cart is a bottom sheet and a product opens as a
+ * sheet rather than a new page.
  */
 import { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { Link, useParams } from 'react-router-dom';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import {
-  Search, ShoppingBag, Plus, Minus, X, MapPin, Phone, Store,
+  Search, ShoppingBag, ShoppingCart, Plus, Minus, X, MapPin, Phone, Store,
   CheckCircle2, Truck, Package, Loader2, AlertCircle, MessageCircle,
+  Wallet, LayoutGrid, Flame, ChevronRight, ShieldCheck,
 } from 'lucide-react';
 import publicApi from '../../api/publicClient';
 import { mediaUrl } from '../../lib/media';
 import { buildOrderMessage, waLink } from '../../utils/whatsapp';
+import { LogoMark } from '../../components/ui/Logo';
 
 interface Shop {
   slug: string; name: string; bio?: string; logoUrl?: string; bannerUrl?: string;
-  phone?: string; city?: string; region?: string; addressLine1?: string;
+  phone?: string; whatsapp?: string; city?: string; region?: string; addressLine1?: string;
   currency: string; businessType: string;
   acceptsDelivery: boolean; acceptsPickup: boolean;
   deliveryFee: number; deliveryNote?: string; minOrderValue: number;
@@ -28,6 +34,7 @@ interface Product {
   category?: string; brand?: string; unit: string;
   price: number; inStock: boolean; lowStock: boolean;
 }
+interface Page { data: Product[]; meta: { total: number; page: number; pages: number } }
 interface Placed {
   orderNo: string; status: string; total: number;
   subtotal: number; deliveryFee: number;
@@ -50,15 +57,35 @@ function apiError(e: unknown, fallback: string) {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
 }
 
+/** Price split so the number reads big and the currency small, marketplace style. */
+function Price({ value, currency, size = 'md' }: { value: number; currency: string; size?: 'md' | 'lg' }) {
+  const n = Math.round(value).toLocaleString('en-US');
+  return (
+    <span className="text-red-600 font-bold tabular-nums whitespace-nowrap">
+      <span className={size === 'lg' ? 'text-sm mr-1' : 'text-[10px] mr-0.5'}>{currency}</span>
+      <span className={size === 'lg' ? 'text-3xl' : 'text-base'}>{n}</span>
+    </span>
+  );
+}
+
+function ProductImage({ p, size = 'thumb', className = '' }: { p: Product; size?: 'thumb' | 'full'; className?: string }) {
+  return p.imageUrl
+    ? <img src={mediaUrl(p.imageUrl, size)} alt={p.name} loading="lazy" decoding="async" className={`w-full h-full object-cover ${className}`} />
+    : <div className="w-full h-full grid place-items-center bg-stone-50"><ShoppingBag size={26} className="text-stone-300" /></div>;
+}
+
 export default function StorefrontPage() {
   const { slug = '' } = useParams();
 
-  const [search, setSearch]     = useState('');
+  const [query, setQuery]       = useState('');    // what is typed
+  const [search, setSearch]     = useState('');    // what is searched
   const [category, setCategory] = useState('');
   const [cart, setCart]         = useState<Line[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkout, setCheckout] = useState(false);
   const [placed, setPlaced]     = useState<Placed | null>(null);
+  const [viewing, setViewing]   = useState<Product | null>(null);
+  const [viewQty, setViewQty]   = useState(1);
 
   // Checkout form
   const [name, setName]         = useState('');
@@ -75,14 +102,33 @@ export default function StorefrontPage() {
     retry: false,
   });
 
-  const { data: products = [], isLoading: loadingProducts } = useQuery<Product[]>({
+  // The unfiltered first page feeds the category tiles and the "few left"
+  // row, so they stay put while the shopper searches or filters below.
+  const { data: showcase = [] } = useQuery<Product[]>({
+    queryKey: ['storefront-showcase', slug],
+    queryFn: () => publicApi.get(`/shops/${slug}/products`, { params: { limit: 48 } }).then(r => r.data.data),
+    enabled: !!shop,
+    staleTime: 60_000,
+  });
+
+  const listing = useInfiniteQuery<Page>({
     queryKey: ['storefront-products', slug, search, category],
-    queryFn: () => publicApi.get(`/shops/${slug}/products`, {
-      params: { search: search || undefined, category: category || undefined, limit: 48 },
-    }).then(r => r.data.data),
+    queryFn: ({ pageParam }) => publicApi.get(`/shops/${slug}/products`, {
+      params: { search: search || undefined, category: category || undefined, limit: 24, page: pageParam },
+    }).then(r => r.data),
+    initialPageParam: 1,
+    getNextPageParam: last => (last.meta.page < last.meta.pages ? last.meta.page + 1 : undefined),
     enabled: !!shop,
     placeholderData: prev => prev,
   });
+  const products = useMemo(() => listing.data?.pages.flatMap(p => p.data) ?? [], [listing.data]);
+  const total = listing.data?.pages[0]?.meta.total ?? 0;
+
+  // Search as you type, but only once typing pauses.
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(query.trim()), 350);
+    return () => clearTimeout(id);
+  }, [query]);
 
   // Cart survives a refresh, scoped per shop so two storefronts don't collide.
   const cartKey = `ud_cart_${slug}`;
@@ -101,22 +147,40 @@ export default function StorefrontPage() {
     if (shop && !shop.acceptsDelivery && shop.acceptsPickup) setMode('PICKUP');
   }, [shop]);
 
+  // A product sheet or the cart open: the page behind should not scroll.
+  useEffect(() => {
+    document.body.style.overflow = viewing || cartOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [viewing, cartOpen]);
+
   const subtotal    = useMemo(() => cart.reduce((s, l) => s + l.product.price * l.qty, 0), [cart]);
   const itemCount   = useMemo(() => cart.reduce((s, l) => s + l.qty, 0), [cart]);
   const deliveryFee = mode === 'DELIVERY' && shop ? shop.deliveryFee : 0;
-  const total       = subtotal + deliveryFee;
+  const orderTotal  = subtotal + deliveryFee;
   const belowMin    = !!shop && shop.minOrderValue > 0 && subtotal < shop.minOrderValue;
 
-  function addToCart(p: Product) {
+  /** One picture per category for the round tiles: the first product with a photo. */
+  const tiles = useMemo(() => (shop?.categories ?? []).map(c => ({
+    name: c,
+    product: showcase.find(p => p.category === c && p.imageUrl) ?? showcase.find(p => p.category === c),
+  })), [shop?.categories, showcase]);
+  const fewLeft = useMemo(() => showcase.filter(p => p.inStock && p.lowStock).slice(0, 12), [showcase]);
+
+  function addToCart(p: Product, qty = 1) {
     setCart(c => {
       const found = c.find(l => l.product.id === p.id);
-      if (found) return c.map(l => l.product.id === p.id ? { ...l, qty: l.qty + 1 } : l);
-      return [...c, { product: p, qty: 1 }];
+      if (found) return c.map(l => l.product.id === p.id ? { ...l, qty: l.qty + qty } : l);
+      return [...c, { product: p, qty }];
     });
   }
   function setQty(id: string, qty: number) {
     setCart(c => qty <= 0 ? c.filter(l => l.product.id !== id)
                           : c.map(l => l.product.id === id ? { ...l, qty } : l));
+  }
+  function openProduct(p: Product) { setViewing(p); setViewQty(1); }
+  function pickCategory(c: string) {
+    setCategory(c);
+    document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   async function submitOrder() {
@@ -143,20 +207,23 @@ export default function StorefrontPage() {
   // ── States ────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen grid place-items-center bg-stone-50">
+      <div className="min-h-screen grid place-items-center bg-stone-100">
         <Loader2 className="animate-spin text-stone-400" size={28} />
       </div>
     );
   }
   if (isError || !shop) {
     return (
-      <div className="min-h-screen grid place-items-center bg-stone-50 p-6 text-center">
+      <div className="min-h-screen grid place-items-center bg-stone-100 p-6 text-center">
         <div>
           <Store size={40} className="mx-auto mb-3 text-stone-300" />
           <h1 className="text-lg font-bold text-stone-800">Shop not found</h1>
           <p className="text-sm text-stone-500 mt-1">
             This storefront doesn't exist or isn't open right now.
           </p>
+          <Link to="/shops" className="inline-flex items-center gap-1 mt-4 text-sm font-semibold text-orange-600">
+            Browse other shops <ChevronRight size={14} />
+          </Link>
         </div>
       </div>
     );
@@ -182,7 +249,7 @@ export default function StorefrontPage() {
     );
 
     return (
-      <div className="min-h-screen bg-stone-50 grid place-items-center p-5">
+      <div className="min-h-screen bg-stone-100 grid place-items-center p-5">
         <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-7 max-w-sm w-full text-center">
           <CheckCircle2 size={44} className="mx-auto mb-3 text-emerald-500" />
           <h1 className="text-lg font-bold text-stone-900">Order placed</h1>
@@ -226,182 +293,352 @@ export default function StorefrontPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-stone-50 pb-28">
-      {/* Banner + shop identity */}
-      <div className="relative">
-        <div className="h-28 sm:h-40 bg-gradient-to-br from-primary-500 to-primary-700 overflow-hidden">
-          {shop.bannerUrl && (
-            <img src={shop.bannerUrl} alt="" className="w-full h-full object-cover" />
-          )}
-        </div>
-        <div className="px-4 sm:px-6 -mt-10">
-          <div className="max-w-5xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-4 sm:p-5 flex gap-4 items-start">
-              <div className="w-16 h-16 rounded-xl bg-stone-100 shrink-0 grid place-items-center overflow-hidden">
-                {shop.logoUrl
-                  ? <img src={shop.logoUrl} alt="" className="w-full h-full object-cover" />
-                  : <Store size={26} className="text-stone-400" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl font-bold text-stone-900 truncate">{shop.name}</h1>
-                {shop.bio && <p className="text-sm text-stone-500 mt-0.5 line-clamp-2">{shop.bio}</p>}
-                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-stone-400">
-                  {(shop.city || shop.addressLine1) && (
-                    <span className="flex items-center gap-1">
-                      <MapPin size={11} /> {[shop.addressLine1, shop.city].filter(Boolean).join(', ')}
-                    </span>
-                  )}
-                  {shop.phone && (
-                    <a href={`tel:${shop.phone}`} className="flex items-center gap-1 hover:text-primary-600">
-                      <Phone size={11} /> {shop.phone}
-                    </a>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {shop.acceptsDelivery && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[11px] font-semibold">
-                      <Truck size={11} /> Delivery {shop.deliveryFee > 0 ? money(shop.deliveryFee, shop.currency) : 'free'}
-                    </span>
-                  )}
-                  {shop.acceptsPickup && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-stone-100 text-stone-600 text-[11px] font-semibold">
-                      <Package size={11} /> Pickup
-                    </span>
-                  )}
-                  <span className="inline-flex items-center px-2 py-1 rounded-lg bg-amber-50 text-amber-700 text-[11px] font-semibold">
-                    Pay on delivery
-                  </span>
-                </div>
-                {shop.deliveryNote && (
-                  <p className="text-[11px] text-stone-400 mt-2">{shop.deliveryNote}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  const location = [shop.addressLine1, shop.city].filter(Boolean).join(', ');
+  const whatsappHref = waLink(shop.whatsapp ?? shop.phone, `Hello ${shop.name}, I saw your online shop.`);
 
-      {/* Search + categories */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-5 space-y-3">
-        <div className="relative">
-          <Search size={15} className="absolute left-3.5 top-3.5 text-stone-400" />
-          <input
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-200 bg-white text-sm outline-none focus:border-primary-400"
-            placeholder={`Search ${shop.name}…`}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+  return (
+    <div className="min-h-screen bg-stone-100 pb-24">
+
+      {/* ── Header: identity, the big search, the cart ─────────────────── */}
+      <header className="sticky top-0 z-30 bg-white border-b border-stone-200 shadow-sm">
+        <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center gap-3">
+          <div className="flex items-center gap-2 min-w-0 shrink-0 sm:max-w-[14rem]">
+            <div className="w-9 h-9 rounded-lg bg-stone-100 overflow-hidden grid place-items-center shrink-0">
+              {shop.logoUrl
+                ? <img src={mediaUrl(shop.logoUrl)} alt="" className="w-full h-full object-cover" />
+                : <Store size={18} className="text-orange-600" />}
+            </div>
+            <span className="hidden sm:block font-extrabold text-stone-900 truncate tracking-tight">{shop.name}</span>
+          </div>
+
+          <form className="flex-1 min-w-0" onSubmit={e => { e.preventDefault(); setSearch(query.trim()); }} role="search">
+            <div className="flex items-stretch rounded-full border-2 border-orange-500 bg-white overflow-hidden">
+              <input
+                className="flex-1 min-w-0 px-4 py-2 text-sm bg-transparent outline-none text-stone-900 placeholder:text-stone-400"
+                placeholder={`Search in ${shop.name}`}
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                aria-label={`Search in ${shop.name}`}
+              />
+              {query && (
+                <button type="button" onClick={() => { setQuery(''); setSearch(''); }}
+                  className="px-2 text-stone-400 hover:text-stone-700" aria-label="Clear search">
+                  <X size={15} />
+                </button>
+              )}
+              <button type="submit" className="px-4 sm:px-6 bg-orange-500 hover:bg-orange-600 text-snow grid place-items-center" aria-label="Search">
+                <Search size={17} />
+              </button>
+            </div>
+          </form>
+
+          <button onClick={() => setCartOpen(true)} className="relative shrink-0 p-2 rounded-full hover:bg-stone-100 text-stone-800" aria-label={`Cart, ${itemCount} items`}>
+            <ShoppingCart size={23} />
+            {itemCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-snow text-[10px] font-bold grid place-items-center">
+                {itemCount > 99 ? '99+' : itemCount}
+              </span>
+            )}
+          </button>
         </div>
+
+        {/* Category bar */}
         {shop.categories.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-            <button
-              onClick={() => setCategory('')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors ${
-                !category ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-600 border-stone-200'}`}>
-              All
-            </button>
-            {shop.categories.map(c => (
-              <button key={c} onClick={() => setCategory(c)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors ${
-                  category === c ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-600 border-stone-200'}`}>
-                {c}
+          <nav className="max-w-6xl mx-auto px-3 sm:px-5 flex gap-5 overflow-x-auto text-[13px] scrollbar-none" aria-label="Categories">
+            {['', ...shop.categories].map(c => (
+              <button key={c || 'all'} onClick={() => pickCategory(c)}
+                className={`py-2 whitespace-nowrap border-b-2 transition-colors ${
+                  category === c ? 'border-orange-500 text-orange-600 font-bold' : 'border-transparent text-stone-600 hover:text-stone-900'}`}>
+                {c || 'All'}
               </button>
             ))}
-          </div>
+          </nav>
         )}
+      </header>
+
+      {/* ── Trust strip ──────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-stone-200">
+        <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2 flex gap-x-6 gap-y-1 overflow-x-auto text-[12px] text-stone-600 scrollbar-none">
+          <span className="flex items-center gap-1.5 whitespace-nowrap"><Wallet size={13} className="text-orange-600" /> Pay on {shop.acceptsDelivery ? 'delivery' : 'pickup'}</span>
+          {shop.acceptsDelivery && (
+            <span className="flex items-center gap-1.5 whitespace-nowrap"><Truck size={13} className="text-orange-600" />
+              {shop.deliveryFee > 0 ? `Delivery ${money(shop.deliveryFee, shop.currency)}` : 'Free delivery'}</span>
+          )}
+          {shop.acceptsPickup && <span className="flex items-center gap-1.5 whitespace-nowrap"><Package size={13} className="text-orange-600" /> Pickup from the shop</span>}
+          {location && <span className="flex items-center gap-1.5 whitespace-nowrap"><MapPin size={13} className="text-orange-600" /> {location}</span>}
+          {shop.minOrderValue > 0 && <span className="whitespace-nowrap">Min. order {money(shop.minOrderValue, shop.currency)}</span>}
+        </div>
       </div>
 
-      {/* Products */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-4">
-        {loadingProducts && products.length === 0 ? (
-          <div className="py-16 grid place-items-center">
-            <Loader2 className="animate-spin text-stone-300" size={22} />
-          </div>
-        ) : products.length === 0 ? (
-          <div className="py-16 text-center">
-            <ShoppingBag size={32} className="mx-auto mb-2 text-stone-300" />
-            <p className="text-sm text-stone-500">
-              {search || category ? 'Nothing matches that search' : 'This shop has no items listed yet'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {products.map(p => {
-              const inCart = cart.find(l => l.product.id === p.id);
-              return (
-                <div key={p.id} className="bg-white rounded-xl border border-stone-100 overflow-hidden flex flex-col">
-                  <div className="aspect-square bg-stone-100 relative">
-                    {p.imageUrl
-                      ? <img src={mediaUrl(p.imageUrl, 'thumb')} alt={p.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
-                      : <div className="w-full h-full grid place-items-center"><ShoppingBag size={26} className="text-stone-300" /></div>}
-                    {!p.inStock && (
-                      <div className="absolute inset-0 bg-white/70 grid place-items-center">
-                        <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">Out of stock</span>
+      <main className="max-w-6xl mx-auto px-3 sm:px-5 mt-3 space-y-3">
+
+        {/* ── Hero: categories, banner, shop card ─────────────────────── */}
+        <section className="grid gap-3 lg:grid-cols-[13rem_minmax(0,1fr)_15rem]">
+          {shop.categories.length > 0 && (
+            <div className="hidden lg:block bg-white rounded-xl p-2">
+              <p className="px-2 py-1.5 text-xs font-bold text-stone-900 flex items-center gap-1.5"><LayoutGrid size={13} /> Categories</p>
+              <ul className="max-h-[15rem] overflow-y-auto">
+                {shop.categories.map(c => (
+                  <li key={c}>
+                    <button onClick={() => pickCategory(c)}
+                      className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[13px] text-left ${
+                        category === c ? 'bg-orange-50 text-orange-700 font-semibold' : 'text-stone-700 hover:bg-stone-100'}`}>
+                      <span className="truncate">{c}</span><ChevronRight size={13} className="text-stone-300 shrink-0" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className={`relative rounded-xl overflow-hidden min-h-[9.5rem] sm:min-h-[15rem] ${shop.categories.length ? '' : 'lg:col-span-2'}`}>
+            {shop.bannerUrl
+              ? <img src={mediaUrl(shop.bannerUrl)} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              : (
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-red-500 to-rose-600">
+                  {/* A few product photos tilted on the banner, so it looks like this shop and not any shop. */}
+                  <div className="absolute right-3 sm:right-8 top-1/2 -translate-y-1/2 flex gap-2 sm:gap-3">
+                    {showcase.filter(p => p.imageUrl).slice(0, 3).map((p, i) => (
+                      <div key={p.id} className={`w-16 h-16 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-snow shadow-lg ${i === 1 ? '-translate-y-3' : 'translate-y-2'} ${i === 2 ? 'hidden sm:block' : ''}`}>
+                        <ProductImage p={p} />
                       </div>
-                    )}
-                    {p.inStock && p.lowStock && (
-                      <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-amber-500 text-white text-[10px] font-bold">
-                        Few left
-                      </span>
-                    )}
-                  </div>
-                  <div className="p-2.5 flex flex-col flex-1">
-                    <p className="text-xs font-semibold text-stone-900 line-clamp-2 leading-snug">{p.name}</p>
-                    {p.brand && <p className="text-[10px] text-stone-400 mt-0.5">{p.brand}</p>}
-                    <p className="text-sm font-bold text-stone-900 mt-1.5">
-                      {money(p.price, shop.currency)}
-                      <span className="text-[10px] font-normal text-stone-400 ml-1">/{p.unit}</span>
-                    </p>
-                    <div className="mt-2">
-                      {!p.inStock ? (
-                        <button disabled className="w-full py-1.5 rounded-lg bg-stone-100 text-stone-400 text-xs font-semibold cursor-not-allowed">
-                          Unavailable
-                        </button>
-                      ) : inCart ? (
-                        <div className="flex items-center justify-between bg-stone-100 rounded-lg">
-                          <button onClick={() => setQty(p.id, inCart.qty - 1)}
-                            className="w-8 h-8 grid place-items-center text-stone-600 active:bg-stone-200 rounded-l-lg">
-                            <Minus size={13} />
-                          </button>
-                          <span className="text-xs font-bold text-stone-900">{inCart.qty}</span>
-                          <button onClick={() => setQty(p.id, inCart.qty + 1)}
-                            className="w-8 h-8 grid place-items-center text-stone-600 active:bg-stone-200 rounded-r-lg">
-                            <Plus size={13} />
-                          </button>
-                        </div>
-                      ) : (
-                        <button onClick={() => addToCart(p)}
-                          className="w-full py-1.5 rounded-lg bg-stone-900 text-white text-xs font-semibold active:bg-stone-700">
-                          Add
-                        </button>
-                      )}
-                    </div>
+                    ))}
                   </div>
                 </div>
-              );
-            })}
+              )}
+            <div className="relative h-full p-4 sm:p-7 flex flex-col justify-center max-w-[60%] sm:max-w-md">
+              <p className="text-snow/90 text-[11px] sm:text-xs font-semibold uppercase tracking-widest">Welcome to</p>
+              <h1 className="text-snow text-xl sm:text-3xl font-extrabold leading-tight mt-0.5 drop-shadow-sm">{shop.name}</h1>
+              {shop.bio && <p className="text-snow/90 text-xs sm:text-sm mt-1.5 line-clamp-2">{shop.bio}</p>}
+              <button onClick={() => document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth' })}
+                className="mt-3 self-start px-4 py-1.5 rounded-full bg-snow text-red-600 text-xs sm:text-sm font-bold shadow">
+                Shop now
+              </button>
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* Sticky cart bar */}
-      {itemCount > 0 && !cartOpen && (
+          <aside className="hidden lg:flex flex-col bg-white rounded-xl p-4 gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-11 h-11 rounded-full bg-orange-50 grid place-items-center overflow-hidden">
+                {shop.logoUrl ? <img src={mediaUrl(shop.logoUrl)} alt="" className="w-full h-full object-cover" /> : <Store size={18} className="text-orange-600" />}
+              </div>
+              <div className="min-w-0">
+                <p className="font-bold text-sm text-stone-900 truncate">{shop.name}</p>
+                <p className="text-[11px] text-stone-500 truncate">{total} products</p>
+              </div>
+            </div>
+            <ul className="text-[12px] text-stone-600 space-y-1.5">
+              <li className="flex items-center gap-1.5"><ShieldCheck size={13} className="text-emerald-600" /> No payment until you receive it</li>
+              <li className="flex items-center gap-1.5"><Phone size={13} className="text-emerald-600" /> The shop confirms every order</li>
+            </ul>
+            <div className="mt-auto space-y-2">
+              {whatsappHref && (
+                <a href={whatsappHref} target="_blank" rel="noreferrer"
+                  className="flex items-center justify-center gap-1.5 w-full py-2 rounded-full bg-[#25D366] text-snow text-xs font-bold">
+                  <MessageCircle size={14} /> Chat on WhatsApp
+                </a>
+              )}
+              {shop.phone && (
+                <a href={`tel:${shop.phone}`} className="flex items-center justify-center gap-1.5 w-full py-2 rounded-full border border-stone-200 text-stone-700 text-xs font-semibold">
+                  <Phone size={13} /> Call the shop
+                </a>
+              )}
+            </div>
+          </aside>
+        </section>
+
+        {/* ── Round category tiles ───────────────────────────────────── */}
+        {tiles.length > 1 && (
+          <section className="bg-white rounded-xl px-2 py-3">
+            <div className="flex gap-1 sm:gap-3 overflow-x-auto scrollbar-none">
+              {tiles.map(({ name: c, product }) => (
+                <button key={c} onClick={() => pickCategory(c)} className="flex flex-col items-center gap-1.5 w-[4.6rem] sm:w-24 shrink-0">
+                  <span className={`w-14 h-14 sm:w-[4.5rem] sm:h-[4.5rem] rounded-full overflow-hidden ring-2 ${category === c ? 'ring-orange-500' : 'ring-transparent'} bg-stone-100`}>
+                    {product ? <ProductImage p={product} /> : null}
+                  </span>
+                  <span className={`text-[11px] leading-tight text-center line-clamp-2 ${category === c ? 'text-orange-600 font-bold' : 'text-stone-700'}`}>{c}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── Few left: the marketplace "deals" row ──────────────────── */}
+        {fewLeft.length > 0 && !search && !category && (
+          <section className="bg-white rounded-xl p-3">
+            <h2 className="flex items-center gap-1.5 text-sm sm:text-base font-extrabold text-stone-900 mb-2.5">
+              <Flame size={17} className="text-red-600" /> Few left, order now
+            </h2>
+            <div className="flex gap-3 overflow-x-auto scrollbar-none">
+              {fewLeft.map(p => (
+                <button key={p.id} onClick={() => openProduct(p)} className="w-28 sm:w-36 shrink-0 text-left">
+                  <div className="relative aspect-square rounded-lg overflow-hidden">
+                    <ProductImage p={p} />
+                    <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-red-600 text-snow text-[10px] font-bold">Few left</span>
+                  </div>
+                  <div className="mt-1.5"><Price value={p.price} currency={shop.currency} /></div>
+                  <p className="text-[11px] text-stone-600 truncate">{p.name}</p>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── All products ───────────────────────────────────────────── */}
+        <section id="all-products" className="scroll-mt-28">
+          <div className="flex items-baseline justify-between gap-2 px-1 py-2">
+            <h2 className="text-base sm:text-lg font-extrabold text-stone-900">
+              {search ? `Results for “${search}”` : category || 'More to love'}
+            </h2>
+            {(search || category) && (
+              <button onClick={() => { setQuery(''); setSearch(''); setCategory(''); }} className="text-xs font-semibold text-orange-600 shrink-0">
+                Clear
+              </button>
+            )}
+          </div>
+
+          {listing.isLoading && products.length === 0 ? (
+            <div className="py-16 grid place-items-center"><Loader2 className="animate-spin text-stone-300" size={22} /></div>
+          ) : products.length === 0 ? (
+            <div className="py-16 text-center bg-white rounded-xl">
+              <ShoppingBag size={32} className="mx-auto mb-2 text-stone-300" />
+              <p className="text-sm text-stone-500">
+                {search || category ? 'Nothing matches that search' : 'This shop has no items listed yet'}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+                {products.map(p => {
+                  const inCart = cart.find(l => l.product.id === p.id);
+                  return (
+                    <div key={p.id} className="group bg-white rounded-xl overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                      <button onClick={() => openProduct(p)} className="relative aspect-square overflow-hidden text-left" aria-label={`View ${p.name}`}>
+                        <ProductImage p={p} className="group-hover:scale-[1.03] transition-transform duration-300" />
+                        {!p.inStock && (
+                          <span className="absolute inset-0 bg-white/70 grid place-items-center text-[11px] font-bold text-stone-500 uppercase tracking-wide">Out of stock</span>
+                        )}
+                        {p.inStock && p.lowStock && (
+                          <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-red-600 text-snow text-[10px] font-bold">Few left</span>
+                        )}
+                      </button>
+                      <div className="p-2 sm:p-2.5 flex flex-col flex-1">
+                        <button onClick={() => openProduct(p)} className="text-left">
+                          <p className="text-[12.5px] text-stone-800 line-clamp-2 leading-snug min-h-[2.2rem]">{p.name}</p>
+                        </button>
+                        <div className="mt-1 flex items-end justify-between gap-1">
+                          <div className="min-w-0">
+                            <Price value={p.price} currency={shop.currency} />
+                            <p className="text-[10px] text-stone-400">per {p.unit}{p.brand ? ` · ${p.brand}` : ''}</p>
+                          </div>
+                          {p.inStock && (inCart ? (
+                            <div className="flex items-center rounded-full bg-orange-50 text-orange-700 shrink-0">
+                              <button onClick={() => setQty(p.id, inCart.qty - 1)} className="w-7 h-7 grid place-items-center" aria-label="One less"><Minus size={12} /></button>
+                              <span className="text-xs font-bold w-4 text-center">{inCart.qty}</span>
+                              <button onClick={() => setQty(p.id, inCart.qty + 1)} className="w-7 h-7 grid place-items-center" aria-label="One more"><Plus size={12} /></button>
+                            </div>
+                          ) : (
+                            <button onClick={() => addToCart(p)} className="w-8 h-8 rounded-full bg-orange-500 hover:bg-orange-600 text-snow grid place-items-center shrink-0 shadow-sm" aria-label={`Add ${p.name} to cart`}>
+                              <ShoppingCart size={15} />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {listing.hasNextPage && (
+                <div className="flex justify-center pt-4">
+                  <button onClick={() => listing.fetchNextPage()} disabled={listing.isFetchingNextPage}
+                    className="px-8 py-2.5 rounded-full border border-stone-300 bg-white text-sm font-semibold text-stone-700 hover:border-stone-500 disabled:opacity-50 flex items-center gap-2">
+                    {listing.isFetchingNextPage && <Loader2 size={14} className="animate-spin" />} Load more
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* ── Footer ─────────────────────────────────────────────────── */}
+        <footer className="bg-white rounded-xl p-4 sm:p-5 text-[12px] text-stone-500 grid gap-3 sm:grid-cols-[1fr_auto] items-center">
+          <div className="space-y-1">
+            <p className="font-bold text-stone-800">{shop.name}</p>
+            {location && <p className="flex items-center gap-1"><MapPin size={12} /> {location}</p>}
+            {shop.phone && <a href={`tel:${shop.phone}`} className="flex items-center gap-1 hover:text-stone-800"><Phone size={12} /> {shop.phone}</a>}
+            {shop.deliveryNote && <p>{shop.deliveryNote}</p>}
+          </div>
+          <Link to="/shops" className="flex items-center gap-1.5 text-stone-500 hover:text-stone-800">
+            <LogoMark size={18} /> More shops on MauzoHalisi <ChevronRight size={13} />
+          </Link>
+        </footer>
+      </main>
+
+      {/* ── Sticky cart bar (phones) ──────────────────────────────────── */}
+      {itemCount > 0 && !cartOpen && !viewing && (
         <button
           onClick={() => setCartOpen(true)}
-          className="fixed bottom-4 left-4 right-4 max-w-md mx-auto py-3.5 px-5 rounded-2xl bg-stone-900 text-white shadow-xl flex items-center justify-between z-30"
+          className="fixed bottom-4 left-4 right-4 max-w-md mx-auto py-3 px-5 rounded-full bg-orange-500 text-snow shadow-xl flex items-center justify-between z-30 sm:hidden"
         >
-          <span className="flex items-center gap-2 text-sm font-semibold">
-            <span className="w-6 h-6 rounded-full bg-white text-stone-900 text-xs font-bold grid place-items-center">
-              {itemCount}
-            </span>
-            View cart
+          <span className="flex items-center gap-2 text-sm font-bold">
+            <ShoppingCart size={17} /> {itemCount} in cart
           </span>
-          <span className="font-bold">{money(subtotal, shop.currency)}</span>
+          <span className="font-extrabold">{money(subtotal, shop.currency)}</span>
         </button>
       )}
 
-      {/* Cart / checkout sheet */}
+      {/* ── Product sheet ─────────────────────────────────────────────── */}
+      {viewing && (
+        <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={viewing.name}>
+          <div className="absolute inset-0 bg-black/50" onClick={() => setViewing(null)} />
+          <div className="relative bg-white w-full sm:max-w-3xl rounded-t-3xl sm:rounded-2xl max-h-[92vh] overflow-y-auto sm:grid sm:grid-cols-2">
+            <button onClick={() => setViewing(null)} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 shadow grid place-items-center text-stone-600" aria-label="Close">
+              <X size={16} />
+            </button>
+            <div className="aspect-square bg-stone-100 sm:rounded-l-2xl overflow-hidden">
+              <ProductImage p={viewing} size="full" />
+            </div>
+            <div className="p-5 flex flex-col gap-3">
+              <div>
+                <Price value={viewing.price} currency={shop.currency} size="lg" />
+                <p className="text-xs text-stone-400">per {viewing.unit}</p>
+              </div>
+              <h3 className="text-base font-semibold text-stone-900 leading-snug">{viewing.name}</h3>
+              <div className="flex flex-wrap gap-1.5 text-[11px]">
+                {viewing.category && <span className="px-2 py-0.5 rounded bg-stone-100 text-stone-600">{viewing.category}</span>}
+                {viewing.brand && <span className="px-2 py-0.5 rounded bg-stone-100 text-stone-600">{viewing.brand}</span>}
+                {viewing.inStock
+                  ? viewing.lowStock
+                    ? <span className="px-2 py-0.5 rounded bg-red-50 text-red-700 font-semibold">Few left</span>
+                    : <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold">In stock</span>
+                  : <span className="px-2 py-0.5 rounded bg-stone-100 text-stone-500 font-semibold">Out of stock</span>}
+              </div>
+              {viewing.description && <p className="text-sm text-stone-600 whitespace-pre-line">{viewing.description}</p>}
+              <ul className="text-[12px] text-stone-500 space-y-1 border-t border-stone-100 pt-3">
+                {shop.acceptsDelivery && <li className="flex items-center gap-1.5"><Truck size={13} /> {shop.deliveryFee > 0 ? `Delivery ${money(shop.deliveryFee, shop.currency)}` : 'Free delivery'}</li>}
+                {shop.acceptsPickup && <li className="flex items-center gap-1.5"><Package size={13} /> Pickup from the shop</li>}
+                <li className="flex items-center gap-1.5"><Wallet size={13} /> Pay when you receive it</li>
+              </ul>
+              {viewing.inStock && (
+                <div className="mt-auto flex items-center gap-3 pt-2">
+                  <div className="flex items-center rounded-full border border-stone-200">
+                    <button onClick={() => setViewQty(q => Math.max(1, q - 1))} className="w-9 h-9 grid place-items-center text-stone-600" aria-label="One less"><Minus size={14} /></button>
+                    <span className="w-7 text-center text-sm font-bold">{viewQty}</span>
+                    <button onClick={() => setViewQty(q => q + 1)} className="w-9 h-9 grid place-items-center text-stone-600" aria-label="One more"><Plus size={14} /></button>
+                  </div>
+                  <button onClick={() => { addToCart(viewing, viewQty); setViewing(null); }}
+                    className="flex-1 py-2.5 rounded-full bg-orange-500 hover:bg-orange-600 text-snow text-sm font-bold flex items-center justify-center gap-1.5">
+                    <ShoppingCart size={15} /> Add to cart
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cart / checkout sheet ─────────────────────────────────────── */}
       {cartOpen && (
         <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setCartOpen(false); setCheckout(false); }} />
@@ -411,7 +648,7 @@ export default function StorefrontPage() {
                 {checkout ? 'Your details' : `Cart (${itemCount})`}
               </h2>
               <button onClick={() => { setCartOpen(false); setCheckout(false); }}
-                className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+                className="text-stone-400 hover:text-stone-700" aria-label="Close"><X size={18} /></button>
             </div>
 
             <div className="p-5 space-y-4">
@@ -425,42 +662,43 @@ export default function StorefrontPage() {
                 <>
                   {cart.map(l => (
                     <div key={l.product.id} className="flex gap-3 items-center">
-                      <div className="w-12 h-12 rounded-lg bg-stone-100 shrink-0 overflow-hidden grid place-items-center">
-                        {l.product.imageUrl
-                          ? <img src={mediaUrl(l.product.imageUrl, 'thumb')} alt="" className="w-full h-full object-cover" />
-                          : <ShoppingBag size={16} className="text-stone-300" />}
+                      <div className="w-14 h-14 rounded-lg bg-stone-100 shrink-0 overflow-hidden">
+                        <ProductImage p={l.product} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-stone-900 truncate">{l.product.name}</p>
-                        <p className="text-xs text-stone-500">{money(l.product.price, shop.currency)}</p>
+                        <p className="text-xs text-stone-800 line-clamp-2">{l.product.name}</p>
+                        <Price value={l.product.price} currency={shop.currency} />
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button onClick={() => setQty(l.product.id, l.qty - 1)}
-                          className="w-7 h-7 grid place-items-center rounded-lg border border-stone-200 text-stone-500">
+                          className="w-7 h-7 grid place-items-center rounded-full border border-stone-200 text-stone-500" aria-label="One less">
                           <Minus size={12} />
                         </button>
                         <span className="w-6 text-center text-xs font-bold">{l.qty}</span>
                         <button onClick={() => setQty(l.product.id, l.qty + 1)}
-                          className="w-7 h-7 grid place-items-center rounded-lg border border-stone-200 text-stone-500">
+                          className="w-7 h-7 grid place-items-center rounded-full border border-stone-200 text-stone-500" aria-label="One more">
                           <Plus size={12} />
                         </button>
                       </div>
                     </div>
                   ))}
                   {cart.length === 0 && (
-                    <p className="text-center text-sm text-stone-400 py-8">Your cart is empty</p>
+                    <div className="text-center py-8">
+                      <ShoppingCart size={30} className="mx-auto mb-2 text-stone-300" />
+                      <p className="text-sm text-stone-400">Your cart is empty</p>
+                    </div>
                   )}
                 </>
               ) : (
                 <>
                   <div>
                     <label className="block text-xs font-semibold text-stone-600 mb-1.5">Your name *</label>
-                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-primary-400"
+                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-orange-400"
                       value={name} onChange={e => setName(e.target.value)} placeholder="Asha Juma" autoFocus />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-stone-600 mb-1.5">Phone number *</label>
-                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-primary-400"
+                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-orange-400"
                       value={phone} onChange={e => setPhone(e.target.value)} placeholder="0712 345 678" inputMode="tel" />
                     <p className="text-[11px] text-stone-400 mt-1">The shop will call this number to confirm.</p>
                   </div>
@@ -471,12 +709,12 @@ export default function StorefrontPage() {
                       <div className="grid grid-cols-2 gap-2">
                         <button type="button" onClick={() => setMode('DELIVERY')}
                           className={`py-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 ${
-                            mode === 'DELIVERY' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-stone-200 text-stone-500'}`}>
+                            mode === 'DELIVERY' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-stone-200 text-stone-500'}`}>
                           <Truck size={13} /> Delivery
                         </button>
                         <button type="button" onClick={() => setMode('PICKUP')}
                           className={`py-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 ${
-                            mode === 'PICKUP' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-stone-200 text-stone-500'}`}>
+                            mode === 'PICKUP' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-stone-200 text-stone-500'}`}>
                           <Package size={13} /> Pickup
                         </button>
                       </div>
@@ -487,7 +725,7 @@ export default function StorefrontPage() {
                     <div>
                       <label className="block text-xs font-semibold text-stone-600 mb-1.5">Delivery address *</label>
                       <textarea rows={2}
-                        className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-primary-400 resize-none"
+                        className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-orange-400 resize-none"
                         value={address} onChange={e => setAddress(e.target.value)}
                         placeholder="Street, area, landmark" />
                     </div>
@@ -495,7 +733,7 @@ export default function StorefrontPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-stone-600 mb-1.5">Note (optional)</label>
-                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-primary-400"
+                    <input className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm outline-none focus:border-orange-400"
                       value={note} onChange={e => setNote(e.target.value)} placeholder="Anything the shop should know" />
                   </div>
                 </>
@@ -515,7 +753,7 @@ export default function StorefrontPage() {
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-stone-900 pt-1 border-t border-stone-100">
-                    <span>Total</span><span>{money(total, shop.currency)}</span>
+                    <span>Total</span><span className="text-red-600">{money(orderTotal, shop.currency)}</span>
                   </div>
                 </div>
 
@@ -530,15 +768,15 @@ export default function StorefrontPage() {
                   <button
                     disabled={belowMin}
                     onClick={() => { setError(''); setCheckout(true); }}
-                    className="w-full py-3 rounded-xl bg-stone-900 text-white text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full py-3 rounded-full bg-orange-500 hover:bg-orange-600 text-snow text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    Continue
+                    Check out
                   </button>
                 ) : (
                   <button
                     disabled={submitting || belowMin || !name.trim() || !phone.trim() || (mode === 'DELIVERY' && !address.trim())}
                     onClick={submitOrder}
-                    className="w-full py-3 rounded-xl bg-stone-900 text-white text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-full bg-orange-500 hover:bg-orange-600 text-snow text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {submitting && <Loader2 size={14} className="animate-spin" />}
                     {submitting ? 'Placing order…' : `Place order · Pay on ${mode === 'PICKUP' ? 'pickup' : 'delivery'}`}

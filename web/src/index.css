@@ -310,3 +310,7 @@
 @keyframes mh-toast-in { from { opacity: 0; transform: translateY(-8px) } to { opacity: 1; transform: none } }
 .mh-toast { animation: mh-toast-in 180ms ease-out; }
 @media (prefers-reduced-motion: reduce) { .mh-toast { animation: none; } }
+
+/* Sideways rows (store categories, deals) scroll by swipe; the bar is noise. */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
