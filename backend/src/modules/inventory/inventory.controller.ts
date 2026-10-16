@@ -497,10 +497,11 @@ export async function importShipment(req: AuthRequest, res: Response) {
       ].filter(Boolean).join(' ');
 
       const costNote = `¥${p.unitPriceCny} × ${exchangeRate} = ${p.costPerItem.toLocaleString()} + ${p.extraPerItem.toLocaleString()} overhead = ${p.landedCost.toLocaleString()} TZS`;
-      const description = [
-        p.supplier  ? `Supplier: ${p.supplier}` : '',
-        `Landed cost: ${costNote}`,
-      ].filter(Boolean).join(' | ');
+      // The cost breakdown and the supplier are internal. They used to be
+      // written into the product description, which the online store shows
+      // to customers, so a shop's buying price was public. They now live
+      // only on the stock movement, which staff see and customers never do.
+      const movementNote = `Shipment import${p.supplier ? ` from ${p.supplier}` : ''}: ${costNote}`;
 
       // Identity is style + colour + size, which is exactly the composed name —
       // the same style in two colours is two products. Name is checked first
@@ -522,7 +523,6 @@ export async function importShipment(req: AuthRequest, res: Response) {
             costPrice: p.landedCost,
             // Only move the selling price when the sheet actually states one.
             ...(p.sellingPrice > 0 && { sellPrice: p.sellingPrice }),
-            description,
           },
         });
 
@@ -566,7 +566,6 @@ export async function importShipment(req: AuthRequest, res: Response) {
             sellPrice:   p.sellingPrice || p.landedCost,
             costPrice:   p.landedCost,
             category:    p.color || undefined,
-            description,
             reorderPoint: 0,
           },
         });
@@ -582,7 +581,7 @@ export async function importShipment(req: AuthRequest, res: Response) {
         data: {
           shopId, productId: product.id,
           type: 'PURCHASE', quantity: p.qty, unitCost: p.landedCost,
-          note: `Shipment import — ${costNote}`,
+          note: movementNote,
           userId,
         },
       });

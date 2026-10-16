@@ -52,7 +52,9 @@ export function publicProduct(
   return {
     id:          p.id,
     name:        p.name,
-    description: p.description,
+    // Belt and braces: a generated cost note must never reach a customer,
+    // even if one slips into a description some other way.
+    description: p.description && /Landed cost:|Supplier:/.test(p.description) ? null : p.description,
     // An uploaded picture is shown only once it has passed review.
     imageUrl:    p.image && p.image.status !== 'APPROVED' ? null : p.imageUrl,
     category:    p.category,
