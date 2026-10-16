@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../../types';
 import { prisma } from '../../core/prisma';
 import * as R from '../../utils/response';
+import { describeImage } from '../../core/looks';
 
 /**
  * The admin portal's photo review queue.
@@ -50,5 +51,6 @@ export async function decideImage(req: AuthRequest, res: Response) {
     data: { status: approve ? 'APPROVED' : 'REJECTED', reason, reviewedAt: new Date() },
   });
   if (!count) return R.notFound(res, 'Image not found');
+  if (approve) void describeImage(req.params.id);
   return R.ok(res, { status: approve ? 'APPROVED' : 'REJECTED' });
 }

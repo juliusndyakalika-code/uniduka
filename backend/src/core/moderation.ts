@@ -6,6 +6,7 @@ import { prisma } from './prisma';
 import { Prisma } from '@prisma/client';
 import { logger } from '../utils/logger';
 import { aiImage, aiReady } from './ai';
+import { describeImage, describeUntagged } from './looks';
 
 /**
  * Deciding whether a product photo may be shown to the public.
@@ -187,14 +188,16 @@ export async function sweepPendingImages(): Promise<number> {
       },
     });
     if (verdict.status === 'REJECTED') logger.warn(`Product image ${img.id} rejected for shop ${img.shopId}`);
+    if (verdict.status === 'APPROVED') await describeImage(img.id);
     if (verdict.status !== 'PENDING') done++;
   }
   return done;
 }
 
 export function startImageReview() {
-  const run = () => sweepPendingImages().catch(err =>
-    logger.error(`Image review sweep failed: ${(err as Error).message}`));
+  const run = () => sweepPendingImages()
+    .then(() => describeUntagged())
+    .catch(err => logger.error(`Image review sweep failed: ${(err as Error).message}`));
   setTimeout(run, 90_000).unref();
   setInterval(run, 5 * 60_000).unref();
 }

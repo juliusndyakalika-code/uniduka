@@ -29,13 +29,14 @@ export const AI_MODEL = process.env.AI_MODEL || 'claude-opus-5-5';
 const client = aiReady ? new Anthropic({ apiKey: KEY, maxRetries: 2, timeout: 60_000 }) : null;
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 
-export type AiKind = 'insight' | 'invoice' | 'moderation';
+export type AiKind = 'insight' | 'invoice' | 'moderation' | 'tagging';
 
 /** Calls per shop per day. Generous for real use, low enough to bound cost. */
 const DAILY_CAP: Record<AiKind, number> = {
   insight: Number(process.env.AI_INSIGHT_DAILY_CAP) || 20,
   invoice: Number(process.env.AI_INVOICE_DAILY_CAP) || 30,
   moderation: Number(process.env.AI_MODERATION_DAILY_CAP) || 300,
+  tagging: Number(process.env.AI_TAGGING_DAILY_CAP) || 300,
 };
 
 /** Takes one unit of today's allowance. False when spent or unreadable. */

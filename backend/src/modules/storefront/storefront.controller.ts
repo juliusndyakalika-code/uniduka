@@ -42,7 +42,7 @@ function isValidPhone(raw: string): boolean {
 }
 
 /** The public shape of a product. Deliberately narrow. */
-function publicProduct(
+export function publicProduct(
   p: { id: string; name: string; description: string | null; imageUrl: string | null;
        category: string | null; brand: string | null; unit: string | null;
        sellPrice: number; publicPrice: number | null; trackStock: boolean;
@@ -75,7 +75,7 @@ function publicProduct(
  * result without touching anything: the storefront goes dark while unpaid and
  * comes straight back on renewal, with the shop's own flag untouched.
  */
-function liveWhere() {
+export function liveWhere() {
   const now = new Date();
   return {
     storefrontEnabled: true,
@@ -92,7 +92,7 @@ function liveWhere() {
   };
 }
 
-async function liveShop(slug: string) {
+export async function liveShop(slug: string) {
   return prisma.shop.findFirst({ where: { slug, ...liveWhere() } });
 }
 

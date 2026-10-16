@@ -9,7 +9,7 @@
  * sheet rather than a new page.
  */
 import { useState, useEffect, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import {
   Search, ShoppingBag, ShoppingCart, Plus, Minus, X, MapPin, Phone, Store,
@@ -20,6 +20,7 @@ import publicApi from '../../api/publicClient';
 import { mediaUrl } from '../../lib/media';
 import { buildOrderMessage, waLink } from '../../utils/whatsapp';
 import { LogoMark } from '../../components/ui/Logo';
+import { Price, ProductImage } from '../../components/storefront/shared';
 
 interface Shop {
   slug: string; name: string; bio?: string; logoUrl?: string; bannerUrl?: string;
@@ -55,23 +56,6 @@ function money(n: number, currency = 'TZS') {
 
 function apiError(e: unknown, fallback: string) {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
-}
-
-/** Price split so the number reads big and the currency small, marketplace style. */
-function Price({ value, currency, size = 'md' }: { value: number; currency: string; size?: 'md' | 'lg' }) {
-  const n = Math.round(value).toLocaleString('en-US');
-  return (
-    <span className="text-red-600 font-bold tabular-nums whitespace-nowrap">
-      <span className={size === 'lg' ? 'text-sm mr-1' : 'text-[10px] mr-0.5'}>{currency}</span>
-      <span className={size === 'lg' ? 'text-3xl' : 'text-base'}>{n}</span>
-    </span>
-  );
-}
-
-function ProductImage({ p, size = 'thumb', className = '' }: { p: Product; size?: 'thumb' | 'full'; className?: string }) {
-  return p.imageUrl
-    ? <img src={mediaUrl(p.imageUrl, size)} alt={p.name} loading="lazy" decoding="async" className={`w-full h-full object-cover ${className}`} />
-    : <div className="w-full h-full grid place-items-center bg-stone-50"><ShoppingBag size={26} className="text-stone-300" /></div>;
 }
 
 export default function StorefrontPage() {
@@ -123,6 +107,18 @@ export default function StorefrontPage() {
   });
   const products = useMemo(() => listing.data?.pages.flatMap(p => p.data) ?? [], [listing.data]);
   const total = listing.data?.pages[0]?.meta.total ?? 0;
+
+  // Arriving from the marketplace with ?product=<id>: open that product, so
+  // the tap that brought the shopper here is not wasted.
+  const [params, setParams] = useSearchParams();
+  const linked = params.get('product');
+  useEffect(() => {
+    if (!shop || !linked) return;
+    publicApi.get(`/shops/${slug}/products/${linked}`)
+      .then(r => { setViewing(r.data.data); setViewQty(1); })
+      .catch(() => { /* gone or unlisted: just show the store */ })
+      .finally(() => setParams(p => { p.delete('product'); return p; }, { replace: true }));
+  }, [shop, linked, slug, setParams]);
 
   // Search as you type, but only once typing pauses.
   useEffect(() => {
@@ -398,15 +394,15 @@ export default function StorefrontPage() {
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-red-500 to-rose-600">
                   {/* A few product photos tilted on the banner, so it looks like this shop and not any shop. */}
                   <div className="absolute right-3 sm:right-8 top-1/2 -translate-y-1/2 flex gap-2 sm:gap-3">
-                    {showcase.filter(p => p.imageUrl).slice(0, 3).map((p, i) => (
-                      <div key={p.id} className={`w-16 h-16 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-snow shadow-lg ${i === 1 ? '-translate-y-3' : 'translate-y-2'} ${i === 2 ? 'hidden sm:block' : ''}`}>
+                    {showcase.filter(p => p.imageUrl).slice(0, 2).map((p, i) => (
+                      <div key={p.id} className={`w-16 h-16 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-snow shadow-lg ${i === 1 ? '-translate-y-3' : 'translate-y-2'}`}>
                         <ProductImage p={p} />
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-            <div className="relative h-full p-4 sm:p-7 flex flex-col justify-center max-w-[60%] sm:max-w-md">
+            <div className="relative h-full p-4 sm:p-7 flex flex-col justify-center max-w-[58%] sm:max-w-[50%]">
               <p className="text-snow/90 text-[11px] sm:text-xs font-semibold uppercase tracking-widest">Welcome to</p>
               <h1 className="text-snow text-xl sm:text-3xl font-extrabold leading-tight mt-0.5 drop-shadow-sm">{shop.name}</h1>
               {shop.bio && <p className="text-snow/90 text-xs sm:text-sm mt-1.5 line-clamp-2">{shop.bio}</p>}

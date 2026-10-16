@@ -1956,6 +1956,10 @@ model ProductImage {
   // The built-in checker's scores (porn, hentai, sexy, neutral, drawing), so a
   // reviewer can see why a photo was held. Null until it has been checked.
   scores     Json?
+  // Words that describe how the product looks, for marketplace search:
+  // its main colours (computed here from the pixels) and, when an AI key is
+  // configured, a few descriptive tags. Lowercase, English and Kiswahili.
+  tags       String[]  @default([])
   createdAt  DateTime  @default(now())
 
   @@index([shopId])

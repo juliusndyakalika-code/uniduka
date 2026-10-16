@@ -9,6 +9,7 @@ import {
   getStorefront, listPublicProducts, placeOrder, trackOrder, listStorefronts,
 } from './storefront.controller';
 import { serveProductImage } from '../inventory/images.controller';
+import { marketProducts, marketShops, marketCategories, publicProductById } from './market.controller';
 
 const router = Router();
 
@@ -54,6 +55,10 @@ const imageLimit = rateLimit({
 });
 
 router.get('/shops',                browseLimit, listStorefronts);
+router.get('/market/products',      browseLimit, marketProducts);
+router.get('/market/shops',         browseLimit, marketShops);
+router.get('/market/categories',    browseLimit, marketCategories);
+router.get('/shops/:slug/products/:id', browseLimit, publicProductById);
 router.get('/images/:id',           imageLimit,  serveProductImage);
 router.get('/shops/:slug',          browseLimit, getStorefront);
 router.get('/shops/:slug/products', browseLimit, listPublicProducts);

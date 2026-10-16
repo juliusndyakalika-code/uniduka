@@ -5,6 +5,7 @@ import * as R from '../../utils/response';
 import { encodeProductImage, ImageError } from '../../core/images';
 import { logger } from '../../utils/logger';
 import { reviewImage } from '../../core/moderation';
+import { describeImage } from '../../core/looks';
 
 const shop = (req: AuthRequest) => req.user!.shopId!;
 
@@ -65,6 +66,8 @@ export async function uploadProductImage(req: AuthRequest, res: Response) {
     await tx.product.update({ where: { id: product.id }, data: { imageUrl: imagePath(row.id) } });
     return row;
   });
+
+  if (image.status === 'APPROVED') void describeImage(image.id);
 
   return R.ok(res, {
     imageUrl: imagePath(image.id), status: image.status,
