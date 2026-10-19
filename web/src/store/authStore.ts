@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { markActive, LAST_ACTIVE_KEY } from '../hooks/useIdleTimer';
 
 interface ShopMeta { id: string; tradingName: string; businessType: string; }
 interface User { id: string; email?: string | null; phone?: string | null; fullName: string; role: string;
@@ -53,6 +54,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: !!lsGet('ud_token'),
 
   setAuth: (token, user, account, shopId, refreshToken) => {
+    // A fresh sign-in starts a fresh inactivity window; without this an old
+    // timestamp from the previous session would sign them straight back out.
+    markActive();
     lsSet('ud_token', token);
     lsSet('ud_user', JSON.stringify(user));
     lsSet('ud_account', JSON.stringify(account));
@@ -135,7 +139,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // ud_refresh is listed so that a token stored by an older build is cleared
     // on the next sign out rather than lingering.
-    ['ud_token', 'ud_refresh', 'ud_user', 'ud_account', 'ud_shop'].forEach(lsRemove);
+    ['ud_token', 'ud_refresh', 'ud_user', 'ud_account', 'ud_shop', LAST_ACTIVE_KEY].forEach(lsRemove);
     set({ token: null, user: null, account: null, shopId: null, shops: [], isAuthenticated: false });
   },
 }));

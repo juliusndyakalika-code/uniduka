@@ -19,7 +19,22 @@ import { logger } from '../utils/logger';
  * again, which is the only reliable signal that a copy has been stolen.
  */
 
-const DAYS = 7;
+/**
+ * How long a session may live.
+ *
+ * Refresh tokens rotate on every use, and each new one used to get a fresh
+ * week, so a phone that opened the app once a week stayed signed in forever.
+ * Two limits now hold whatever the client does:
+ *
+ *   IDLE      a token not used within this long is dead (it was 7 days)
+ *   ABSOLUTE  no session outlives this, counted from the actual sign-in
+ *
+ * The app's own 15-minute inactivity sign-out is the everyday limit; these
+ * are what remain true if a client never runs that timer.
+ */
+const IDLE_HOURS = Number(process.env.SESSION_IDLE_HOURS) || 24;
+const ABSOLUTE_DAYS = Number(process.env.SESSION_MAX_DAYS) || 30;
+const DAYS = IDLE_HOURS / 24;
 export const REFRESH_COOKIE = 'mh_rt';
 
 /**
@@ -47,7 +62,7 @@ function cookieOptions() {
     sameSite: SAME_SITE,
     domain: COOKIE_DOMAIN,
     path: '/api/v1/auth',   // sent only where it is needed
-    maxAge: DAYS * 24 * 60 * 60 * 1000,
+    maxAge: DAYS * 86_400_000,
   } as const;
 }
 
@@ -57,17 +72,22 @@ function cookieOptions() {
  * Returns nothing to the caller on purpose: the token must not end up in a
  * response body, which is the habit this replaces.
  */
-export async function issueRefresh(res: Response, req: Request, userId: string): Promise<void> {
+export async function issueRefresh(
+  res: Response, req: Request, userId: string, sessionStartedAt: Date = new Date(),
+): Promise<void> {
   // 32 random bytes, not a JWT. There is nothing to read inside it and nothing
   // to forge; it is a lookup key and the row is the authority.
   const token = crypto.randomBytes(32).toString('base64url');
-  const expiresAt = new Date(Date.now() + DAYS * 24 * 60 * 60 * 1000);
+  // Never past the session's absolute end, even if the idle window would allow it.
+  const absoluteEnd = sessionStartedAt.getTime() + ABSOLUTE_DAYS * 86_400_000;
+  const expiresAt = new Date(Math.min(Date.now() + DAYS * 86_400_000, absoluteEnd));
 
   await prisma.refreshToken.create({
     data: {
       userId,
       tokenHash: hash(token),
       expiresAt,
+      sessionStartedAt,
       userAgent: req.get('user-agent')?.slice(0, 250) ?? null,
       ip: req.ip ?? null,
     },
@@ -106,7 +126,8 @@ export async function rotateRefresh(req: Request, res: Response): Promise<Rotate
     return { ok: false, reuse: true };
   }
 
-  if (row.expiresAt < new Date()) {
+  const sessionEnd = row.sessionStartedAt.getTime() + ABSOLUTE_DAYS * 86_400_000;
+  if (row.expiresAt < new Date() || sessionEnd <= Date.now()) {
     clearRefresh(res);
     return { ok: false };
   }
@@ -114,7 +135,7 @@ export async function rotateRefresh(req: Request, res: Response): Promise<Rotate
   // Marked spent and replaced in one step, so two concurrent refreshes cannot
   // both succeed and leave two live families behind.
   await prisma.refreshToken.update({ where: { id: row.id }, data: { usedAt: new Date() } });
-  await issueRefresh(res, req, row.userId);
+  await issueRefresh(res, req, row.userId, row.sessionStartedAt);
   return { ok: true, userId: row.userId };
 }
 

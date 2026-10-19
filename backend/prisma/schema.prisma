@@ -1798,8 +1798,11 @@ model RefreshToken {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  tokenHash String   @unique
-  expiresAt DateTime
+  tokenHash        String   @unique
+  expiresAt        DateTime
+  // When the person actually signed in. Carried unchanged through every
+  // rotation, so a session has a fixed end however often it is refreshed.
+  sessionStartedAt DateTime @default(now())
 
   // Set when the token is exchanged. A used token presented again means the
   // holder is not the only one with a copy.
