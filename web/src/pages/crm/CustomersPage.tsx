@@ -4,6 +4,7 @@ import { Plus, Search, Phone, Mail, X, Pencil, Trash2, AlertTriangle } from 'luc
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import { useFocusTarget } from '../../hooks/useFocusTarget';
 import { useAuthStore } from '../../store/authStore';
 import { useDataTable, SortableTh, TablePagination } from '../../components/ui/DataTable';
 import { PageLoader } from '../../components/ui/Loader';
@@ -24,7 +25,8 @@ export default function CustomersPage() {
   const { shopId, user } = useAuthStore();
   const isOwner = user?.role === 'ACCOUNT_OWNER';
   const qc = useQueryClient();
-  const [search, setSearch] = useState('');
+  const { initialQ, flashId: focusFlash } = useFocusTarget();
+  const [search, setSearch] = useState(initialQ);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Customer | null>(null);
@@ -116,7 +118,7 @@ export default function CustomersPage() {
               </thead>
               <tbody>
                 {custTable.view.map(c => (
-                  <tr key={c.id} className="cursor-pointer hover:bg-stone-50">
+                  <tr key={c.id} data-focus-id={c.id} className={`cursor-pointer hover:bg-stone-50 ${focusFlash === c.id ? 'mh-focus' : ''}`}>
                     <td>
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center shrink-0">

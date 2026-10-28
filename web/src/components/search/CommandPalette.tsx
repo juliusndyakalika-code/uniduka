@@ -214,7 +214,8 @@ export default function CommandPalette() {
             }] : []),
             {
               label: t('search.open'),
-              run: () => go('/inventory/products', { key: 'product:' + p.id, title: p.name, detail: t('nav.products'), path: '/inventory/products' }),
+              // Lands on the list filtered to this product, scrolled to it and highlighted.
+              run: () => go(`/inventory/products?q=${encodeURIComponent(p.name)}&focus=${p.id}`, { key: 'product:' + p.id, title: p.name, detail: t('nav.products'), path: `/inventory/products?q=${encodeURIComponent(p.name)}&focus=${p.id}` }),
             },
           ],
         })),
@@ -231,7 +232,7 @@ export default function CommandPalette() {
             .filter(Boolean).join(' · '),
           icon: <User size={15} />,
           actions: [
-            { label: t('search.open'), run: () => go('/customers') },
+            { label: t('search.open'), run: () => go(`/customers?q=${encodeURIComponent(c.name)}&focus=${c.id}`) },
             ...(c.phone ? [{
               label: t('search.call'),
               href: `tel:${c.phone}`,
@@ -253,7 +254,8 @@ export default function CommandPalette() {
           icon: <ReceiptText size={15} />,
           actions: [{
             label: t('search.open'),
-            run: () => go(`/pos/transactions?search=${encodeURIComponent(x.receiptNo)}`),
+            // The receipts page never read ?search=, so this used to open the whole list.
+            run: () => go(`/pos/transactions?q=${encodeURIComponent(x.receiptNo)}&focus=${x.id}`),
           }],
         })),
       });

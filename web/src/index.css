@@ -319,3 +319,7 @@
    so a shopper sees the same MauzoHalisi surfaces as the owner does. */
 .mh-ground { background: rgb(var(--ground)); }
 .mh-bar { box-shadow: 0 6px 16px -10px rgb(var(--neu-dark)); border-bottom: 1px solid rgb(var(--c-stone-200) / 0.6); }
+
+/* A row opened from the header search: ringed and tinted for a few seconds. */
+.mh-focus { background: rgb(var(--c-primary-50)); box-shadow: inset 3px 0 0 rgb(var(--c-primary-600)); transition: background 0.6s ease; }
+.mh-focus:focus { outline: none; }

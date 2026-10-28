@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 import CameraScanner from '../../components/CameraScanner';
 import { TablePagination } from '../../components/ui/DataTable';
 import { PageLoader } from '../../components/ui/Loader';
+import { useFocusTarget } from '../../hooks/useFocusTarget';
 import InvoiceScanModal from '../../components/inventory/InvoiceScanModal';
 
 interface Product {
@@ -352,7 +353,9 @@ export default function ProductsPage() {
   const { shopId, shops, user } = useAuthStore();
   const isOwner = user?.role === 'ACCOUNT_OWNER';
   const qc = useQueryClient();
-  const [search, setSearch]       = useState('');
+  // Opened from the header search: start filtered to that product, then highlight it.
+  const { initialQ, flashId: focusFlash } = useFocusTarget();
+  const [search, setSearch]       = useState(initialQ);
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [page, setPage]           = useState(1);
   const [pageSize, setPageSize]   = useState(50);
@@ -662,7 +665,7 @@ export default function ProductsPage() {
               </thead>
               <tbody>
                 {products.map(p => (
-                  <tr key={p.id} className={`transition-colors duration-700 ${flashId === p.id ? 'bg-primary-50' : ''}`}>
+                  <tr key={p.id} data-focus-id={p.id} className={`transition-colors duration-700 ${flashId === p.id ? 'bg-primary-50' : ''} ${focusFlash === p.id ? 'mh-focus' : ''}`}>
                     <td>
                       <div className="flex items-center gap-2">
                         <Package size={14} className="text-stone-400 shrink-0" />

@@ -7,6 +7,7 @@ import {
 import { printInvoice } from '../../utils/printInvoice';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import { useFocusTarget } from '../../hooks/useFocusTarget';
 import { useAuthStore } from '../../store/authStore';
 import { printReceipt as doPrint } from '../../utils/printReceipt';
 import { PageLoader } from '../../components/ui/Loader';
@@ -80,7 +81,8 @@ export default function TransactionsPage() {
   const { t } = useTranslation();
   const { shopId, account } = useAuthStore();
 
-  const [search, setSearch]   = useState('');
+  const { initialQ, flashId: focusFlash } = useFocusTarget();
+  const [search, setSearch]   = useState(initialQ);
   const [from, setFrom]       = useState('');
   const [to, setTo]           = useState('');
   const [status, setStatus]   = useState('');
@@ -315,7 +317,7 @@ export default function TransactionsPage() {
                 </thead>
                 <tbody>
                   {rows.map(tx => (
-                    <tr key={tx.id}>
+                    <tr key={tx.id} data-focus-id={tx.id} className={focusFlash === tx.id ? 'mh-focus' : ''}>
                       <td className="text-stone-500 text-xs whitespace-nowrap">
                         {new Date(tx.createdAt).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short', year: 'numeric' })}
                         <span className="text-stone-400 ml-1">
