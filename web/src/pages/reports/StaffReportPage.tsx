@@ -133,7 +133,7 @@ function ProductSalesDetail({ userId, productId, from, to }: { userId: string; p
   );
 }
 
-function SellerProductList({ userId, from, to }: { userId: string; from: string; to: string }) {
+function SellerProductList({ userId, from, to, q }: { userId: string; from: string; to: string; q: string }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<string | null>(null);
   const { data, isLoading } = useQuery<SellerProducts>({
@@ -143,6 +143,16 @@ function SellerProductList({ userId, from, to }: { userId: string; from: string;
   });
   if (isLoading) return <div className="flex items-center justify-center py-4"><Spinner size={16} /></div>;
   if (!data?.products.length) return <p className="text-xs text-stone-400 py-2">{t('reports.noSales')}</p>;
+  const needle = q.trim().toLowerCase();
+  const shown = needle ? data.products.filter(p => p.name.toLowerCase().includes(needle)) : data.products;
+  if (!shown.length) return <p className="text-xs text-stone-400 py-2">{t('reports.noMatch')}</p>;
+  // Totals follow the filter, so a search answers "how many of these did they sell".
+  const totals = needle ? {
+    products: shown.length,
+    quantity: shown.reduce((a, p) => a + p.quantity, 0),
+    revenue: shown.reduce((a, p) => a + p.revenue, 0),
+    grossProfit: shown.reduce((a, p) => a + p.grossProfit, 0),
+  } : data.totals;
   return (
     <table className="w-full text-xs border-collapse">
       <thead>
@@ -155,7 +165,7 @@ function SellerProductList({ userId, from, to }: { userId: string; from: string;
         </tr>
       </thead>
       <tbody>
-        {data.products.map(p => (
+        {shown.map(p => (
           <Fragment key={p.productId}>
             <tr
               className={`border-b border-stone-100 cursor-pointer hover:bg-white ${open === p.productId ? 'bg-white' : ''}`}
@@ -181,11 +191,11 @@ function SellerProductList({ userId, from, to }: { userId: string; from: string;
       </tbody>
       <tfoot>
         <tr className="border-t border-stone-300">
-          <td className="py-1.5 font-semibold text-stone-600">{t('reports.productCount', { count: data.totals.products })}</td>
-          <td className="py-1.5 pr-3 text-right font-bold tabular-nums text-stone-900">{qtyFmt(data.totals.quantity)}</td>
+          <td className="py-1.5 font-semibold text-stone-600">{t('reports.productCount', { count: totals.products })}</td>
+          <td className="py-1.5 pr-3 text-right font-bold tabular-nums text-stone-900">{qtyFmt(totals.quantity)}</td>
           <td></td>
-          <td className="py-1.5 pr-3 text-right font-bold tabular-nums text-stone-900">{fmt(data.totals.revenue)}</td>
-          <td className="py-1.5 text-right font-bold tabular-nums text-emerald-600">{fmt(data.totals.grossProfit)}</td>
+          <td className="py-1.5 pr-3 text-right font-bold tabular-nums text-stone-900">{fmt(totals.revenue)}</td>
+          <td className="py-1.5 text-right font-bold tabular-nums text-emerald-600">{fmt(totals.grossProfit)}</td>
         </tr>
       </tfoot>
     </table>
@@ -206,6 +216,7 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [view, setView] = useState<'products' | 'receipts'>('products');
+  const [q, setQ] = useState('');
   const [loadingPrint, setLoadingPrint] = useState<string | null>(null);
 
   // POS: transactions per cashier
@@ -229,6 +240,13 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
   });
 
   const isLoading = isHotel ? loadingFolios : view === 'receipts' && loadingTx;
+  const needle = q.trim().toLowerCase();
+  const shownTx = needle
+    ? txns.filter(tx =>
+        tx.receiptNo.toLowerCase().includes(needle)
+        || (tx.customer?.fullName ?? tx.customerName ?? '').toLowerCase().includes(needle)
+        || tx.items.some(it => it.name.toLowerCase().includes(needle)))
+    : txns;
 
   const handlePrint = async (txId: string) => {
     setLoadingPrint(txId);
@@ -307,15 +325,23 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
               {!isHotel && (
                 <div className="mb-2 inline-flex rounded-lg bg-stone-200/60 p-0.5 text-[11px] font-semibold" role="tablist">
                   {(['products', 'receipts'] as const).map(v => (
-                    <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
+                    <button key={v} role="tab" aria-selected={view === v} onClick={() => { setView(v); setQ(''); }}
                       className={`px-3 py-1 rounded-md transition-colors ${view === v ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>
                       {t(v === 'products' ? 'reports.byProduct' : 'reports.byReceipt')}
                     </button>
                   ))}
                 </div>
               )}
+              {!isHotel && (
+                <TableSearch
+                  value={q}
+                  onChange={setQ}
+                  placeholder={t(view === 'products' ? 'reports.searchProduct' : 'reports.searchReceipt')}
+                  className="mb-2 ml-2 inline-block align-top max-w-[15rem]"
+                />
+              )}
               {!isHotel && view === 'products' ? (
-                <SellerProductList userId={stat.userId} from={from} to={to} />
+                <SellerProductList userId={stat.userId} from={from} to={to} q={q} />
               ) : isLoading ? (
                 <div className="flex items-center justify-center py-4"><Spinner size={16} /></div>
               ) : isHotel ? (
@@ -365,8 +391,8 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
                 )
               ) : (
                 /* ── POS: transaction list ── */
-                txns.length === 0 ? (
-                  <p className="text-xs text-stone-400 py-2">{t('reports.noSales')}</p>
+                shownTx.length === 0 ? (
+                  <p className="text-xs text-stone-400 py-2">{t(needle ? 'reports.noMatch' : 'reports.noSales')}</p>
                 ) : (
                   <table className="w-full text-xs border-collapse">
                     <thead>
@@ -382,7 +408,7 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
                       </tr>
                     </thead>
                     <tbody>
-                      {txns.map(tx => (
+                      {shownTx.map(tx => (
                         <tr key={tx.id} className={`border-b border-stone-100 last:border-0 ${tx.status === 'VOIDED' ? 'opacity-50' : ''}`}>
                           <td className="py-2 pr-3 font-mono text-stone-700">
                             {tx.receiptNo}
@@ -423,13 +449,13 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
                     <tfoot>
                       <tr className="border-t border-stone-200 bg-white">
                         <td colSpan={4} className="py-1.5 text-stone-500 font-semibold">
-                          {txns.length} transaction{txns.length !== 1 ? 's' : ''}
+                          {shownTx.length} transaction{shownTx.length !== 1 ? 's' : ''}
                         </td>
                         <td className="py-1.5 text-right font-bold text-stone-900">
-                          {fmt(txns.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + t.total, 0))}
+                          {fmt(shownTx.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + t.total, 0))}
                         </td>
                         <td className="py-1.5 text-right font-bold text-emerald-600">
-                          {fmt(txns.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + txProfit(t), 0))}
+                          {fmt(shownTx.filter(t => t.status !== 'VOIDED').reduce((s, t) => s + txProfit(t), 0))}
                         </td>
                         <td colSpan={2}></td>
                       </tr>

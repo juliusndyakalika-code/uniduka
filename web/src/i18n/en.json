@@ -459,7 +459,10 @@
     "consignmentNote": "Goods sold on behalf of partners",
     "totalNetProfit": "Total Net Profit",
     "totalNetProfitNote": "Gross profit + consignment − expenses",
-    "totalNetProfitNoteHotel": "Revenue + consignment − expenses"
+    "totalNetProfitNoteHotel": "Revenue + consignment − expenses",
+    "searchProduct": "Search product…",
+    "searchReceipt": "Search receipt, customer or product…",
+    "noMatch": "Nothing matches that search."
   },
   "timeclock": {
     "title": "Staff Timeclock",

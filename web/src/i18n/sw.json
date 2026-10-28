@@ -459,7 +459,10 @@
     "consignmentNote": "Bidhaa zilizouzwa kwa niaba ya washirika",
     "totalNetProfit": "Faida Halisi Jumla",
     "totalNetProfitNote": "Faida ghafi + amana − matumizi",
-    "totalNetProfitNoteHotel": "Mapato + amana − matumizi"
+    "totalNetProfitNoteHotel": "Mapato + amana − matumizi",
+    "searchProduct": "Tafuta bidhaa…",
+    "searchReceipt": "Tafuta risiti, mteja au bidhaa…",
+    "noMatch": "Hakuna kinacholingana na utafutaji huo."
   },
   "timeclock": {
     "title": "Saa za Kazi za Wafanyakazi",
