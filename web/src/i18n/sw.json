@@ -402,7 +402,20 @@
     "totalPerYear": "Takriban ujumbe {{count}} kwa mwaka kwa mipangilio hii.",
     "sendTest": "Nitumie jaribio sasa",
     "sendTestHint": "Inatuma SMS moja halisi yenye takwimu zako, ili uhakikishe inafika. Mara tano kwa siku.",
-    "sendTestDone": "Imetumwa kwa {{phone}}. Inapaswa kufika ndani ya dakika moja."
+    "sendTestDone": "Imetumwa kwa {{phone}}. Inapaswa kufika ndani ya dakika moja.",
+    "byProduct": "Bidhaa",
+    "byReceipt": "Risiti",
+    "product": "Bidhaa",
+    "qtySold": "Idadi iliyouzwa",
+    "receipts": "Risiti",
+    "revenue": "Mapato",
+    "qty": "Idadi",
+    "soldOn": "zimeuzwa kwenye risiti {{count}}",
+    "soldOn_one": "zimeuzwa kwenye risiti 1",
+    "return": "REJESHO",
+    "showingLatest": "Inaonyesha mauzo {{shown}} ya karibuni kati ya {{total}}.",
+    "productCount": "Bidhaa {{count}}",
+    "productCount_one": "Bidhaa 1"
   },
   "timeclock": {
     "title": "Saa za Kazi za Wafanyakazi",

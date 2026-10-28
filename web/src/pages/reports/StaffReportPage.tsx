@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
 import { TrendingUp, Users, Package, BarChart2, ChevronDown, ChevronRight, Printer, Download } from 'lucide-react';
@@ -61,6 +61,137 @@ const REPORT_TABS = [
   { to: '/reports/inventory', label: 'Stock',      icon: Package },
 ];
 
+// ── What one seller sold, product by product ────────────────────────────────
+interface SellerProduct {
+  productId: string; name: string; unit: string;
+  quantity: number; revenue: number; grossProfit: number; receipts: number;
+}
+interface SellerProducts {
+  products: SellerProduct[];
+  totals: { products: number; quantity: number; revenue: number; grossProfit: number };
+}
+interface ProductSale {
+  transactionId: string; receiptNo: string; at: string; isReturn: boolean;
+  customer: string | null; quantity: number; unitPrice: number; unitLabel: string; lineTotal: number;
+}
+interface ProductSales {
+  product: { id: string; name: string; unit: string };
+  totals: { quantity: number; revenue: number; lines: number };
+  sales: ProductSale[];
+}
+
+const qtyFmt = (n: number) => (Number.isInteger(n) ? n : Math.round(n * 100) / 100).toLocaleString('en-US');
+
+/** The receipts one product was sold on, by one seller, in the period. */
+function ProductSalesDetail({ userId, productId, from, to }: { userId: string; productId: string; from: string; to: string }) {
+  const { t } = useTranslation();
+  const { data, isLoading } = useQuery<ProductSales>({
+    queryKey: ['seller-product-sales', userId, productId, from, to],
+    queryFn: () => api.get(`/reporting/staff/${userId}/products/${productId}`, { params: { from, to } }).then(r => r.data.data),
+    staleTime: 60_000,
+  });
+  if (isLoading || !data) return <div className="flex justify-center py-3"><Spinner size={14} /></div>;
+  const unit = data.product.unit || data.sales[0]?.unitLabel || '';
+  return (
+    <div className="rounded-lg bg-white border border-stone-200 p-3 space-y-2">
+      <p className="text-sm text-stone-800">
+        <span className="font-bold text-primary-700 text-base tabular-nums">{qtyFmt(data.totals.quantity)} {unit}</span>{' '}
+        {t('reports.soldOn', { count: new Set(data.sales.map(s => s.transactionId)).size })}
+        <span className="text-stone-400"> · {fmt(data.totals.revenue)}</span>
+      </p>
+      <table className="w-full text-xs border-collapse">
+        <thead>
+          <tr className="text-stone-500 border-b border-stone-200">
+            <th className="text-left py-1 pr-3 font-semibold">{t('reports.receipt')}</th>
+            <th className="text-left py-1 pr-3 font-semibold">{t('reports.date')}</th>
+            <th className="text-left py-1 pr-3 font-semibold">{t('reports.customer')}</th>
+            <th className="text-right py-1 pr-3 font-semibold">{t('reports.qty')}</th>
+            <th className="text-right py-1 font-semibold">{t('common.total')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.sales.map((s, i) => (
+            <tr key={i} className="border-b border-stone-100 last:border-0">
+              <td className="py-1 pr-3 font-mono text-stone-700">
+                {s.receiptNo}
+                {s.isReturn && <span className="ml-1 text-[10px] bg-amber-100 text-amber-700 rounded px-1">{t('reports.return')}</span>}
+              </td>
+              <td className="py-1 pr-3 text-stone-500 whitespace-nowrap">
+                {new Date(s.at).toLocaleString('en-TZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              </td>
+              <td className="py-1 pr-3 text-stone-600">{s.customer ?? <span className="text-stone-300">Walk-in</span>}</td>
+              <td className={`py-1 pr-3 text-right tabular-nums font-semibold ${s.quantity < 0 ? 'text-amber-700' : 'text-stone-900'}`}>{qtyFmt(s.quantity)} {s.unitLabel}</td>
+              <td className="py-1 text-right tabular-nums text-stone-700">{fmt(s.lineTotal)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {data.totals.lines > data.sales.length && (
+        <p className="text-[11px] text-stone-400">{t('reports.showingLatest', { shown: data.sales.length, total: data.totals.lines })}</p>
+      )}
+    </div>
+  );
+}
+
+function SellerProductList({ userId, from, to }: { userId: string; from: string; to: string }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState<string | null>(null);
+  const { data, isLoading } = useQuery<SellerProducts>({
+    queryKey: ['seller-products', userId, from, to],
+    queryFn: () => api.get(`/reporting/staff/${userId}/products`, { params: { from, to } }).then(r => r.data.data),
+    staleTime: 60_000,
+  });
+  if (isLoading) return <div className="flex items-center justify-center py-4"><Spinner size={16} /></div>;
+  if (!data?.products.length) return <p className="text-xs text-stone-400 py-2">{t('reports.noSales')}</p>;
+  return (
+    <table className="w-full text-xs border-collapse">
+      <thead>
+        <tr className="text-stone-500 border-b border-stone-200">
+          <th className="text-left py-1.5 pr-3 font-semibold">{t('reports.product')}</th>
+          <th className="text-right py-1.5 pr-3 font-semibold">{t('reports.qtySold')}</th>
+          <th className="text-right py-1.5 pr-3 font-semibold">{t('reports.receipts')}</th>
+          <th className="text-right py-1.5 pr-3 font-semibold">{t('reports.revenue')}</th>
+          <th className="text-right py-1.5 font-semibold text-emerald-700">{t('reports.grossProfit')}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.products.map(p => (
+          <Fragment key={p.productId}>
+            <tr
+              className={`border-b border-stone-100 cursor-pointer hover:bg-white ${open === p.productId ? 'bg-white' : ''}`}
+              onClick={() => setOpen(open === p.productId ? null : p.productId)}
+              aria-expanded={open === p.productId}
+            >
+              <td className="py-1.5 pr-3 text-stone-800 font-medium">
+                <span className="inline-flex items-center gap-1">
+                  {open === p.productId ? <ChevronDown size={12} className="text-primary-600" /> : <ChevronRight size={12} className="text-stone-400" />}
+                  {p.name}
+                </span>
+              </td>
+              <td className="py-1.5 pr-3 text-right tabular-nums font-bold text-stone-900">{qtyFmt(p.quantity)} <span className="font-normal text-stone-400">{p.unit}</span></td>
+              <td className="py-1.5 pr-3 text-right tabular-nums text-stone-600">{p.receipts}</td>
+              <td className="py-1.5 pr-3 text-right tabular-nums text-stone-900">{fmt(p.revenue)}</td>
+              <td className="py-1.5 text-right tabular-nums text-emerald-600">{fmt(p.grossProfit)}</td>
+            </tr>
+            {open === p.productId && (
+              <tr><td colSpan={5} className="py-2"><ProductSalesDetail userId={userId} productId={p.productId} from={from} to={to} /></td></tr>
+            )}
+          </Fragment>
+        ))}
+      </tbody>
+      <tfoot>
+        <tr className="border-t border-stone-300">
+          <td className="py-1.5 font-semibold text-stone-600">{t('reports.productCount', { count: data.totals.products })}</td>
+          <td className="py-1.5 pr-3 text-right font-bold tabular-nums text-stone-900">{qtyFmt(data.totals.quantity)}</td>
+          <td></td>
+          <td className="py-1.5 pr-3 text-right font-bold tabular-nums text-stone-900">{fmt(data.totals.revenue)}</td>
+          <td className="py-1.5 text-right font-bold tabular-nums text-emerald-600">{fmt(data.totals.grossProfit)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  );
+}
+
 interface SellerRowProps {
   stat: StaffStat;
   rank: number;
@@ -74,6 +205,7 @@ interface SellerRowProps {
 function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+  const [view, setView] = useState<'products' | 'receipts'>('products');
   const [loadingPrint, setLoadingPrint] = useState<string | null>(null);
 
   // POS: transactions per cashier
@@ -82,7 +214,7 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
     queryFn: () =>
       api.get('/pos/transactions', { params: { cashierId: stat.userId, from, to, limit: 100 } })
          .then(r => r.data.data as Tx[]),
-    enabled: expanded && !!shopId && !isHotel,
+    enabled: expanded && !!shopId && !isHotel && view === 'receipts',
     staleTime: 60_000,
   });
 
@@ -96,7 +228,7 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
     staleTime: 60_000,
   });
 
-  const isLoading = isHotel ? loadingFolios : loadingTx;
+  const isLoading = isHotel ? loadingFolios : view === 'receipts' && loadingTx;
 
   const handlePrint = async (txId: string) => {
     setLoadingPrint(txId);
@@ -172,7 +304,19 @@ function SellerRow({ stat, rank, share, from, to, shopId, isHotel }: SellerRowPr
         <tr>
           <td colSpan={isHotel ? 6 : 8} className="p-0">
             <div className="bg-stone-50 border-t border-b border-stone-200 px-6 py-3">
-              {isLoading ? (
+              {!isHotel && (
+                <div className="mb-2 inline-flex rounded-lg bg-stone-200/60 p-0.5 text-[11px] font-semibold" role="tablist">
+                  {(['products', 'receipts'] as const).map(v => (
+                    <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
+                      className={`px-3 py-1 rounded-md transition-colors ${view === v ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>
+                      {t(v === 'products' ? 'reports.byProduct' : 'reports.byReceipt')}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!isHotel && view === 'products' ? (
+                <SellerProductList userId={stat.userId} from={from} to={to} />
+              ) : isLoading ? (
                 <div className="flex items-center justify-center py-4"><Spinner size={16} /></div>
               ) : isHotel ? (
                 /* ── Hotel: folio list ── */

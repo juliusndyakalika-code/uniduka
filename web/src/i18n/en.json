@@ -402,7 +402,20 @@
     "totalPerYear": "About {{count}} messages a year at these settings.",
     "sendTest": "Send me a test now",
     "sendTestHint": "Sends one real SMS with your actual figures, so you can check it arrives. Five a day.",
-    "sendTestDone": "Sent to {{phone}}. It should arrive within a minute."
+    "sendTestDone": "Sent to {{phone}}. It should arrive within a minute.",
+    "byProduct": "Products",
+    "byReceipt": "Receipts",
+    "product": "Product",
+    "qtySold": "Qty sold",
+    "receipts": "Receipts",
+    "revenue": "Revenue",
+    "qty": "Qty",
+    "soldOn": "sold on {{count}} receipts",
+    "soldOn_one": "sold on 1 receipt",
+    "return": "RETURN",
+    "showingLatest": "Showing the latest {{shown}} of {{total}} sales.",
+    "productCount": "{{count}} products",
+    "productCount_one": "1 product"
   },
   "timeclock": {
     "title": "Staff Timeclock",

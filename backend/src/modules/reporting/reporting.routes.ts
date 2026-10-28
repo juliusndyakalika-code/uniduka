@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { staffProducts, staffProductSales } from './reporting.controller';
 import { salesReport, inventoryReport, staffReport, businessTypeReport, dashboardStats, productSalesReport, salesCalendar } from './reporting.controller';
 import { authenticate, requireShop, authorize } from '../../middleware/auth';
 import { getReportPrefs, updateReportPrefs, previewReport, sendTestReport } from './reportPrefs.controller';
@@ -20,6 +21,8 @@ router.get('/sales',          salesReport);
 router.get('/calendar',       salesCalendar);
 router.get('/inventory',      inventoryReport);
 router.get('/staff',          staffReport);
+router.get('/staff/:userId/products',            staffProducts);
+router.get('/staff/:userId/products/:productId', staffProductSales);
 router.get('/business-type',  businessTypeReport);
 router.get('/products',       productSalesReport);
 export default router;

@@ -610,3 +610,117 @@ export async function salesCalendar(req: AuthRequest, res: Response, next: NextF
     });
   } catch (err) { next(err); }
 }
+
+// ─── SELLER × PRODUCT ────────────────────────────────────────────────────────
+
+/**
+ * GET /reporting/staff/:userId/products?from&to
+ *
+ * What one seller sold in the period, product by product. Same rules as the
+ * seller totals above (completed transactions, the shop's calendar days), so
+ * the rows add up to that seller's revenue. Returns are recorded with
+ * negative quantities and totals, so the sums are net of them.
+ *
+ * Aggregated in the database, not from a page of receipts: the receipt list
+ * this replaces stopped at 100, which undercounted any busy seller over a
+ * month.
+ */
+export async function staffProducts(req: AuthRequest, res: Response) {
+  const range = await dateRange(req);
+  const where = {
+    transaction: { shopId: shop(req), cashierId: req.params.userId, status: 'COMPLETED' as const, createdAt: range },
+  };
+
+  const [sums, perReceipt] = await Promise.all([
+    prisma.transactionItem.groupBy({
+      by: ['productId'], where,
+      _sum: { quantity: true, lineTotal: true },
+    }),
+    // One row per (product, receipt), so counting rows counts receipts.
+    prisma.transactionItem.groupBy({ by: ['productId', 'transactionId'], where }),
+  ]);
+
+  const receipts = new Map<string, number>();
+  for (const r of perReceipt) receipts.set(r.productId, (receipts.get(r.productId) ?? 0) + 1);
+
+  const products = await prisma.product.findMany({
+    where: { id: { in: sums.map(s => s.productId) } },
+    select: { id: true, name: true, unit: true, costPrice: true },
+  });
+  const byId = new Map(products.map(p => [p.id, p]));
+
+  const rows = sums.map(s => {
+    const p = byId.get(s.productId);
+    const quantity = s._sum.quantity ?? 0;
+    const revenue = s._sum.lineTotal ?? 0;
+    return {
+      productId: s.productId,
+      name: p?.name ?? 'Deleted product',
+      unit: p?.unit ?? '',
+      quantity,
+      revenue,
+      grossProfit: revenue - (p?.costPrice ?? 0) * quantity,
+      receipts: receipts.get(s.productId) ?? 0,
+    };
+  }).filter(r => r.quantity !== 0 || r.revenue !== 0)
+    .sort((a, b) => b.revenue - a.revenue);
+
+  return R.ok(res, {
+    products: rows,
+    totals: {
+      products: rows.length,
+      quantity: rows.reduce((s, r) => s + r.quantity, 0),
+      revenue: rows.reduce((s, r) => s + r.revenue, 0),
+      grossProfit: rows.reduce((s, r) => s + r.grossProfit, 0),
+    },
+  });
+}
+
+/**
+ * GET /reporting/staff/:userId/products/:productId?from&to
+ *
+ * One product as one seller sold it: how many in total, and on which
+ * receipts. A return shows as its own row with a negative quantity.
+ */
+export async function staffProductSales(req: AuthRequest, res: Response) {
+  const range = await dateRange(req);
+  const where = {
+    productId: req.params.productId,
+    transaction: { shopId: shop(req), cashierId: req.params.userId, status: 'COMPLETED' as const, createdAt: range },
+  };
+
+  const [items, agg, product] = await Promise.all([
+    prisma.transactionItem.findMany({
+      where,
+      select: {
+        quantity: true, unitPrice: true, lineTotal: true, unitLabel: true,
+        transaction: {
+          select: {
+            id: true, receiptNo: true, createdAt: true, type: true, customerName: true,
+            customer: { select: { fullName: true } },
+          },
+        },
+      },
+      orderBy: { transaction: { createdAt: 'desc' } },
+      take: 300,
+    }),
+    prisma.transactionItem.aggregate({ where, _sum: { quantity: true, lineTotal: true }, _count: true }),
+    prisma.product.findFirst({ where: { id: req.params.productId, shopId: shop(req) }, select: { name: true, unit: true } }),
+  ]);
+
+  return R.ok(res, {
+    product: { id: req.params.productId, name: product?.name ?? 'Deleted product', unit: product?.unit ?? '' },
+    totals: { quantity: agg._sum.quantity ?? 0, revenue: agg._sum.lineTotal ?? 0, lines: agg._count },
+    sales: items.map(i => ({
+      transactionId: i.transaction.id,
+      receiptNo: i.transaction.receiptNo,
+      at: i.transaction.createdAt,
+      isReturn: i.transaction.type === 'RETURN',
+      customer: i.transaction.customer?.fullName ?? i.transaction.customerName ?? null,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      unitLabel: i.unitLabel,
+      lineTotal: i.lineTotal,
+    })),
+  });
+}
